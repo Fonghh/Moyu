@@ -34,7 +34,10 @@
 - 遠洋 `T.FAR`（地圖最東邊，要漁船）。
 - 天氣 `WEATHERS`／`weatherAt()`，每 3 分鐘依時間換；暴風雨（`severe`）出現變種怪影（魚影 sz 3），釣到 `MUTANTS` 變種怪魚。
 - 搏鬥掙扎頻率有上限 `CFG.surgeCap`，確保最強的魚用好竿子拉得上來。
-- 回城 `goHome()`：回到兩間店中間（`SPAWN`）。畫面永遠以人物為中心，地圖外畫成樹林。
+- 料理 `METHODS`（烤、炸、煮湯、生魚片）：餐廳 `restBody()` 代客料理，背包的 `b.dish` 是料理；吃 `eatDish()` 得到加成 `S.buffs`（`hasBuff()`）；料理只能賣給餐廳。
+- 客人委託 `S.quests`：`questFishList()` 只挑目前釣竿、船釣得到的魚（不含變種、奇物）。
+- 拉霸 `slotBody()`／`spinSlot()`／`slotPrize()`，大獎金條（`gold`，`noDex` 不進圖鑑、不會釣到）。
+- 回城 `goHome()`：回到四間店中間（`SPAWN`）。畫面永遠以人物為中心，地圖外畫成樹林。
 - 狀態 `state`：walk → charge → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
 - `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。

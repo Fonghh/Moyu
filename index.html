@@ -190,6 +190,12 @@
   .tabs2 { display: flex; gap: 2px; margin: 12px 0 8px; border-bottom: 1px solid #d4d4d4; }
   .tabs2 button { border: 1px solid transparent; background: none; padding: 4px 12px; font-family: inherit; font-size: 12px; cursor: pointer; color: #555; }
   .tabs2 button.on { border-color: #d4d4d4; border-bottom-color: #fff; background: #fff; color: #217346; font-weight: 600; margin-bottom: -1px; }
+  .buffs { font-size: 12px; color: #c55a11; margin-top: 4px; }
+  .card .sbtn { margin-top: 4px; }
+  .reels { display: flex; gap: 8px; justify-content: center; margin: 12px 0 0; }
+  .reel { width: 64px; height: 64px; border: 2px solid #217346; background: #fff; font-size: 34px; font-weight: 700; color: #c00000;
+    display: flex; align-items: center; justify-content: center; font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
+  .sbtn:disabled { background: #bfbfbf; cursor: default; }
   .card.unk canvas { filter: brightness(0) opacity(.2); }
 
   /* 隱藏模式：只剩普通的 Excel */
@@ -225,7 +231,7 @@
     拖曳畫面移動人物<br>（電腦：方向鍵／WASD）<br>
     走到水邊，<b>按住</b>「下竿」蓄力，放開拋竿<br>
     按鈕閃爍時快按，按住收線！<br>
-    右邊的房子按鈕可以回城（兩間店就在旁邊）<br>
+    右邊的房子按鈕可以回城（四間店都在旁邊）<br>
     走進水裡會自動搭船；暴風雨時有變種怪魚
   </div>
   <div class="note" id="toast"></div>
@@ -246,8 +252,8 @@ const CFG = {
   speed: 150,            // 移動速度（px/秒）
   miniW: 64,             // 小地圖寬度（px）
   castTime: 0.45,        // 拋竿動畫秒數（力道越大飛越久）
-  chargeTime: 0.8,       // 蓄力從 0 到滿的秒數（之後會往回掉，來回擺盪）
-  castMin: 40, castMax: 300,   // 拋竿距離（px）：最小力道～最大力道
+  chargeTime: 1.6,       // 蓄力從 0 到滿的秒數（之後會往回掉，來回擺盪）
+  castMin: 24, castMax: 300,   // 拋竿距離（px）：最小力道（約 1 格）～最大力道
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
   biteWin: 1.3,          // 上鉤後可以拉竿的秒數
   landTime: 1.3, landFly: .9,   // 釣到後的動畫秒數、魚在空中飛的秒數
@@ -260,7 +266,7 @@ const CFG = {
 };
 
 // ================= 地形 =================
-const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8, SHOP_T: 9, SHOP_M: 10, FAR: 11 };
+const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8, SHOP_T: 9, SHOP_M: 10, FAR: 11, SHOP_R: 12, SHOP_G: 13 };
 const TILES = [
   { name: '草地', color: '#C6E0B4', walk: true },
   { name: '樹林', color: '#70AD47' },
@@ -274,6 +280,8 @@ const TILES = [
   { name: '釣具行', color: '#F8CBAD', walk: true, shop: 'tackle' },
   { name: '魚市場', color: '#D9D2E9', walk: true, shop: 'market' },
   { name: '海水・遠洋', color: '#002060', water: 'far' },
+  { name: '海港餐廳', color: '#FFC7CE', walk: true, shop: 'restaurant' },
+  { name: '遊藝場', color: '#FFD966', walk: true, shop: 'slot' },
 ];
 
 // ================= 魚種 =================
@@ -342,6 +350,9 @@ const SPECIALS = [
     rows: ['....kkkk....', '..kkyyyykk..', '.kyyyyyyyyk.', '.kyyBBByyyk.', 'kyyyBByByyyk', 'kyyyBBBByyyk', 'kyyyBByyByyk', 'kyyyBBBByyyk', '.kyyBByyyyk.', '.kyyyyyyyyk.', '..kkyyyykk..', '....kkkk....'],
     pal: { k: '#8a5a00', y: '#f7b500', B: '#fff2b0' } },
 ];
+SPECIALS.push({ id: 'gold', name: '金條', water: [], w: 0, price: 20000, noDex: true, desc: '遊藝場的大獎，魚市場高價收購。',
+  rows: ['...kkkkkkkkkk...', '..kYYYYYYYYYyk..', '.kyYYYYYYYYyyk..', 'kyyyyyyyyyyyyyyk', 'kddddddddddddddk', 'kkkkkkkkkkkkkkkk'],
+  pal: { k: '#7a5200', Y: '#fff2a8', y: '#f2c200', d: '#c99a00' } });
 SPECIALS.forEach(s => { s.special = true; s.rar = 5; s.size = [0, 0]; FISH.push(s); });
 
 // 每種魚喜歡的餌料（用對了機率 ×3，不對 ×0.4）
@@ -445,7 +456,7 @@ let hotCache = { p: -1, list: [] };
 function hotList() {
   const p = Math.floor(Date.now() / HOT_PERIOD);
   if (hotCache.p !== p) {
-    const r = mulberry32(p * 7919 + 13), pool = FISH.filter(f => !f.junk).map(f => f.id), list = [];
+    const r = mulberry32(p * 7919 + 13), pool = FISH.filter(f => !f.junk && !f.noDex).map(f => f.id), list = [];
     for (let k = 0; k < 4; k++) {   // 3 種漲價、1 種跌價
       const id = pool.splice(Math.floor(r() * pool.length), 1)[0];
       list.push({ id, m: k < 3 ? Math.round((1.3 + r() * .7) * 10) / 10 : .6 });
@@ -460,6 +471,7 @@ function priceOf(b) {
   const f = FISH_BY[b.id];
   let m = 1;
   if (!f.special && !f.junk) m = .7 + .9 * clamp((b.size - f.size[0]) / (f.size[1] - f.size[0]), 0, 1);
+  if (b.dish) m *= METHOD_BY[b.dish].mult;   // 料理比生魚值錢
   return Math.max(1, Math.round(f.price * m * hotMult(b.id)));
 }
 
@@ -536,8 +548,9 @@ function genMap() {
   for (let j = PY - 3; j <= PY + 3; j++) setT(ePY + 9, j, T.DOCK);
   // 往南的小徑，過河的地方是木橋
   for (let j = PY; j <= 75; j++) setT(15, j, tileAt(15, j) === T.RIVER ? T.DOCK : T.PATH);
-  // 商店（2×2 格，緊鄰小徑）：出生點左邊釣具行、右邊魚市場
-  for (const [i0, t] of [[7, T.SHOP_T], [12, T.SHOP_M]]) for (let j = PY - 2; j < PY; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
+  // 商店（2×2 格，緊鄰小徑）：上排釣具行、魚市場，下排餐廳、遊藝場
+  for (const [i0, j0, t] of [[7, PY - 2, T.SHOP_T], [12, PY - 2, T.SHOP_M], [7, PY + 1, T.SHOP_R], [12, PY + 1, T.SHOP_G]])
+    for (let j = j0; j < j0 + 2; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
 }
 genMap();
 
@@ -687,7 +700,7 @@ const parts = [];
 let bag = [];
 try { bag = JSON.parse(localStorage.getItem('moyu.bag') || '[]').filter(b => FISH_BY[b.id]); } catch (e) {}
 // 金錢、裝備、圖鑑
-const S = { money: 200, rod: 1, baits: {}, bait: 'bread', dex: {}, lures: {}, boat: 1 };   // 一開始送一艘舢舨
+const S = { money: 200, rod: 1, baits: {}, bait: 'bread', dex: {}, lures: {}, boat: 1, buffs: {}, quests: [] };   // 一開始送一艘舢舨
 let hadSave = false;
 try { const raw = localStorage.getItem('moyu.save'); if (raw) { Object.assign(S, JSON.parse(raw)); hadSave = true; } } catch (e) {}
 if (!BAIT_BY[S.bait] && !(LURE_BY[S.bait] && S.lures[S.bait])) S.bait = 'bread';
@@ -775,7 +788,7 @@ function goHome() {
   if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
   if (state !== 'walk') stopFishing();
   P.x = SPAWN.x; P.y = SPAWN.y; P.dir = 'u'; lastTile = T.PATH;
-  toast('回到小鎮了：左邊釣具行、右邊魚市場');
+  toast('回到小鎮了：上排釣具行、魚市場，下排餐廳、遊藝場');
 }
 $('logo').addEventListener('click', () => setBoss(!boss));
 document.addEventListener('visibilitychange', () => { if (document.hidden && !boss) setBoss(true); });
@@ -895,7 +908,7 @@ function pickFish(water, sz) {
     if (f.mutant) return 0;
     if (f.junk || f.special) return f.w;
     if (ONLY_BAIT[f.id] && S.bait !== ONLY_BAIT[f.id]) return 0;
-    const base = RAR[f.rar].w * SZ_MULT[sz][f.rar];
+    const base = RAR[f.rar].w * SZ_MULT[sz][f.rar] * (f.rar >= 2 && hasBuff('sashimi') ? 1.5 : 1);   // 生魚片：稀有魚多
     // 誘餌只有掠食魚會咬；鐵板特別吸引旗魚
     if (lure) return f.pred && lure.waters.includes(water) ? base * 3 * (lure.id === 'jig' && f.id === 'marlin' ? 2 : 1) : 0;
     return base * (f.bait.includes(S.bait) ? 3 : .4);
@@ -1003,8 +1016,11 @@ function moneyLine() {
 function openBag(tab) {
   if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
   tab = tab || 'bag';
+  const dexList = FISH.filter(f => !f.noDex);
   const d = el('div');
   d.appendChild(moneyLine());
+  const bl = buffList();
+  if (bl.length) d.appendChild(el('div', 'buffs', '目前加成：' + bl.join('、')));
   // 選擇這次下竿要用的餌
   d.appendChild(el('div', 'sect', '使用餌料'));
   const chips = el('div', 'chips');
@@ -1023,7 +1039,7 @@ function openBag(tab) {
   }
   d.appendChild(chips);
   const tabs = el('div', 'tabs2');
-  for (const [k, name] of [['bag', `漁獲 ${bag.length}`], ['dex', `圖鑑 ${Object.keys(S.dex).length}/${FISH.length}`]]) {
+  for (const [k, name] of [['bag', `漁獲 ${bag.length}`], ['dex', `圖鑑 ${dexList.filter(f => S.dex[f.id]).length}/${dexList.length}`]]) {
     const b = el('button', tab === k ? 'on' : '', name); b.onclick = () => openBag(k); tabs.appendChild(b);
   }
   d.appendChild(tabs);
@@ -1031,6 +1047,7 @@ function openBag(tab) {
   if (tab === 'bag') {
     const groups = {};
     for (const b of bag) {
+      if (b.dish) continue;
       const g = groups[b.id] || (groups[b.id] = { n: 0, max: 0, v: 0 });
       g.n++; g.max = Math.max(g.max, b.size); g.v += priceOf(b);
     }
@@ -1038,7 +1055,7 @@ function openBag(tab) {
       const fa = FISH_BY[a], fb = FISH_BY[b];
       return (fb.junk ? -1 : fb.rar) - (fa.junk ? -1 : fa.rar) || FISH.indexOf(fa) - FISH.indexOf(fb);
     });
-    if (!ids.length) { body.className = 'empty'; body.textContent = '還沒有漁獲，去水邊試試吧！'; }
+    if (!ids.length && !bag.length) { body.className = 'empty'; body.textContent = '還沒有漁獲，去水邊試試吧！'; }
     for (const id of ids) {
       const f = FISH_BY[id], g = groups[id];
       const c = el('div', 'card');
@@ -1052,7 +1069,7 @@ function openBag(tab) {
     }
   } else {
     // 圖鑑：沒釣過的顯示剪影和出沒地點
-    for (const f of FISH) {
+    for (const f of dexList) {
       const known = S.dex[f.id];
       const c = el('div', 'card' + (known ? '' : ' unk'));
       c.appendChild(fishCanvas(f.id, 3));
@@ -1065,6 +1082,22 @@ function openBag(tab) {
     }
   }
   d.appendChild(body);
+  // 料理：可以吃（得到加成），要賣請拿去餐廳
+  const dishes = bag.filter(b => b.dish);
+  if (tab === 'bag' && dishes.length) {
+    d.appendChild(el('div', 'sect', '料理（吃了有加成，也可以拿去餐廳賣）'));
+    const g2 = el('div', 'bagGrid');
+    for (const b of dishes) {
+      const c = el('div', 'card');
+      c.appendChild(dishCanvas(b, 3));
+      c.appendChild(el('div', 'n', dishName(b)));
+      c.appendChild(el('div', 's', METHOD_BY[b.dish].buff));
+      const bt = el('button', 'sbtn', '吃'); bt.onclick = () => { eatDish(b); openBag('bag'); };
+      c.appendChild(bt);
+      g2.appendChild(c);
+    }
+    d.appendChild(g2);
+  }
   openDlg('背包', d);
 }
 
@@ -1098,6 +1131,19 @@ const NPC = {
     ],
   },
 };
+NPC.restaurant = {
+  title: '海港餐廳', who: '阿德師', pal: { h: '#ffffff', H: '#d9d9d9', c: '#ffffff', C: '#d9d9d9' },
+  greet: () => [
+    '今天想吃什麼？拿魚來，我幫你料理！',
+    '烤的、炸的、煮湯、生魚片都行，吃了釣魚會更順喔。',
+    '料理過的魚，我收的價錢比魚市場高！',
+    '門口那些客人都在等，幫他們做道菜吧，會給小費的。',
+  ],
+};
+NPC.slot = {
+  title: '遊藝場', who: '阿發', pal: { h: '#7030a0', H: '#4b2070', c: '#ffd966', C: '#c9a227' },
+  greet: () => ['一次 $50，拉下去就對了！', '三個 7 就送金條一條喔！', '今天手氣如何？試試看！', '聽說昨天有人連中兩次魷魚，發光餌拿到手軟。'],
+};
 const NPC_LEGS = ['...pp..pp...', '...pp..pp...', '...pp..pp...', '...bb..bb...'];
 
 function openShop(kind, line) {
@@ -1111,7 +1157,10 @@ function openShop(kind, line) {
   top.appendChild(bub);
   d.appendChild(top);
   d.appendChild(moneyLine());
-  if (kind === 'market') marketBody(d); else { tackleBody(d); tackleBody2(d); }
+  if (kind === 'market') marketBody(d);
+  else if (kind === 'restaurant') restBody(d);
+  else if (kind === 'slot') slotBody(d);
+  else { tackleBody(d); tackleBody2(d); }
   openDlg(npc.title, d);
 }
 
@@ -1135,9 +1184,20 @@ function marketBody(d) {
     t.appendChild(tr);
   }
   d.appendChild(t);
-  d.appendChild(el('div', 'sect', '收購'));
-  if (!bag.length) { d.appendChild(el('div', 'empty', '背包是空的，先去釣幾尾再來。')); return; }
-  const items = bag.map(b => ({ b, p: priceOf(b) })).sort((a, b) => b.p - a.p);
+  d.appendChild(el('div', 'sect', '收購（料理請拿去餐廳賣）'));
+  const raw = bag.filter(b => !b.dish);
+  if (!raw.length) { d.appendChild(el('div', 'empty', '背包裡沒有生鮮可以賣，先去釣幾尾再來。')); return; }
+  const items = raw.map(b => ({ b, p: priceOf(b) })).sort((a, b) => b.p - a.p);
+  // 全部賣出放在清單上面，不用捲到底
+  const row = el('div', 'btnrow');
+  const all = el('button', 'okBtn', `全部賣出 $${fmtN(items.reduce((a, b) => a + b.p, 0))}`);
+  all.onclick = () => sellItems(raw.slice());
+  const common = raw.filter(b => { const f = FISH_BY[b.id]; return f.junk || (!f.special && f.rar <= 1); });
+  const cb = el('button', 'okBtn alt', `只賣普通、少見（${common.length}）`);
+  cb.disabled = !common.length;
+  cb.onclick = () => sellItems(common);
+  row.append(all, cb);
+  d.appendChild(row);
   const t2 = xlTable(['', '品名', '尺寸', '價格', '']);
   for (const it of items) {
     const f = FISH_BY[it.b.id], m = hotMult(f.id), tr = el('tr');
@@ -1151,15 +1211,6 @@ function marketBody(d) {
     t2.appendChild(tr);
   }
   d.appendChild(t2);
-  const row = el('div', 'btnrow');
-  const all = el('button', 'okBtn', `全部賣出 $${fmtN(items.reduce((a, b) => a + b.p, 0))}`);
-  all.onclick = () => sellItems(bag.slice());
-  const common = bag.filter(b => { const f = FISH_BY[b.id]; return f.junk || (!f.special && f.rar <= 1); });
-  const cb = el('button', 'okBtn alt', `只賣普通、少見（${common.length}）`);
-  cb.disabled = !common.length;
-  cb.onclick = () => sellItems(common);
-  row.append(all, cb);
-  d.appendChild(row);
 }
 
 function sellItems(list) {
@@ -1240,6 +1291,232 @@ function tackleBody2(d) {
     tr.appendChild(td); t2.appendChild(tr);
   }
   d.appendChild(t2);
+}
+
+// ================= 料理（海港餐廳） =================
+const METHODS = [
+  { id: 'grill', name: '烤', label: n => '烤' + n, mult: 1.6, buff: '收線速度 +30%' },
+  { id: 'fry', name: '炸', label: n => '酥炸' + n, mult: 1.7, buff: '魚上鉤快 35%' },
+  { id: 'soup', name: '煮湯', label: n => n + '湯', mult: 1.8, buff: '張力上升 -25%' },
+  { id: 'sashimi', name: '生魚片', label: n => n + '生魚片', mult: 2.0, buff: '稀有魚機率 ×1.5' },
+];
+const METHOD_BY = Object.fromEntries(METHODS.map(m => [m.id, m]));
+const canCook = f => !f.junk && !f.special;
+const dishName = b => METHOD_BY[b.dish].label(FISH_BY[b.id].name);
+const cookFee = b => 30 + Math.round(priceOf({ id: b.id, size: b.size }) * .1);
+// 加成：存到期時間，重新整理也還在
+const hasBuff = k => (S.buffs[k] || 0) > Date.now() ? 1 : 0;
+function buffList() {
+  return METHODS.filter(m => hasBuff(m.id)).map(m => {
+    const s = Math.ceil((S.buffs[m.id] - Date.now()) / 1000);
+    return `${m.name}（${m.buff}，剩 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}）`;
+  });
+}
+function eatDish(b) {
+  const f = FISH_BY[b.id], m = METHOD_BY[b.dish];
+  const ms = (2 + Math.min(f.rar, 4)) * 60000;   // 越稀有效果越久：2～6 分鐘
+  S.buffs[m.id] = Math.max(Date.now(), S.buffs[m.id] || 0) + ms;
+  bag.splice(bag.indexOf(b), 1); saveAll();
+  toast(`吃了${dishName(b)}！${m.buff}，${ms / 60000} 分鐘`);
+}
+
+// 料理的像素圖：烤、炸用魚的圖加顏色，湯和生魚片另外畫
+const DISH_CACHE = {};
+function dishImg(fid, m) {
+  const key = fid + m;
+  if (DISH_CACHE[key]) return DISH_CACHE[key];
+  const f = FISH_BY[fid], c = document.createElement('canvas'); c.width = FW; c.height = FH;
+  const x = c.getContext('2d'), px = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
+  const body = f.body || '#999999', belly = f.belly || '#dddddd';
+  if (m === 'soup') {
+    px(9, 0, 1, 3, '#cccccc'); px(13, 1, 1, 3, '#cccccc'); px(17, 0, 1, 3, '#cccccc');   // 熱氣
+    px(4, 5, 20, 1, '#7f7f7f'); px(5, 6, 18, 1, '#f3d9a4');
+    px(8, 6, 3, 1, body); px(15, 6, 3, 1, belly); px(12, 6, 2, 1, '#5aa02c');
+    for (let y = 7; y <= 11; y++) px(5 + (y - 7), y, 18 - 2 * (y - 7), 1, y === 8 ? '#2e75b6' : '#ffffff');
+    px(4, 6, 1, 2, '#7f7f7f'); px(23, 6, 1, 2, '#7f7f7f'); px(10, 12, 8, 1, '#bfbfbf');
+  } else {
+    // 盤子
+    px(3, 11, 22, 1, '#d9d9d9'); px(2, 12, 24, 1, '#ffffff'); px(4, 13, 20, 1, '#a6a6a6'); px(2, 11, 1, 1, '#a6a6a6'); px(25, 11, 1, 1, '#a6a6a6');
+    if (m === 'sashimi') {
+      px(3, 7, 3, 4, '#5aa02c'); px(22, 8, 2, 2, '#8fd14f');   // 紫蘇葉、山葵
+      for (let k = 0; k < 4; k++) { px(7 + k * 4, 6 + (k % 2), 3, 4, belly); px(7 + k * 4, 6 + (k % 2), 3, 1, body); px(7 + k * 4, 10, 3, 1, '#7f7f7f'); }
+    } else {
+      const t = document.createElement('canvas'); t.width = FW; t.height = FH;
+      const tx = t.getContext('2d'); tx.imageSmoothingEnabled = false;
+      tx.drawImage(FISH_IMG[fid], 3, 0, 22, 11);
+      tx.globalCompositeOperation = 'source-atop';
+      tx.fillStyle = m === 'grill' ? 'rgba(110,55,10,.5)' : 'rgba(230,160,40,.6)';
+      tx.fillRect(0, 0, FW, FH);
+      tx.fillStyle = m === 'grill' ? '#3a2210' : '#fff3c0';
+      for (let k = 0; k < FW; k++) for (let y = 0; y < 11; y++) {
+        if (m === 'grill' ? (k + y) % 5 === 0 && k > 8 && k < 22 : hash(k, y) % 5 === 0) tx.fillRect(k, y, 1, 1);
+      }
+      x.drawImage(t, 0, 0);
+    }
+  }
+  return (DISH_CACHE[key] = c);
+}
+function dishCanvas(b, scale) {
+  const c = document.createElement('canvas'); c.width = FW * scale; c.height = FH * scale;
+  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  x.drawImage(dishImg(b.id, b.dish), 0, 0, c.width, c.height);
+  return c;
+}
+
+// 客人委託：只點目前裝備釣得到的魚（不含變種、奇物）
+const CUSTOMERS = [
+  ['上班族小陳', '午休只有一小時，想吃{d}！'], ['健身教練阿肌', '高蛋白！給我來份{d}。'],
+  ['美食部落客', '聽說這裡的{d}很厲害，拍照打卡用！'], ['日本觀光客', '{d}、おいしい？想吃吃看！'],
+  ['老饕阿伯', '少年仔，我只吃新鮮的{d}。'], ['工程師', 'debug 到半夜，需要一份{d}補一下。'],
+  ['網紅小美', '直播要吃{d}，拜託快一點～'], ['林太太', '突然好想吃{d}…'],
+];
+function questFishList() {
+  return FISH.filter(f => canCook(f) && !f.mutant && fishLv(f, 0) <= S.rod && f.water.some(w => w !== 'far' || S.boat >= 2));
+}
+function newQuest() {
+  const list = questFishList(), ws = list.map(f => [6, 4, 2, 1, .5][f.rar] || .5);
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0), f = list[0];
+  for (let k = 0; k < list.length; k++) { r -= ws[k]; if (r <= 0) { f = list[k]; break; } }
+  const m = pick(METHODS), [who, line] = pick(CUSTOMERS);
+  const reward = Math.round(f.price * 1.15 * m.mult * 1.5 + 80);
+  return { who, line, fid: f.id, m: m.id, reward };
+}
+function ensureQuests() {
+  const ok = new Set(questFishList().map(f => f.id));
+  S.quests = (S.quests || []).filter(q => ok.has(q.fid) && METHOD_BY[q.m]);
+  while (S.quests.length < 3) S.quests.push(newQuest());
+}
+
+let cookMethod = 'grill';
+function restBody(d) {
+  ensureQuests(); saveAll();
+  // 客人委託
+  d.appendChild(el('div', 'sect', '客人委託（交付料理可得報酬）'));
+  const tq = xlTable(['客人', '想吃', '報酬', '']);
+  S.quests.forEach((q, k) => {
+    const tr = el('tr'), want = METHOD_BY[q.m].label(FISH_BY[q.fid].name);
+    const td0 = el('td', null, q.who); td0.title = q.line.replace('{d}', want); tr.appendChild(td0);
+    tr.appendChild(el('td', null, want));
+    tr.appendChild(el('td', 'num', '$' + fmtN(q.reward)));
+    const td = el('td'), have = bag.find(b => b.dish === q.m && b.id === q.fid);
+    const bt = el('button', 'sbtn', '交付'); bt.disabled = !have;
+    bt.onclick = () => {
+      bag.splice(bag.indexOf(have), 1); S.money += q.reward; S.quests[k] = newQuest(); saveAll();
+      openShop('restaurant', `${q.who}：「太好吃了！」小費加報酬一共 $${fmtN(q.reward)}，收好！`);
+    };
+    td.appendChild(bt); tr.appendChild(td); tq.appendChild(tr);
+  });
+  d.appendChild(tq);
+  const rf = el('button', 'okBtn alt', '換一批客人');
+  rf.onclick = () => { S.quests = []; ensureQuests(); saveAll(); openShop('restaurant', '新的客人進來了，看看他們想吃什麼。'); };
+  const rr = el('div', 'btnrow'); rr.appendChild(rf); d.appendChild(rr);
+
+  // 代客料理
+  d.appendChild(el('div', 'sect', '代客料理（做好放進背包，可以吃或賣）'));
+  const chips = el('div', 'chips');
+  for (const m of METHODS) {
+    const c = el('button', 'chip' + (cookMethod === m.id ? ' on' : ''), `${m.name}：${m.buff}`);
+    c.onclick = () => { cookMethod = m.id; openShop('restaurant', `${m.name}是吧，交給我！`); };
+    chips.appendChild(c);
+  }
+  d.appendChild(chips);
+  const raw = bag.filter(b => !b.dish && canCook(FISH_BY[b.id]));
+  if (!raw.length) d.appendChild(el('div', 'empty', '背包裡沒有可以料理的魚。'));
+  else {
+    const t = xlTable(['', '魚', '尺寸', '']);
+    for (const b of raw) {
+      const tr = el('tr'), f = FISH_BY[b.id];
+      tr.appendChild(iconCell(b.id)); tr.appendChild(el('td', null, f.name)); tr.appendChild(el('td', 'num', String(b.size)));
+      const td = el('td', 'nowrap'), fee = cookFee(b), bt = el('button', 'sbtn', `料理 $${fee}`);
+      bt.onclick = () => {
+        if (S.money < fee) { openShop('restaurant', '工本費不夠喔，先去賣幾條魚吧。'); return; }
+        S.money -= fee; b.dish = cookMethod; saveAll();
+        openShop('restaurant', `${dishName(b)}好了！熱騰騰的，已經放進你的背包。`);
+      };
+      td.appendChild(bt); tr.appendChild(td); t.appendChild(tr);
+    }
+    d.appendChild(t);
+  }
+
+  // 收購料理
+  const dishes = bag.filter(b => b.dish);
+  d.appendChild(el('div', 'sect', '收購料理（比生魚貴）'));
+  if (!dishes.length) { d.appendChild(el('div', 'empty', '還沒有料理。')); return; }
+  const sum = dishes.reduce((a, b) => a + priceOf(b), 0);
+  const all = el('button', 'okBtn', `全部賣出 $${fmtN(sum)}`);
+  all.onclick = () => { dishes.forEach(b => bag.splice(bag.indexOf(b), 1)); S.money += sum; saveAll(); openShop('restaurant', `${dishes.length} 道料理一共 $${fmtN(sum)}，謝啦！`); };
+  const ar = el('div', 'btnrow'); ar.appendChild(all); d.appendChild(ar);
+  const t2 = xlTable(['', '料理', '價格', '']);
+  for (const b of dishes) {
+    const tr = el('tr'), p = priceOf(b);
+    const td0 = el('td'); td0.appendChild(dishCanvas(b, 2)); tr.appendChild(td0);
+    tr.appendChild(el('td', null, dishName(b))); tr.appendChild(el('td', 'num', '$' + fmtN(p)));
+    const td = el('td'), bt = el('button', 'sbtn', '賣');
+    bt.onclick = () => { bag.splice(bag.indexOf(b), 1); S.money += p; saveAll(); openShop('restaurant', `${dishName(b)}收了，$${fmtN(p)}！`); };
+    td.appendChild(bt); tr.appendChild(td); t2.appendChild(tr);
+  }
+  d.appendChild(t2);
+}
+
+// ================= 拉霸（遊藝場） =================
+const SLOT = [{ s: '7', w: 2 }, { s: '💰', w: 3 }, { s: '🎣', w: 3 }, { s: '🦑', w: 4 }, { s: '🐟', w: 5 }, { s: '🍞', w: 7 }];
+const SLOT_COST = 50;
+let slotBusy = false, slotShow = ['7', '7', '7'];
+function slotPick() {
+  let r = Math.random() * SLOT.reduce((a, b) => a + b.w, 0);
+  for (const x of SLOT) { r -= x.w; if (r <= 0) return x.s; }
+  return SLOT[SLOT.length - 1].s;
+}
+const addBait = (id, n) => { S.baits[id] = (S.baits[id] || 0) + n; };
+// 依結果發獎，回傳老闆說的話
+function slotPrize(r) {
+  if (r[0] === r[1] && r[1] === r[2]) {
+    switch (r[0]) {
+      case '7': bag.push({ id: 'gold', size: 0, t: Date.now() }); return '大獎！！！金條一條，拿去魚市場可以換 $20,000！';
+      case '💰': S.money += 3000; return '三個錢袋！獎金 $3,000！';
+      case '🎣': {
+        const l = LURES.find(x => !S.lures[x.id]);
+        if (l) { S.lures[l.id] = true; return `三支釣竿！送你誘餌「${l.name}」！`; }
+        S.money += 2000; return '三支釣竿！誘餌你都有了，改送 $2,000！';
+      }
+      case '🦑': addBait('squid', 5); addBait('glow', 1); return '三隻魷魚！活魷魚 ×5、發光餌 ×1！';
+      case '🐟': addBait('shrimp', 5); addBait('lug', 10); return '三條魚！活蝦 ×5、沙蠶 ×10！';
+      default: addBait('worm', 10); return '三片麵包！蚯蚓 ×10！';
+    }
+  }
+  if (r[0] === r[1] || r[1] === r[2] || r[0] === r[2]) { addBait('worm', 5); return '兩個一樣，小獎：蚯蚓 ×5！'; }
+  return pick(['沒中…再來一次？', '差一點點！', '手氣會來的啦！']);
+}
+function slotBody(d) {
+  const reels = el('div', 'reels');
+  slotShow.forEach(s => reels.appendChild(el('div', 'reel', s)));
+  d.appendChild(reels);
+  const bt = el('button', 'okBtn', `拉一次 $${SLOT_COST}`); bt.id = 'spinBtn';
+  bt.onclick = spinSlot;
+  const row = el('div', 'btnrow'); row.appendChild(bt); d.appendChild(row);
+  d.appendChild(el('div', 'sect', '獎項'));
+  const t = xlTable(['組合', '獎品']);
+  for (const [k, v] of [['7 7 7', '金條（價值 $20,000）'], ['💰💰💰', '$3,000'], ['🎣🎣🎣', '沒有的誘餌（都有就 $2,000）'], ['🦑🦑🦑', '活魷魚 ×5、發光餌 ×1'], ['🐟🐟🐟', '活蝦 ×5、沙蠶 ×10'], ['🍞🍞🍞', '蚯蚓 ×10'], ['任兩個一樣', '蚯蚓 ×5']]) {
+    const tr = el('tr'); tr.appendChild(el('td', null, k)); tr.appendChild(el('td', null, v)); t.appendChild(tr);
+  }
+  d.appendChild(t);
+}
+function spinSlot() {
+  if (slotBusy) return;
+  if (S.money < SLOT_COST) { openShop('slot', '錢不夠喔，先去釣幾條魚吧。'); return; }
+  S.money -= SLOT_COST; saveAll(); slotBusy = true;
+  const res = [slotPick(), slotPick(), slotPick()], reels = [...document.querySelectorAll('.reel')];
+  $('spinBtn').disabled = true;
+  const t0 = performance.now();
+  const timer = setInterval(() => {
+    const t = performance.now() - t0;
+    reels.forEach((r, k) => { r.textContent = t < 700 + k * 350 ? slotPick() : res[k]; });
+    if (t < 700 + 2 * 350 + 100) return;
+    clearInterval(timer); slotBusy = false; slotShow = res;
+    const line = slotPrize(res); saveAll();
+    // 視窗被關掉的話改用提示
+    if ($('dlg').classList.contains('on') && $('dlgTitle').textContent === NPC.slot.title) openShop('slot', line); else toast(line);
+  }, 70);
 }
 
 function buy(cost, apply, line) {
@@ -1327,7 +1604,7 @@ function update(dt) {
       if (s) { s.target = { x: spot.i + .5, y: spot.j + .5 }; spot.shadow = s; waitT = rand(1, 2.5); }
       else { spot.shadow = null; waitT = rand(CFG.waitMax, CFG.waitMax * 2); }
       // 下雨魚比較快上鉤；誘餌也會縮短等待
-      waitT *= (weather.wait || 1) * (1 - (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0));
+      waitT *= (weather.wait || 1) * (1 - (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0)) * (1 - .35 * hasBuff('fry'));   // 炸魚：上鉤快
     }
   } else if (state === 'wait') {
     waitT -= dt;
@@ -1378,8 +1655,8 @@ function updateFight(dt) {
   if (F.surge > 0) F.surge -= dt;
   const s = F.str, surging = F.surge > 0;
   if (holding) {
-    F.prog += CFG.reelUp * (1 + .15 * (S.rod - 1)) / s * dt * (surging ? 0.3 : 1);   // 好竿子收線比較快
-    F.tens += CFG.tensUp * s * F.tensMul * dt * (surging ? 2.2 : 1);
+    F.prog += CFG.reelUp * (1 + .15 * (S.rod - 1)) * (1 + .3 * hasBuff('grill')) / s * dt * (surging ? 0.3 : 1);   // 好竿子、烤魚收線比較快
+    F.tens += CFG.tensUp * s * F.tensMul * (1 - .25 * hasBuff('soup')) * dt * (surging ? 2.2 : 1);   // 魚湯：張力漲比較慢
   } else {
     F.tens -= CFG.tensDown * dt;
     F.prog -= CFG.slipDown * s * dt * (surging ? 1.8 : 1);
@@ -1447,7 +1724,7 @@ function openMap() {
   drawMap(x, w, h, null);
   d.appendChild(c);
   const lg = document.createElement('div'); lg.className = 'legend';
-  for (const t of [T.SHOP_T, T.SHOP_M, T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP, T.FAR]) {
+  for (const t of [T.SHOP_T, T.SHOP_M, T.SHOP_R, T.SHOP_G, T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP, T.FAR]) {
     const it = document.createElement('div');
     const sw = document.createElement('i'); sw.style.background = TILES[t].color;
     it.appendChild(sw); it.appendChild(document.createTextNode(TILES[t].name + (TILES[t].walk || TILES[t].water ? '' : '（不能走）')));
@@ -1771,14 +2048,15 @@ function updateUI(sel) {
       $('ftip').textContent = F.surge > 0 ? '魚在掙扎！先放開！' : F.tens > .8 ? '張力太高，放開！' : '';
     } else { btn = 'dim'; label = '下竿'; }
   }
-  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length, S.money, weather.name, boss].join('|');
+  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length, S.money, weather.name, boss, METHODS.filter(m => hasBuff(m.id)).length].join('|');
   if (key === lastUI) return;
   lastUI = key;
   $('namebox').textContent = addr(sel[0], sel[1]);
   $('formula').textContent = formula;
   act.className = btn; act.innerHTML = label;
   $('st').textContent = st;
-  $('wx').textContent = boss ? '' : weather.name;   // 天氣放在狀態列，像 Excel 的狀態訊息
+  const nb = METHODS.filter(m => hasBuff(m.id)).length;
+  $('wx').textContent = boss ? '' : weather.name + (nb ? ` ・加成 ${nb}` : '');   // 天氣放在狀態列，像 Excel 的狀態訊息
   $('cnt').textContent = '計數: ' + bag.length;
   $('sum').textContent = '加總: ' + fmtN(S.money);   // 加總＝持有金額
   $('bagCount').textContent = bag.length || '';
