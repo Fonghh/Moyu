@@ -29,7 +29,9 @@
 - 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級很吃力，差 2 級直接斷線。
 - 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。
 - 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
-- 狀態 `state`：walk → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
+- 拋竿：按住蓄力（state `charge`，`castPower()` 0→1→0 擺盪），放開 `doCast()`；落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
+- 回城 `goHome()`：回到兩間店中間（`SPAWN`）。畫面永遠以人物為中心，地圖外畫成樹林。
+- 狀態 `state`：walk → charge → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
 - `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
 - 程式註解使用繁體中文。

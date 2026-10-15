@@ -76,6 +76,14 @@
   #actBtn.fight { background: radial-gradient(circle at 35% 30%, #f07a5a, #c0392b 70%); border-color: #7b1f16; box-shadow: 0 4px 0 #7b1f16, 0 6px 12px rgba(0,0,0,.25); }
   #actBtn.hold { transform: translateY(3px) scale(.96); box-shadow: 0 1px 0 #7b1f16; }
 
+  /* 回城按鈕（在背包上方） */
+  #homeBtn {
+    position: absolute; right: max(38px, calc(env(safe-area-inset-right, 0px) + 22px)); bottom: 196px; width: 48px; height: 48px; border-radius: 10px;
+    background: #fff; border: 2px solid #8a5a2b; box-shadow: 0 3px 0 #8a5a2b; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #homeBtn canvas { width: 30px; height: 30px; image-rendering: pixelated; }
+  #actBtn.charge { background: radial-gradient(circle at 35% 30%, #f8b26a, #ed7d31 70%); border-color: #a8541a; box-shadow: 0 4px 0 #a8541a, 0 6px 12px rgba(0,0,0,.25); }
   /* 背包按鈕（在拉魚按鈕上方） */
   #bagBtn {
     position: absolute; right: 34px; bottom: 128px; width: 56px; height: 56px; border-radius: 10px;
@@ -185,7 +193,7 @@
   .card.unk canvas { filter: brightness(0) opacity(.2); }
 
   /* 隱藏模式：只剩普通的 Excel */
-  body.boss #actBtn, body.boss #bagBtn, body.boss #miniBox, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
+  body.boss #actBtn, body.boss #bagBtn, body.boss #homeBtn, body.boss #miniBox, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
 </style>
 </head>
 <body>
@@ -210,13 +218,14 @@
     <div class="tip" id="ftip"></div>
   </div>
   <div id="miniBox" title="區域分布圖"><div class="mt">區域分布</div><canvas id="mini"></canvas></div>
+  <button id="homeBtn" title="回城"><canvas id="homeIcon" width="12" height="12"></canvas></button>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
   <button id="actBtn">下竿</button>
   <div class="note" id="hint">
     拖曳畫面移動人物<br>（電腦：方向鍵／WASD）<br>
-    走到藍色水邊，按右下「下竿」<br>
+    走到水邊，<b>按住</b>「下竿」蓄力，放開拋竿<br>
     按鈕閃爍時快按，按住收線！<br>
-    橘色格是釣具行、紫色格是魚市場
+    右邊的房子按鈕可以回城（兩間店就在旁邊）
   </div>
   <div class="note" id="toast"></div>
 </div>
@@ -234,8 +243,10 @@ const CFG = {
   mapW: 44, mapH: 80,    // 地圖格數
   hdW: 34, hdH: 20,      // 列號寬、欄名高
   speed: 150,            // 移動速度（px/秒）
-  miniW: 96,             // 小地圖寬度（px）
-  castTime: 0.45,        // 拋竿動畫秒數
+  miniW: 64,             // 小地圖寬度（px）
+  castTime: 0.45,        // 拋竿動畫秒數（力道越大飛越久）
+  chargeTime: 0.8,       // 蓄力從 0 到滿的秒數（之後會往回掉，來回擺盪）
+  castMin: 40, castMax: 300,   // 拋竿距離（px）：最小力道～最大力道
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
   biteWin: 1.3,          // 上鉤後可以拉竿的秒數
   landTime: 1.3, landFly: .9,   // 釣到後的動畫秒數、魚在空中飛的秒數
@@ -466,8 +477,8 @@ function genMap() {
   for (let j = PY - 3; j <= PY + 3; j++) setT(ePY + 9, j, T.DOCK);
   // 往南的小徑，過河的地方是木橋
   for (let j = PY; j <= 75; j++) setT(15, j, tileAt(15, j) === T.RIVER ? T.DOCK : T.PATH);
-  // 商店（2×2 格，緊鄰小徑）：出生點旁的釣具行、海邊的魚市場
-  for (const [i0, t] of [[7, T.SHOP_T], [ePY - 4, T.SHOP_M]]) for (let j = PY - 2; j < PY; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
+  // 商店（2×2 格，緊鄰小徑）：出生點左邊釣具行、右邊魚市場
+  for (const [i0, t] of [[7, T.SHOP_T], [12, T.SHOP_M]]) for (let j = PY - 2; j < PY; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
 }
 genMap();
 
@@ -589,6 +600,10 @@ const BAG_ROWS = [
   '..kkkkkkkk..',
   '............',
 ];
+$('homeIcon').getContext('2d').drawImage(strSprite([
+  '.....kk.....', '....kRRk....', '...kRRRRk...', '..kRRRRRRk..', '.kRRRRRRRRk.', 'kkkkkkkkkkkk',
+  '.kwwwwwwwwk.', '.kwbbwwddwk.', '.kwbbwwddwk.', '.kwwwwwddwk.', '.kwwwwwddwk.', '.kkkkkkkkkk.',
+], { k: '#3b2414', R: '#c0392b', w: '#f4e4c1', b: '#5b9bd5', d: '#8a5a2b' }), 0, 0);
 $('bagIcon').getContext('2d').drawImage(strSprite(BAG_ROWS, { k: '#3b2414', b: '#a0622d', B: '#c8813f', y: '#ffd34d' }), 0, 0);
 
 // 人物（12×16 像素）：上半身 12 列，腿另外畫才能做走路動畫
@@ -604,7 +619,7 @@ const LEGS = { d: [3, 7], u: [3, 7], r: [4, 6], l: [4, 6] };
 const P = { x: SPAWN.x, y: SPAWN.y, dir: 'd', moving: false, walkT: 0 };
 let state = 'walk';     // walk / cast / wait / bite / fight / caught
 let spot = null;        // 釣點 {i, j, t, dir}
-let castT = 0, waitT = 0, biteT = 0, F = null, holding = false;
+let castT = 0, castDur = 0, chargeT = 0, waitT = 0, biteT = 0, F = null, holding = false;
 let catchShow = null;   // 剛釣到的魚，舉在頭上
 let L = null;           // 釣到後的動畫資料
 let boss = false, gameT = 0;
@@ -666,7 +681,7 @@ cv.addEventListener('pointercancel', joyEnd);
 // 下竿／拉竿按鈕：按下觸發，按住收線
 const act = $('actBtn');
 act.addEventListener('pointerdown', e => { e.preventDefault(); act.setPointerCapture(e.pointerId); press(); });
-const release = () => { holding = false; };
+const release = () => { holding = false; if (state === 'charge') doCast(); };
 act.addEventListener('pointerup', release);
 act.addEventListener('pointercancel', release);
 act.addEventListener('contextmenu', e => e.preventDefault());
@@ -682,6 +697,7 @@ document.addEventListener('keydown', e => {
   if (k === ' ' || k === 'j' || k === 'enter') { if (!e.repeat) press(); e.preventDefault(); return; }
   if (k === 'i' || k === 'e') { openBag(); return; }
   if (k === 'm') { openMap(); return; }
+  if (k === 'h') { goHome(); return; }
   keys.add(k);
   if (k.startsWith('arrow')) e.preventDefault();
 });
@@ -693,12 +709,20 @@ document.addEventListener('keyup', e => {
 window.addEventListener('blur', () => { keys.clear(); release(); });
 
 $('bagBtn').addEventListener('click', openBag);
+$('homeBtn').addEventListener('click', goHome);
+// 回城：直接回到兩間店中間
+function goHome() {
+  if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
+  if (state !== 'walk') stopFishing();
+  P.x = SPAWN.x; P.y = SPAWN.y; P.dir = 'u'; lastTile = T.PATH;
+  toast('回到小鎮了：左邊釣具行、右邊魚市場');
+}
 $('logo').addEventListener('click', () => setBoss(!boss));
 document.addEventListener('visibilitychange', () => { if (document.hidden && !boss) setBoss(true); });
 
 // ================= 水裡的魚影 =================
 // 影子越大，上鉤的魚越大尾、越稀有
-const SHADOW_N = { pond: 7, river: 10, sea: 14, deep: 16 };
+const SHADOW_N = { pond: 16, river: 26, sea: 36, deep: 40 };
 const SHADOW_P = { pond: [.5, .4], river: [.45, .4], sea: [.35, .45], deep: [.2, .45] };   // 小、中的機率，其餘是大
 const SHADOW_R = [[6, 2.2], [10, 3.6], [16, 5.5]];   // 小／中／大魚影的半徑（px）
 const waterCells = { pond: [], river: [], sea: [], deep: [] };
@@ -738,22 +762,38 @@ function nearestShadow(cx, cy, maxD) {
 function removeShadow(s) { const i = shadows.indexOf(s); if (i >= 0) { shadows.splice(i, 1); spawnShadow(s.w); } }
 
 // ================= 釣魚流程 =================
-function spotFrom(dir) {
+// 蓄力：0→1→0 來回擺盪，放開那一刻的值就是力道
+function castPower() { const t = chargeT / CFG.chargeTime; return 1 - Math.abs((t % 2) - 1); }
+// 沿著面向拋出去，落點不是水面就往回找最近的水面格
+function aimSpot(power, dir = P.dir) {
   const [dx, dy] = DIRS[dir];
-  for (let k = 1; k <= 2; k++) {
-    const i = Math.floor(P.x) + dx * k, j = Math.floor(P.y) + dy * k, t = tileAt(i, j);
+  const R = CFG.castMin + power * (CFG.castMax - CFG.castMin);
+  for (let r = R; r >= CFG.castMin * .6; r -= 6) {
+    const i = Math.floor(P.x + dx * r / CFG.cellW), j = Math.floor(P.y + dy * r / CFG.cellH), t = tileAt(i, j);
     if (TILES[t].water) return { i, j, t, dir };
-    if (!TILES[t].walk) return null;
   }
   return null;
 }
-function findSpot() {
+// 哪個方向拋得到水（優先面向的方向）
+function findCastDir() {
   if (TILES[tileAt(Math.floor(P.x), Math.floor(P.y))].water) return null;
-  for (const d of [P.dir, 'd', 'r', 'l', 'u']) { const s = spotFrom(d); if (s) return s; }
+  for (const d of [P.dir, 'd', 'r', 'l', 'u']) if (aimSpot(1, d)) return d;
   return null;
 }
 
 // 收竿：放掉被吸引過來的魚影
+function doCast() {
+  const pw = castPower(), s = aimSpot(pw);
+  if (!s) { state = 'walk'; toast('沒拋進水裡，力道再大一點'); return; }
+  // 每次下竿用掉一個餌（麵包屑免費）
+  if (S.bait !== 'bread') {
+    if ((S.baits[S.bait] || 0) <= 0) { toast(`${BAIT_BY[S.bait].name}用完了，改用麵包屑`); S.bait = 'bread'; }
+    else S.baits[S.bait]--;
+    saveAll();
+  }
+  spot = s; state = 'cast'; castT = 0; castDur = CFG.castTime * (.6 + pw);
+}
+
 function stopFishing(msg) {
   if (spot && spot.shadow) { spot.shadow.target = null; spot.shadow = null; }
   state = 'walk';
@@ -763,15 +803,9 @@ function stopFishing(msg) {
 function press() {
   if (boss) return;
   if (state === 'walk') {
-    const s = findSpot();
-    if (!s) { toast('要站在水邊才能下竿喔'); return; }
-    // 每次下竿用掉一個餌（麵包屑免費）
-    if (S.bait !== 'bread') {
-      if ((S.baits[S.bait] || 0) <= 0) { toast(`${BAIT_BY[S.bait].name}用完了，改用麵包屑`); S.bait = 'bread'; }
-      else S.baits[S.bait]--;
-      saveAll();
-    }
-    spot = s; P.dir = s.dir; state = 'cast'; castT = 0;
+    const d = findCastDir();
+    if (!d) { toast('附近沒有水，走近一點再下竿'); return; }
+    P.dir = d; state = 'charge'; chargeT = 0;   // 按住蓄力，放開才拋
     hideHint();
   } else if (state === 'cast' || state === 'wait') {
     stopFishing('收竿了');
@@ -1108,6 +1142,7 @@ function setBoss(on) {
   $('tab1').classList.toggle('on', !on);
   $('tab2').classList.toggle('on', on);
   joy.id = null; keys.clear(); holding = false;
+  if (state === 'charge') state = 'walk';   // 蓄力到一半被切走就取消
 }
 
 // ================= 更新 =================
@@ -1131,6 +1166,10 @@ function update(dt) {
     const here = tileAt(Math.floor(P.x), Math.floor(P.y));
     if (TILES[here].shop && !TILES[lastTile].shop) { keys.clear(); joy.id = null; openShop(TILES[here].shop); }
     lastTile = here;
+  } else if (state === 'charge') {
+    // 蓄力中可以用搖桿／方向鍵轉向瞄準
+    P.moving = false; chargeT += dt;
+    if (moving) P.dir = Math.abs(v.x) > Math.abs(v.y) ? (v.x > 0 ? 'r' : 'l') : (v.y > 0 ? 'd' : 'u');
   } else {
     P.moving = false;
     if ((state === 'cast' || state === 'wait') && moving) stopFishing();
@@ -1138,11 +1177,11 @@ function update(dt) {
 
   if (state === 'cast') {
     castT += dt;
-    if (castT >= CFG.castTime) {
+    if (castT >= castDur) {
       state = 'wait';
       splash(spot.i + .5, spot.j + .5, 4);
       // 附近有魚影就會游過來；沒有的話要等比較久
-      const s = nearestShadow(spot.i + .5, spot.j + .5, 4);
+      const s = nearestShadow(spot.i + .5, spot.j + .5, 5);
       if (s) { s.target = { x: spot.i + .5, y: spot.j + .5 }; spot.shadow = s; waitT = rand(1, 2.5); }
       else { spot.shadow = null; waitT = rand(CFG.waitMax, CFG.waitMax * 2); }
     }
@@ -1280,11 +1319,12 @@ function render() {
   ctx.imageSmoothingEnabled = false;
   const gw = VW - CFG.hdW, gh = VH - CFG.hdH;
   // 隱藏模式固定顯示左上角的報表
-  const camX = boss ? 0 : W * CW <= gw ? -(gw - W * CW) / 2 : clamp(P.x * CW - gw / 2, 0, W * CW - gw);
-  const camY = boss ? 0 : H * CH <= gh ? -(gh - H * CH) / 2 : clamp(P.y * CH - gh / 2, 0, H * CH - gh);
+  // 人物永遠在畫面中央；隱藏模式固定顯示左上角的報表
+  const camX = boss ? 0 : P.x * CW - gw / 2;
+  const camY = boss ? 0 : P.y * CH - gh / 2;
   const ox = CFG.hdW - camX, oy = CFG.hdH - camY;   // 地圖格 (0,0) 在螢幕上的位置
-  const i0 = Math.max(0, Math.floor(camX / CW)), i1 = Math.min(W - 1, Math.floor((camX + gw) / CW));
-  const j0 = Math.max(0, Math.floor(camY / CH)), j1 = Math.min(H - 1, Math.floor((camY + gh) / CH));
+  const i0 = Math.floor(camX / CW), i1 = Math.floor((camX + gw) / CW);
+  const j0 = Math.floor(camY / CH), j1 = Math.floor((camY + gh) / CH);
 
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, VW, VH);
   ctx.save();
@@ -1300,7 +1340,8 @@ function render() {
 
   let sel;
   if (!boss) {
-    const sp = state === 'walk' ? findSpot() : spot;
+    // 選取框：走路時在人物腳下，蓄力時跟著瞄準的落點
+    const sp = state === 'walk' ? null : state === 'charge' ? aimSpot(castPower()) : spot;
     drawWorld(ox, oy);
     sel = sp ? [sp.i, sp.j] : [Math.floor(P.x), Math.floor(P.y)];
   } else {
@@ -1320,6 +1361,9 @@ function render() {
 
 function drawCell(i, j, x, y) {
   const CW = CFG.cellW, CH = CFG.cellH, t = tileAt(i, j), head = j === 0;
+  if (i < 0 || j < 0 || i >= W || j >= H) {   // 地圖外：當成樹林，不放文字
+    ctx.fillStyle = boss ? '#fff' : TILES[T.FOREST].color; ctx.fillRect(x, y, CW, CH); return;
+  }
   let fg = '#222';
   if (boss) ctx.fillStyle = head ? '#ddebf7' : '#fff';
   else { ctx.fillStyle = TILES[t].color; if (DARK_FILL.has(t)) fg = '#fff'; }
@@ -1381,6 +1425,7 @@ function drawWorld(ox, oy) {
       const dx = bob.x - hand.x, dy = bob.y - hand.y, l = Math.hypot(dx, dy) || 1;
       tx = hand.x + dx / l * 15 * u; ty = hand.y + dy / l * 15 * u - 10 * u;
     } else if (state === 'land') { tx = hand.x - ddx * 4 * u + 3 * u; ty = hand.y - 22 * u; }   // 竿子甩到頭上
+    else if (state === 'charge') { const pw = castPower(); tx = hand.x - ddx * (4 + 8 * pw) * u; ty = hand.y - (14 + 6 * pw) * u - ddy * 6 * pw * u; }   // 蓄力時往後拉
     else { tx = hand.x + 4 * u; ty = hand.y - 16 * u; }
     let bend = 0;
     if (state === 'fight') { bend = holding ? 1 : .5; tx += (bob.x - tx) * .18 * bend; ty += (bob.y - ty) * .3 * bend; }
@@ -1391,9 +1436,9 @@ function drawWorld(ox, oy) {
     tip = { x: tx, y: ty };
     if (bob) {
       let bx = bob.x, by = bob.y;
-      if (state === 'cast') {   // 拋出去的弧線
-        const k = clamp(castT / CFG.castTime, 0, 1);
-        bx = tx + (bob.x - tx) * k; by = ty + (bob.y - ty) * k - Math.sin(k * Math.PI) * CH * 2;
+      if (state === 'cast') {   // 拋出去的弧線，越遠飛越高
+        const k = clamp(castT / castDur, 0, 1);
+        bx = tx + (bob.x - tx) * k; by = ty + (bob.y - ty) * k - Math.sin(k * Math.PI) * CH * (1.5 + castDur * 3);
       }
       ctx.strokeStyle = 'rgba(40,40,40,.7)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(tx, ty);
@@ -1414,6 +1459,21 @@ function drawWorld(ox, oy) {
     }
   }
 
+  // 蓄力：瞄準點和力道條
+  if (state === 'charge') {
+    const pw = castPower(), a = aimSpot(pw);
+    if (a) {
+      const ax = ox + (a.i + .5) * CW, ay = oy + (a.j + .5) * CH;
+      ctx.strokeStyle = '#c00000'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.ellipse(ax, ay, 16, 8, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(ax - 5, ay); ctx.lineTo(ax + 5, ay); ctx.moveTo(ax, ay - 4); ctx.lineTo(ax, ay + 4); ctx.stroke();
+    }
+    const gx = bx0 + 10 * u, gy = by0 - 34, gh2 = 30;
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(gx - 1, gy - 1, 8, gh2 + 2);
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(gx - 1.5, gy - 1.5, 9, gh2 + 3);
+    ctx.fillStyle = pw > .85 ? '#c00000' : pw > .5 ? '#ed7d31' : '#70ad47';
+    ctx.fillRect(gx, gy + gh2 * (1 - pw), 6, gh2 * pw);
+  }
   // 拉竿後魚飛到半空中甩尾，再落到手上
   if (state === 'land' && L.t < CFG.landFly && tip) {
     const k = L.t / CFG.landFly;
@@ -1483,7 +1543,7 @@ function drawHeaders(ox, oy, i0, i1, j0, j1, sel) {
     const x = ox + i * CW;
     if (i === sel[0]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(x, 0, CW, CFG.hdH); ctx.fillStyle = '#217346'; ctx.fillRect(x, CFG.hdH - 2, CW, 2); }
     ctx.fillStyle = i === sel[0] ? '#217346' : '#555';
-    ctx.fillText(colName(i), x + CW / 2, CFG.hdH / 2 + 1);
+    if (i >= 0) ctx.fillText(colName(i), x + CW / 2, CFG.hdH / 2 + 1);
     ctx.fillStyle = '#d4d4d4'; ctx.fillRect(x + CW - 1, 0, 1, CFG.hdH);
   }
   ctx.restore();
@@ -1492,7 +1552,7 @@ function drawHeaders(ox, oy, i0, i1, j0, j1, sel) {
     const y = oy + j * CH;
     if (j === sel[1]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(0, y, CFG.hdW, CH); ctx.fillStyle = '#217346'; ctx.fillRect(CFG.hdW - 2, y, 2, CH); }
     ctx.fillStyle = j === sel[1] ? '#217346' : '#555';
-    ctx.fillText(j + 1, CFG.hdW / 2, y + CH / 2 + .5);
+    if (j >= 0) ctx.fillText(j + 1, CFG.hdW / 2, y + CH / 2 + .5);
     ctx.fillStyle = '#d4d4d4'; ctx.fillRect(0, y + CH - 1, CFG.hdW, 1);
   }
   ctx.restore();
@@ -1512,7 +1572,8 @@ function updateUI(sel) {
   const formula = cellLabel(sel[0], sel[1]);
   let btn = '', label = '', st = '就緒';
   if (!boss) {
-    if (state === 'walk') { btn = findSpot() ? '' : 'dim'; label = '下竿<small>' + (S.bait === 'bread' ? '麵包屑' : BAIT_BY[S.bait].name + '×' + (S.baits[S.bait] || 0)) + '</small>'; }
+    if (state === 'charge') { btn = 'charge'; label = '放開拋竿<small>力道 ' + Math.round(castPower() * 100) + '%</small>'; }
+    else if (state === 'walk') { btn = findCastDir() ? '' : 'dim'; label = '下竿<small>' + (S.bait === 'bread' ? '麵包屑' : BAIT_BY[S.bait].name + '×' + (S.baits[S.bait] || 0)) + '</small>'; }
     else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; st = '計算中…'; }
     else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; }
     else if (state === 'fight') {
