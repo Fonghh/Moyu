@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#217346">
+<title>Q3_銷售報表_final_v3.xlsx</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    font-size: 13px; color: #222; background: #fff;
+    display: flex; flex-direction: column;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  /* 標題列 */
+  #titlebar {
+    background: #217346; color: #fff; height: 36px; flex: none;
+    display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  }
+  #titlebar .logo {
+    width: 22px; height: 22px; background: #fff; color: #217346; border-radius: 3px;
+    font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  #titlebar .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #titlebar button {
+    background: none; border: 0; color: #fff; font-size: 16px; width: 32px; height: 30px;
+    border-radius: 3px; cursor: pointer;
+  }
+  #titlebar button:active { background: rgba(255,255,255,.2); }
+  /* 功能區 */
+  #ribbon {
+    flex: none; background: #f3f3f3; border-bottom: 1px solid #d4d4d4;
+    display: flex; gap: 2px; padding: 0 6px; height: 30px; align-items: flex-end;
+    overflow: hidden; white-space: nowrap;
+  }
+  #ribbon span { padding: 5px 10px; color: #444; }
+  #ribbon span.on { background: #fff; border: 1px solid #d4d4d4; border-bottom: 0; color: #217346; font-weight: 600; }
+  /* 公式列 */
+  #fbar {
+    flex: none; display: flex; align-items: stretch; height: 26px; border-bottom: 1px solid #d4d4d4;
+  }
+  #namebox {
+    width: 64px; border-right: 1px solid #d4d4d4; padding: 4px 6px; font-size: 12px;
+  }
+  #fx { width: 30px; color: #888; font-style: italic; text-align: center; padding-top: 4px; border-right: 1px solid #d4d4d4; }
+  #formula { flex: 1; padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  /* 表格 */
+  #sheet { flex: 1; position: relative; overflow: hidden; touch-action: none; background: #fff; }
+  #grid { display: grid; position: absolute; left: 0; top: 0; }
+  .c {
+    border-right: 1px solid #e1e1e1; border-bottom: 1px solid #e1e1e1;
+    padding: 0 4px; font-size: 12px; line-height: 21px; height: 22px;
+    white-space: nowrap; overflow: hidden; text-align: right;
+  }
+  .c.t { text-align: left; }
+  .hd { background: #f3f3f3; color: #555; text-align: center; border-color: #d4d4d4; padding: 0; }
+  .hd.on { background: #d2e8da; color: #217346; font-weight: 600; }
+  .c.th { font-weight: 600; background: #ddebf7; text-align: center; }
+  /* 偽裝成「設定格式化的條件」的遊戲顏色 */
+  .c.s { background: #c6efce; color: #006100; }
+  .c.h { background: #a9dfb5; color: #006100; font-weight: 600; }
+  .c.f { background: #ffeb9c; color: #9c5700; font-weight: 600; }
+  .c.x { background: #ffc7ce; color: #9c0006; }
+  body.boss .c.s, body.boss .c.h, body.boss .c.f, body.boss .c.x { background: #fff; color: #222; font-weight: 400; }
+  /* 選取框（跟著蛇頭） */
+  #sel {
+    position: absolute; border: 2px solid #217346; pointer-events: none;
+    transition: left .08s linear, top .08s linear;
+  }
+  #sel::after {
+    content: ""; position: absolute; right: -4px; bottom: -4px; width: 6px; height: 6px;
+    background: #217346; border: 1px solid #fff;
+  }
+  /* 註解（說明）框 */
+  #note {
+    position: absolute; right: 10px; top: 40px; max-width: 230px; background: #ffffe1;
+    border: 1px solid #a0a0a0; box-shadow: 2px 2px 4px rgba(0,0,0,.2);
+    padding: 6px 8px; font-size: 12px; line-height: 1.6; color: #333;
+  }
+  #note b { display: block; }
+  body.boss #note { display: none; }
+  /* 工作表分頁與狀態列 */
+  #tabs {
+    flex: none; height: 28px; background: #f3f3f3; border-top: 1px solid #d4d4d4;
+    display: flex; align-items: stretch; padding-left: 8px; gap: 2px;
+  }
+  #tabs span { padding: 5px 12px; color: #444; cursor: pointer; }
+  #tabs span.on { background: #fff; color: #217346; font-weight: 600; border-bottom: 2px solid #217346; }
+  #status {
+    flex: none; height: 24px; background: #217346; color: #fff; font-size: 12px;
+    display: flex; align-items: center; gap: 16px; padding: 0 10px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #status .sp { flex: 1; }
+  @media (max-width: 480px) { #ribbon span:nth-child(n+5) { display: none; } }
+</style>
+</head>
+<body>
+<div id="titlebar">
+  <div class="logo">X</div>
+  <div class="name">Q3_銷售報表_final_v3.xlsx - 已儲存</div>
+  <button id="saveBtn" title="儲存">💾</button>
+</div>
+<div id="ribbon">
+  <span>檔案</span><span class="on">常用</span><span>插入</span><span>公式</span><span>資料</span><span>校閱</span><span>檢視</span>
+</div>
+<div id="fbar">
+  <div id="namebox">A1</div>
+  <div id="fx">fx</div>
+  <div id="formula">地區</div>
+</div>
+<div id="sheet">
+  <div id="grid"></div>
+  <div id="sel"></div>
+  <div id="note">
+    <b>王經理：</b>
+    綠色區塊依各區業績自動標示。<br>
+    滑動或方向鍵 → 移動<br>
+    點黃色儲存格 → 吃掉它<br>
+    💾 或 Esc → 老闆鍵<br>
+    點表格開始
+  </div>
+</div>
+<div id="tabs"><span class="on" id="tab1">Q3彙總</span><span id="tab2">明細</span><span>+</span></div>
+<div id="status">
+  <span id="st">就緒</span><span class="sp"></span>
+  <span id="avg">平均值: 0</span><span id="sum">加總: 0</span>
+</div>
+
+<script>
+// ===== 參數 =====
+const CFG = {
+  maxCols: 9,       // 最多資料欄數（窄螢幕會自動減少）
+  minColW: 58,      // 每欄最小寬度（px）
+  cellH: 22,        // 儲存格高度（px）
+  rowHdW: 34,       // 列號寬度
+  startLen: 3,      // 蛇的起始長度
+  tick0: 190,       // 起始每步毫秒數
+  tickMin: 75,      // 最快每步毫秒數
+  tickStep: 6,      // 每吃一個加快多少毫秒
+  swipeMin: 18,     // 滑動判定距離（px）
+};
+
+const $ = id => document.getElementById(id);
+const grid = $('grid'), sheet = $('sheet'), sel = $('sel');
+const REGIONS = ['台北','新北','桃園','新竹','台中','彰化','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','基隆','苗栗','南投','雲林','澎湖','金門','馬祖'];
+const MONTHS = ['地區','7月','8月','9月','Q3合計','目標','達成率','成長率','備註'];
+const colName = i => String.fromCharCode(65 + i);
+const fmt = n => n.toLocaleString('en-US');
+
+let COLS, ROWS, colW, cells = [], data = [], hdCols = [], hdRows = [];
+let snake, dir, dirQ, food, score, tick, timer, state = 'idle', boss = false;
+let best = 0;
+try { best = +localStorage.getItem('moyu.best') || 0; } catch (e) {}
+
+// ===== 建立表格 =====
+function build() {
+  const w = sheet.clientWidth, h = sheet.clientHeight;
+  // 依螢幕寬度決定欄數，讓整個遊戲區都看得到
+  COLS = Math.max(5, Math.min(CFG.maxCols, Math.floor((w - CFG.rowHdW) / CFG.minColW)));
+  colW = Math.floor((w - CFG.rowHdW) / COLS);
+  ROWS = Math.max(8, Math.floor(h / CFG.cellH) - 2);   // 扣掉欄名列與標題列
+  grid.style.gridTemplateColumns = `${CFG.rowHdW}px repeat(${COLS}, ${colW}px)`;
+  grid.innerHTML = '';
+  cells = []; data = []; hdCols = []; hdRows = [];
+  const add = (cls, txt) => { const d = document.createElement('div'); d.className = 'c ' + cls; d.textContent = txt; grid.appendChild(d); return d; };
+  add('hd', '');
+  for (let x = 0; x < COLS; x++) hdCols.push(add('hd', colName(x)));
+  add('hd', '1');
+  for (let x = 0; x < COLS; x++) add('th', MONTHS[x] || '');
+  for (let y = 0; y < ROWS; y++) {
+    hdRows.push(add('hd', y + 2));
+    for (let x = 0; x < COLS; x++) {
+      const v = fakeVal(x, y);
+      data.push(v);
+      cells.push(add(x === 0 || x === 8 ? 't' : '', v));
+    }
+  }
+}
+
+// 產生看起來像真的報表數字
+function fakeVal(x, y) {
+  const r = Math.random();
+  switch (x) {
+    case 0: return REGIONS[y % REGIONS.length] + (y >= REGIONS.length ? '二區' : '');
+    case 1: case 2: case 3: return fmt(Math.round(800 + r * 9000));
+    case 4: return fmt(Math.round(3000 + r * 25000));
+    case 5: return fmt(Math.round(5000 + r * 20000));
+    case 6: return (60 + r * 60).toFixed(1) + '%';
+    case 7: return (r * 30 - 10).toFixed(1) + '%';
+    default: return ['', '', '待確認', '已核', '見附件', ''][Math.floor(r * 6)];
+  }
+}
+
+const idx = (x, y) => y * COLS + x;
+const addr = (x, y) => colName(x) + (y + 2);
+
+// ===== 遊戲 =====
+function reset() {
+  clearTimeout(timer);
+  const sy = Math.floor(ROWS / 2);
+  snake = [];
+  for (let i = 0; i < CFG.startLen; i++) snake.push({ x: 2 - i + 1, y: sy });
+  dir = { x: 1, y: 0 }; dirQ = [];
+  score = 0; tick = CFG.tick0;
+  placeFood();
+  state = 'idle';
+  draw();
+  setStatus('就緒');
+}
+
+function placeFood() {
+  const occ = new Set(snake.map(p => idx(p.x, p.y)));
+  let f;
+  do { f = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
+  while (occ.has(idx(f.x, f.y)));
+  food = f;
+}
+
+function start() {
+  if (state === 'over') reset();
+  if (state === 'run') return;
+  $('note').style.display = 'none';
+  state = 'run';
+  setStatus('編輯');
+  loop();
+}
+
+function loop() {
+  if (state !== 'run' || boss) return;
+  step();
+  if (state === 'run') timer = setTimeout(loop, tick);
+}
+
+function step() {
+  if (dirQ.length) dir = dirQ.shift();
+  const head = snake[0];
+  const nx = head.x + dir.x, ny = head.y + dir.y;
+  // 撞牆或撞到自己就結束（尾巴這一步會移開，所以不算）
+  const hitSelf = snake.slice(0, -1).some(p => p.x === nx && p.y === ny);
+  if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS || hitSelf) return gameOver();
+  snake.unshift({ x: nx, y: ny });
+  if (nx === food.x && ny === food.y) {
+    score++;
+    tick = Math.max(CFG.tickMin, tick - CFG.tickStep);
+    if (snake.length >= COLS * ROWS) return gameOver(true);
+    placeFood();
+  } else {
+    snake.pop();
+  }
+  draw();
+}
+
+function gameOver(win) {
+  state = 'over';
+  clearTimeout(timer);
+  if (score > best) { best = score; try { localStorage.setItem('moyu.best', best); } catch (e) {} }
+  draw(true);
+  $('formula').textContent = win
+    ? `=全部填滿(${score})  完美！點表格重來`
+    : `#REF! 參照錯誤（${score} 筆，最高 ${best}）— 點表格重來`;
+  setStatus('錯誤');
+}
+
+// ===== 畫面 =====
+function draw(dead) {
+  const cls = new Array(COLS * ROWS).fill('');
+  snake.forEach((p, i) => cls[idx(p.x, p.y)] = dead ? 'x' : (i === 0 ? 'h' : 's'));
+  if (!dead) cls[idx(food.x, food.y)] = 'f';
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i];
+    for (const k of ['s', 'h', 'f', 'x']) c.classList.toggle(k, cls[i] === k);
+  }
+  const h = snake[0];
+  sel.style.left = (CFG.rowHdW + h.x * colW - 1) + 'px';
+  sel.style.top = ((h.y + 2) * CFG.cellH - 1) + 'px';
+  sel.style.width = (colW + 1) + 'px';
+  sel.style.height = (CFG.cellH + 1) + 'px';
+  hdCols.forEach((d, i) => d.classList.toggle('on', i === h.x));
+  hdRows.forEach((d, i) => d.classList.toggle('on', i === h.y));
+  $('namebox').textContent = addr(h.x, h.y);
+  if (state !== 'over') $('formula').textContent = h.x === 0 ? data[idx(h.x, h.y)] : `=VLOOKUP(${addr(0, h.y)},明細!A:${colName(h.x)},${h.x + 1},FALSE)`;
+  // 狀態列：加總其實是分數
+  $('sum').textContent = '加總: ' + fmt(score);
+  $('avg').textContent = '最高: ' + fmt(Math.max(best, score));
+}
+
+function setStatus(t) { $('st').textContent = t; }
+
+// ===== 老闆鍵 =====
+function setBoss(on) {
+  boss = on;
+  document.body.classList.toggle('boss', on);
+  $('tab1').classList.toggle('on', !on);
+  $('tab2').classList.toggle('on', on);
+  if (on) {
+    clearTimeout(timer);
+    $('formula').textContent = '=SUM(B2:D' + (ROWS + 1) + ')';
+    setStatus('就緒');
+  } else if (state === 'run') {
+    setStatus('編輯');
+    loop();
+  } else {
+    draw(state === 'over');
+  }
+}
+$('saveBtn').addEventListener('click', e => { e.stopPropagation(); setBoss(!boss); });
+$('tab1').addEventListener('click', () => boss && setBoss(false));
+$('tab2').addEventListener('click', () => !boss && setBoss(true));
+// 切走分頁／App 自動進入老闆模式
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'run') setBoss(true); });
+
+// ===== 操作 =====
+function turn(x, y) {
+  if (boss) return;
+  if (state !== 'run') start();
+  const last = dirQ.length ? dirQ[dirQ.length - 1] : dir;
+  if (last.x === -x && last.y === -y) return;   // 不能直接迴轉
+  if (last.x === x && last.y === y) return;
+  if (dirQ.length < 3) dirQ.push({ x, y });
+}
+
+const KEYS = {
+  ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+  w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') { setBoss(!boss); e.preventDefault(); return; }
+  const k = KEYS[e.key] || KEYS[e.key.toLowerCase()];
+  if (k) { turn(k[0], k[1]); e.preventDefault(); return; }
+  if ((e.key === 'Enter' || e.key === ' ') && !boss) { start(); e.preventDefault(); }
+});
+
+// 觸控：滑動轉向，點一下開始／重來
+let tx = 0, ty = 0, moved = false;
+sheet.addEventListener('touchstart', e => {
+  const t = e.touches[0]; tx = t.clientX; ty = t.clientY; moved = false;
+  e.preventDefault();
+}, { passive: false });
+sheet.addEventListener('touchmove', e => {
+  const t = e.touches[0], dx = t.clientX - tx, dy = t.clientY - ty;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < CFG.swipeMin) return;
+  if (Math.abs(dx) > Math.abs(dy)) turn(Math.sign(dx), 0); else turn(0, Math.sign(dy));
+  tx = t.clientX; ty = t.clientY; moved = true;   // 一次滑動中可以連續轉彎
+  e.preventDefault();
+}, { passive: false });
+sheet.addEventListener('touchend', e => {
+  if (!moved && !boss && state !== 'run') start();
+  e.preventDefault();
+}, { passive: false });
+sheet.addEventListener('mousedown', () => { if (!boss && state !== 'run') start(); });
+
+// 視窗大小改變時（例如轉向），沒在玩才重建表格
+let rsT;
+window.addEventListener('resize', () => {
+  clearTimeout(rsT);
+  rsT = setTimeout(() => { if (state !== 'run') { build(); reset(); } }, 200);
+});
+
+build();
+reset();
+</script>
+</body>
+</html>
