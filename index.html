@@ -149,6 +149,41 @@
   .card .s { color: #777; }
   .empty { color: #777; text-align: center; padding: 24px 0; }
 
+  .catch .price { margin-top: 6px; color: #217346; font-weight: 600; }
+  .catch .meta + .meta { font-size: 12px; color: #777; }
+  .lvrow { font-size: 11px; color: #555; text-align: center; }
+  .lvrow.warn { color: #c00000; font-weight: 600; }
+  /* 商店：店員對話 */
+  .npc { display: flex; gap: 10px; align-items: flex-start; }
+  .npc canvas { width: 48px; height: 64px; image-rendering: pixelated; flex: none; background: #f3f3f3; border: 1px solid #ddd; }
+  .bubble { flex: 1; min-width: 0; background: #ffffe1; border: 1px solid #a0a0a0; padding: 6px 8px; font-size: 13px; line-height: 1.5; }
+  .money { margin: 10px 0 2px; font-size: 12px; color: #555; }
+  .money b { color: #217346; font-size: 14px; }
+  .sect { font-weight: 600; margin: 12px 0 6px; color: #217346; border-bottom: 1px solid #d4d4d4; padding-bottom: 2px; font-size: 12px; }
+  table.xl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.xl td, table.xl th { border: 1px solid #d4d4d4; padding: 3px 5px; }
+  table.xl th { background: #ddebf7; font-weight: 600; }
+  table.xl td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.xl td.desc { color: #777; font-size: 11px; }
+  table.xl td.nowrap { white-space: nowrap; }
+  table.xl canvas { width: 42px; height: 21px; image-rendering: pixelated; vertical-align: middle; }
+  .sbtn { background: #217346; color: #fff; border: 0; padding: 3px 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .sbtn + .sbtn { margin-left: 3px; }
+  .own { color: #777; font-size: 11px; }
+  .up { color: #c00000; font-weight: 600; }
+  .down { color: #2e75b6; font-weight: 600; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .btnrow .okBtn { display: inline-block; margin: 12px 0 0; padding: 7px 14px; font-size: 13px; }
+  .okBtn.alt { background: #fff; color: #217346; border: 1px solid #217346; }
+  .okBtn:disabled { opacity: .45; cursor: default; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid #bfbfbf; background: #fff; padding: 3px 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .chip.on { border-color: #217346; background: #e2efda; color: #217346; font-weight: 600; }
+  .tabs2 { display: flex; gap: 2px; margin: 12px 0 8px; border-bottom: 1px solid #d4d4d4; }
+  .tabs2 button { border: 1px solid transparent; background: none; padding: 4px 12px; font-family: inherit; font-size: 12px; cursor: pointer; color: #555; }
+  .tabs2 button.on { border-color: #d4d4d4; border-bottom-color: #fff; background: #fff; color: #217346; font-weight: 600; margin-bottom: -1px; }
+  .card.unk canvas { filter: brightness(0) opacity(.2); }
+
   /* 隱藏模式：只剩普通的 Excel */
   body.boss #actBtn, body.boss #bagBtn, body.boss #miniBox, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
 </style>
@@ -171,6 +206,7 @@
   <div id="fight">
     <div class="row"><span class="lb">張力</span><div class="bar" id="tens"><i></i></div></div>
     <div class="row"><span class="lb">收線</span><div class="bar" id="prog"><i></i></div></div>
+    <div class="lvrow" id="flv"></div>
     <div class="tip" id="ftip"></div>
   </div>
   <div id="miniBox" title="區域分布圖"><div class="mt">區域分布</div><canvas id="mini"></canvas></div>
@@ -179,7 +215,8 @@
   <div class="note" id="hint">
     拖曳畫面移動人物<br>（電腦：方向鍵／WASD）<br>
     走到藍色水邊，按右下「下竿」<br>
-    按鈕閃爍時快按，按住收線！
+    按鈕閃爍時快按，按住收線！<br>
+    橘色格是釣具行、紫色格是魚市場
   </div>
   <div class="note" id="toast"></div>
 </div>
@@ -201,6 +238,7 @@ const CFG = {
   castTime: 0.45,        // 拋竿動畫秒數
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
   biteWin: 1.3,          // 上鉤後可以拉竿的秒數
+  landTime: 1.3, landFly: .9,   // 釣到後的動畫秒數、魚在空中飛的秒數
   reelUp: 0.45,          // 按住時收線進度（每秒）
   tensUp: 0.55,          // 按住時張力上升（每秒，乘上魚的力氣）
   tensDown: 0.9,         // 放開時張力下降（每秒）
@@ -209,7 +247,7 @@ const CFG = {
 };
 
 // ================= 地形 =================
-const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8 };
+const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8, SHOP_T: 9, SHOP_M: 10 };
 const TILES = [
   { name: '草地', color: '#C6E0B4', walk: true },
   { name: '樹林', color: '#70AD47' },
@@ -220,16 +258,19 @@ const TILES = [
   { name: '海水・近海', color: '#5B9BD5', water: 'sea' },
   { name: '海水・深海', color: '#1F4E78', water: 'deep' },
   { name: '碼頭', color: '#C9A26B', walk: true },
+  { name: '釣具行', color: '#F8CBAD', walk: true, shop: 'tackle' },
+  { name: '魚市場', color: '#D9D2E9', walk: true, shop: 'market' },
 ];
 
 // ================= 魚種 =================
-// rar：0 普通 1 少見 2 稀有 3 史詩 4 傳說；price 先記著，之後商店販賣用
+// rar：0 普通 1 少見 2 稀有 3 史詩 4 傳說 5 奇物；lv 是魚的力量等級；price 是魚市場的基本收購價
 const RAR = [
-  { name: '普通', w: 60, color: '#7f7f7f', str: 0.75 },
-  { name: '少見', w: 26, color: '#2e75b6', str: 1.0 },
-  { name: '稀有', w: 10, color: '#7030a0', str: 1.2 },
-  { name: '史詩', w: 3.5, color: '#c55a11', str: 1.45 },
-  { name: '傳說', w: 0.8, color: '#c00000', str: 1.75 },
+  { name: '普通', w: 60, color: '#7f7f7f', str: 0.75, lv: 1 },
+  { name: '少見', w: 26, color: '#2e75b6', str: 1.0, lv: 2 },
+  { name: '稀有', w: 10, color: '#7030a0', str: 1.2, lv: 3 },
+  { name: '史詩', w: 3.5, color: '#c55a11', str: 1.45, lv: 4 },
+  { name: '傳說', w: 0.8, color: '#c00000', str: 1.75, lv: 5 },
+  { name: '奇物', w: 0, color: '#d63384', str: 0.5, lv: 1 },
 ];
 const FISH = [
   // 淡水・池塘
@@ -256,7 +297,101 @@ const FISH = [
   // 雜物
   { id: 'boot', name: '破靴子', water: ['pond', 'river', 'sea', 'deep'], rar: 0, junk: true, w: 4, size: [24, 30], price: 1, shape: 'boot' },
 ];
+// 千奇百怪的特殊物品（奇物）：跟餌料無關，很少見但很值錢
+const SPECIALS = [
+  { id: 'boba', name: '喝一半的珍奶', water: ['pond', 'river'], w: 3, price: 50, desc: '珍珠還在，冰塊已經化了。',
+    rows: ['.....s....', '.....s....', '.cccccccc.', '.kttttttk.', '.kttttttk.', '..kttttk..', '..kpptpk..', '..kppppk..', '...kkkk...'],
+    pal: { s: '#e04040', c: '#dddddd', k: '#8a6a50', t: '#d9b48c', p: '#3a2a1a' } },
+  { id: 'airpods', name: 'AirPods 充電盒', water: ['river', 'sea'], w: 1.5, price: 3000, desc: '「尋找」顯示它在河底。主人放棄了。',
+    rows: ['..kkkkkk..', '.kwwwwwwk.', '.kwwwwwwk.', '.kggggggk.', '.kwwwwwwk.', '.kwwwlwwk.', '.kwwwwwwk.', '..kkkkkk..'],
+    pal: { k: '#888888', w: '#fafafa', g: '#cccccc', l: '#33cc33' } },
+  { id: 'ball', name: '2026 世界盃足球', water: ['sea'], w: 1.5, price: 2600, desc: '美加墨世界盃的比賽用球，怎麼漂到這裡來的？',
+    rows: ['...kkkk...', '.kkwwwwkk.', '.kwwkkwwk.', 'kwwkkkkwwk', 'kwwwkkwwwk', 'kkwwwwwwkk', 'kwkwwwwkwk', '.kkwwwwkk.', '.kwwkkwwk.', '...kkkk...'],
+    pal: { k: '#222222', w: '#ffffff' } },
+  { id: 'card', name: '寶可夢閃卡', water: ['pond'], w: 1.2, price: 5000, desc: '護貝過，完全沒泡壞，收藏家搶著要。',
+    rows: ['kkkkkkkkk', 'kyyyyyyyk', 'kybbbbbyk', 'kybYYYbyk', 'kybYkYbyk', 'kybbbbbyk', 'kyyyyyyyk', 'kywwwwwyk', 'kyyyyyyyk', 'kywwwwwyk', 'kyyyyyyyk', 'kkkkkkkkk'],
+    pal: { k: '#555555', y: '#f2c94c', b: '#9bd2f5', Y: '#ffd400', w: '#ffffff' } },
+  { id: 'labubu', name: 'Labubu 公仔', water: ['pond', 'river'], w: 1, price: 8000, desc: '露出招牌的九顆牙在對你笑。',
+    rows: ['..k......k..', '.kbk....kbk.', '.kbbkkkkbbk.', '.kbffffffbk.', '.kbfkffkfbk.', '.kbffffffbk.', '.kbfwwwwfbk.', '..kbffffbk..', '..kbbbbbbk..', '..kbk..kbk..', '..kk....kk..'],
+    pal: { k: '#3a2a1a', b: '#c99a6b', f: '#f4dcc0', w: '#ffffff' } },
+  { id: 'switch2', name: 'Switch 2', water: ['river', 'pond'], w: 0.8, price: 12000, desc: '左右手把都還在，誰捨得丟的啦。',
+    rows: ['.bbkkkkkkkkrr.', 'bbbksssssskrrr', 'bwbksssssskrwr', 'bbbksssssskrrr', 'bbbksssssskrrr', 'bbbkkkkkkkkrrr', '.bb........rr.'],
+    pal: { b: '#00b4e6', r: '#ff4554', k: '#222222', s: '#39434f', w: '#ffffff' } },
+  { id: 'iphone', name: 'iPhone 18 Pro', water: ['sea', 'deep'], w: 0.6, price: 45000, desc: '今年最新款，泡在海裡居然還能開機。',
+    rows: ['..kkkkkkkk..', '.kooooooook.', '.kmmmmmoook.', '.kmcmcmoook.', '.kmmmmmoook.', '.kmcmmmoook.', '.kmmmmmoook.', '.kooooooook.', '.koooaooook.', '.kooaaaoook.', '.koooaooook.', '.kooooooook.', '.kooooooook.', '..kkkkkkkk..'],
+    pal: { k: '#222222', o: '#e8792a', m: '#d4651c', c: '#111111', a: '#fff3e0' } },
+  { id: 'rtx', name: 'RTX 5090 顯示卡', water: ['deep'], w: 0.4, price: 60000, desc: '水冷做到這種程度，連輝達都沒想到。',
+    rows: ['kkkkkkkkkkkkkk', 'kgggkgggkgggkk', 'kgfgkgfgkgfgkk', 'kgggkgggkgggkk', 'kkkkkkkkkkkkkk', '.yyyyyyyy.....'],
+    pal: { k: '#2b2b2b', g: '#555555', f: '#9a9a9a', y: '#d4a017' } },
+  { id: 'btc', name: '實體比特幣', water: ['deep'], w: 0.25, price: 88000, desc: '沉在深海的冷錢包，這下真的「冷」了。',
+    rows: ['....kkkk....', '..kkyyyykk..', '.kyyyyyyyyk.', '.kyyBBByyyk.', 'kyyyBByByyyk', 'kyyyBBBByyyk', 'kyyyBByyByyk', 'kyyyBBBByyyk', '.kyyBByyyyk.', '.kyyyyyyyyk.', '..kkyyyykk..', '....kkkk....'],
+    pal: { k: '#8a5a00', y: '#f7b500', B: '#fff2b0' } },
+];
+SPECIALS.forEach(s => { s.special = true; s.rar = 5; s.size = [0, 0]; FISH.push(s); });
+
+// 每種魚喜歡的餌料（用對了機率 ×3，不對 ×0.4）
+const LIKES = {
+  mosq: ['bread', 'worm'], tilapia: ['bread', 'worm'], crucian: ['bread', 'worm'], koi: ['koifood'], goldkoi: ['koifood'],
+  zacco: ['worm'], ayu: ['worm'], catfish: ['worm', 'shrimp'], salmon: ['worm', 'shrimp'],
+  scad: ['lug'], porgy: ['lug', 'shrimp'], puffer: ['lug', 'shrimp'], grouper: ['shrimp', 'squid'],
+  mahi: ['squid'], tuna: ['squid'], marlin: ['squid'], oarfish: ['glow'],
+};
+const ONLY_BAIT = { oarfish: 'glow' };   // 只吃這種餌
+FISH.forEach(f => { f.bait = LIKES[f.id] || []; });
 const FISH_BY = Object.fromEntries(FISH.map(f => [f.id, f]));
+const WATER_NAME = { pond: '池塘', river: '河川', sea: '近海', deep: '深海' };
+
+// ================= 裝備 =================
+const RODS = [
+  { lv: 1, name: '竹竿', price: 0 },
+  { lv: 2, name: '碳纖維竿', price: 500 },
+  { lv: 3, name: '磯釣竿', price: 2000 },
+  { lv: 4, name: '船釣竿', price: 8000 },
+  { lv: 5, name: '名匠竿', price: 30000 },
+];
+const BAITS = [
+  { id: 'bread', name: '麵包屑', price: 0, desc: '淡水小魚' },
+  { id: 'worm', name: '蚯蚓', price: 5, desc: '河川魚' },
+  { id: 'koifood', name: '錦鯉飼料', price: 30, desc: '錦鯉' },
+  { id: 'lug', name: '沙蠶', price: 10, desc: '近海魚' },
+  { id: 'shrimp', name: '活蝦', price: 40, desc: '石斑、黑鯛' },
+  { id: 'squid', name: '活魷魚', price: 150, desc: '深海大魚' },
+  { id: 'glow', name: '發光餌', price: 800, desc: '傳說級' },
+];
+const BAIT_BY = Object.fromEntries(BAITS.map(b => [b.id, b]));
+
+// 魚的力量等級：稀有度決定，特別大尾再加 1
+function fishLv(f, ratio) {
+  if (f.junk || f.special) return 1;
+  return Math.min(5, RAR[f.rar].lv + (ratio > .8 ? 1 : 0));
+}
+
+// ================= 今日行情（每 30 分鐘換一次） =================
+const HOT_PERIOD = 30 * 60 * 1000;
+function mulberry32(a) {
+  return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+let hotCache = { p: -1, list: [] };
+function hotList() {
+  const p = Math.floor(Date.now() / HOT_PERIOD);
+  if (hotCache.p !== p) {
+    const r = mulberry32(p * 7919 + 13), pool = FISH.filter(f => !f.junk).map(f => f.id), list = [];
+    for (let k = 0; k < 4; k++) {   // 3 種漲價、1 種跌價
+      const id = pool.splice(Math.floor(r() * pool.length), 1)[0];
+      list.push({ id, m: k < 3 ? Math.round((1.3 + r() * .7) * 10) / 10 : .6 });
+    }
+    hotCache = { p, list };
+  }
+  return hotCache.list;
+}
+const hotMult = id => (hotList().find(h => h.id === id) || { m: 1 }).m;
+// 售價＝基本價 × 尺寸倍率（0.7～1.6）× 行情
+function priceOf(b) {
+  const f = FISH_BY[b.id];
+  let m = 1;
+  if (!f.special && !f.junk) m = .7 + .9 * clamp((b.size - f.size[0]) / (f.size[1] - f.size[0]), 0, 1);
+  return Math.max(1, Math.round(f.price * m * hotMult(b.id)));
+}
 
 // ================= 小工具 =================
 const $ = id => document.getElementById(id);
@@ -331,6 +466,8 @@ function genMap() {
   for (let j = PY - 3; j <= PY + 3; j++) setT(ePY + 9, j, T.DOCK);
   // 往南的小徑，過河的地方是木橋
   for (let j = PY; j <= 75; j++) setT(15, j, tileAt(15, j) === T.RIVER ? T.DOCK : T.PATH);
+  // 商店（2×2 格，緊鄰小徑）：出生點旁的釣具行、海邊的魚市場
+  for (const [i0, t] of [[7, T.SHOP_T], [ePY - 4, T.SHOP_M]]) for (let j = PY - 2; j < PY; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
 }
 genMap();
 
@@ -348,6 +485,12 @@ const FW = 28, FH = 14;
 function makeFish(f) {
   const g = Array.from({ length: FH }, () => new Array(FW).fill(null));
   const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < FW && y < FH) g[y][x] = c; };
+  if (f.rows) {   // 特殊物品：手繪像素圖置中
+    const sp = strSprite(f.rows, f.pal), c = document.createElement('canvas');
+    c.width = FW; c.height = FH;
+    c.getContext('2d').drawImage(sp, Math.floor((FW - sp.width) / 2), Math.floor((FH - sp.height) / 2));
+    return c;
+  }
   if (f.shape === 'boot') {
     return strSprite([
       '............................',
@@ -463,11 +606,21 @@ let state = 'walk';     // walk / cast / wait / bite / fight / caught
 let spot = null;        // 釣點 {i, j, t, dir}
 let castT = 0, waitT = 0, biteT = 0, F = null, holding = false;
 let catchShow = null;   // 剛釣到的魚，舉在頭上
+let L = null;           // 釣到後的動畫資料
 let boss = false, gameT = 0;
 const parts = [];
 let bag = [];
 try { bag = JSON.parse(localStorage.getItem('moyu.bag') || '[]').filter(b => FISH_BY[b.id]); } catch (e) {}
-const saveBag = () => { try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); } catch (e) {} };
+// 金錢、裝備、圖鑑
+const S = { money: 200, rod: 1, baits: {}, bait: 'bread', dex: {} };
+let hadSave = false;
+try { const raw = localStorage.getItem('moyu.save'); if (raw) { Object.assign(S, JSON.parse(raw)); hadSave = true; } } catch (e) {}
+if (!BAIT_BY[S.bait]) S.bait = 'bread';
+function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); d.n++; d.max = Math.max(d.max, b.size); }
+if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
+function saveAll() {
+  try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); localStorage.setItem('moyu.save', JSON.stringify(S)); } catch (e) {}
+}
 
 // ================= 畫布 =================
 const cv = $('cv'), ctx = cv.getContext('2d');
@@ -543,6 +696,47 @@ $('bagBtn').addEventListener('click', openBag);
 $('logo').addEventListener('click', () => setBoss(!boss));
 document.addEventListener('visibilitychange', () => { if (document.hidden && !boss) setBoss(true); });
 
+// ================= 水裡的魚影 =================
+// 影子越大，上鉤的魚越大尾、越稀有
+const SHADOW_N = { pond: 7, river: 10, sea: 14, deep: 16 };
+const SHADOW_P = { pond: [.5, .4], river: [.45, .4], sea: [.35, .45], deep: [.2, .45] };   // 小、中的機率，其餘是大
+const SHADOW_R = [[6, 2.2], [10, 3.6], [16, 5.5]];   // 小／中／大魚影的半徑（px）
+const waterCells = { pond: [], river: [], sea: [], deep: [] };
+for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const w = TILES[tileAt(i, j)].water; if (w) waterCells[w].push([i, j]); }
+const shadows = [];
+function spawnShadow(w) {
+  const c = waterCells[w][Math.floor(Math.random() * waterCells[w].length)], p = SHADOW_P[w], r = Math.random();
+  shadows.push({ x: c[0] + .5, y: c[1] + .5, w, sz: r < p[0] ? 0 : r < p[0] + p[1] ? 1 : 2, a: rand(0, 6.28), sp: rand(.4, .9), turn: rand(1, 3), target: null });
+}
+for (const w in SHADOW_N) for (let k = 0; k < SHADOW_N[w]; k++) spawnShadow(w);
+const waterOf = (x, y) => TILES[tileAt(Math.floor(x), Math.floor(y))].water;
+function updateShadows(dt) {
+  const k = CFG.cellH / CFG.cellW;   // 橫向一格比較寬，換算成相同的螢幕速度
+  for (const s of shadows) {
+    if (s.target) {   // 被浮標吸引，游過去
+      const dx = (s.target.x - s.x) / k, dy = s.target.y - s.y, l = Math.hypot(dx, dy);
+      s.a = Math.atan2(dy, dx);
+      if (l > .15) { const v = Math.min(l, 1.2 * dt); s.x += Math.cos(s.a) * v * k; s.y += Math.sin(s.a) * v; }
+      continue;
+    }
+    s.turn -= dt;
+    if (s.turn <= 0) { s.a += rand(-1.5, 1.5); s.turn = rand(1, 3); }
+    const nx = s.x + Math.cos(s.a) * s.sp * k * dt, ny = s.y + Math.sin(s.a) * s.sp * dt;
+    if (waterOf(nx, ny) === s.w) { s.x = nx; s.y = ny; } else s.a += Math.PI * rand(.6, 1.4);
+  }
+}
+function nearestShadow(cx, cy, maxD) {
+  let best = null, bd = maxD;
+  const k = CFG.cellW / CFG.cellH;
+  for (const s of shadows) {
+    if (s.target) continue;
+    const d = Math.hypot((s.x - cx) * k, s.y - cy);
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+function removeShadow(s) { const i = shadows.indexOf(s); if (i >= 0) { shadows.splice(i, 1); spawnShadow(s.w); } }
+
 // ================= 釣魚流程 =================
 function spotFrom(dir) {
   const [dx, dy] = DIRS[dir];
@@ -559,15 +753,28 @@ function findSpot() {
   return null;
 }
 
+// 收竿：放掉被吸引過來的魚影
+function stopFishing(msg) {
+  if (spot && spot.shadow) { spot.shadow.target = null; spot.shadow = null; }
+  state = 'walk';
+  if (msg) toast(msg);
+}
+
 function press() {
   if (boss) return;
   if (state === 'walk') {
     const s = findSpot();
     if (!s) { toast('要站在水邊才能下竿喔'); return; }
+    // 每次下竿用掉一個餌（麵包屑免費）
+    if (S.bait !== 'bread') {
+      if ((S.baits[S.bait] || 0) <= 0) { toast(`${BAIT_BY[S.bait].name}用完了，改用麵包屑`); S.bait = 'bread'; }
+      else S.baits[S.bait]--;
+      saveAll();
+    }
     spot = s; P.dir = s.dir; state = 'cast'; castT = 0;
     hideHint();
   } else if (state === 'cast' || state === 'wait') {
-    state = 'walk'; toast('收竿了');
+    stopFishing('收竿了');
   } else if (state === 'bite') {
     startFight(); holding = true;
   } else if (state === 'fight') {
@@ -575,36 +782,51 @@ function press() {
   }
 }
 
-function pickFish(water) {
+// 魚影大小對各稀有度的機率倍率：小影多小魚，大影多稀有大魚
+const SZ_MULT = [[2, 1, .2, .1, .05], [1, 1, 1, 1, 1], [.3, 1, 3, 4, 5]];
+const SZ_RATIO = [() => Math.pow(Math.random(), 2.5) * .6, () => Math.pow(Math.random(), 1.8), () => .4 + .6 * Math.pow(Math.random(), .8)];
+function pickFish(water, sz) {
   const list = FISH.filter(f => f.water.includes(water));
-  const ws = list.map(f => f.junk ? f.w : RAR[f.rar].w);
+  const ws = list.map(f => {
+    if (f.junk || f.special) return f.w;
+    if (ONLY_BAIT[f.id] && S.bait !== ONLY_BAIT[f.id]) return 0;
+    return RAR[f.rar].w * (f.bait.includes(S.bait) ? 3 : .4) * SZ_MULT[sz][f.rar];
+  });
   let r = Math.random() * ws.reduce((a, b) => a + b, 0);
   for (let k = 0; k < list.length; k++) { r -= ws[k]; if (r <= 0) return list[k]; }
   return list[0];
 }
 
 function startFight() {
-  const f = pickFish(TILES[spot.t].water);
-  const ratio = Math.pow(Math.random(), 1.8);
-  const size = Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
-  const str = (f.junk ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio);
-  F = { f, size, str, tens: 0.3, prog: 0.25, surge: 0, nextSurge: rand(1, 2.2), t: 0 };
-  state = 'fight';
-  $('fight').classList.add('on');
+  const sz = spot.shadow ? spot.shadow.sz : 1;
+  if (spot.shadow) removeShadow(spot.shadow);
+  spot.shadow = null;
+  const f = pickFish(TILES[spot.t].water, sz);
+  const ratio = f.special ? 0 : SZ_RATIO[sz]();
+  const size = f.special ? 0 : Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
+  const lv = fishLv(f, ratio), diff = lv - S.rod;
   splash(spot.i + .5, spot.j + .5, 10);
+  // 魚比釣竿強 2 級以上，一上鉤就斷線
+  if (diff >= 2) { state = 'walk'; toast(`啪！線斷了…這條魚太強（Lv${lv}），要換更好的釣竿`); return; }
+  const str = (f.junk || f.special ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio);
+  F = { f, size, str, lv, sz, tensMul: diff >= 1 ? 1.6 : diff < 0 ? .85 : 1, tens: 0.3, prog: 0.25, surge: 0, nextSurge: rand(1, 2.2), t: 0 };
+  state = 'fight';
+  $('flv').textContent = `魚力 Lv${lv}・${RODS[S.rod - 1].name} Lv${S.rod}` + (diff >= 1 ? '（竿子太弱，很吃力！）' : '');
+  $('flv').className = 'lvrow' + (diff >= 1 ? ' warn' : '');
+  $('fight').classList.add('on');
 }
 
 function endFight(ok, msg) {
   $('fight').classList.remove('on');
   holding = false;
   if (!ok) { state = 'walk'; F = null; toast(msg); return; }
-  const isNew = !bag.some(b => b.id === F.f.id);
-  bag.push({ id: F.f.id, size: F.size, t: Date.now() });
-  saveBag();
-  state = 'caught';
-  catchShow = F.f.id;
-  splash(spot.i + .5, spot.j + .5, 14);
-  showCatch(F.f, F.size, isNew, TILES[spot.t].name);
+  const item = { id: F.f.id, size: F.size, t: Date.now() };
+  const isNew = !S.dex[item.id];
+  bag.push(item); addDex(item); saveAll();
+  // 先播拉竿、魚飛起來甩尾、落到手上的動畫，再跳出結果
+  L = { f: F.f, size: F.size, sz: F.sz, isNew, where: TILES[spot.t].name, item, t: 0 };
+  state = 'land';
+  splash(spot.i + .5, spot.j + .5, 16);
   F = null;
 }
 
@@ -613,10 +835,16 @@ function splash(x, y, n) {
 }
 
 // ================= 對話框 =================
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
 function openDlg(title, body) {
+  const b = $('dlgBody');
+  // 同一個視窗重畫時保留捲動位置（例如連續買東西）
+  const keep = $('dlg').classList.contains('on') && $('dlgTitle').textContent === title ? b.scrollTop : 0;
   $('dlgTitle').textContent = title;
-  const b = $('dlgBody'); b.innerHTML = ''; b.appendChild(body);
+  b.innerHTML = ''; b.appendChild(body);
   $('dlg').classList.add('on');
+  b.scrollTop = keep;
 }
 function closeDlg() {
   $('dlg').classList.remove('on');
@@ -626,52 +854,241 @@ $('dlgX').addEventListener('click', closeDlg);
 $('dlg').addEventListener('click', e => { if (e.target.id === 'dlg') closeDlg(); });
 
 function rarTag(f) {
-  const s = document.createElement('span'); s.className = 'rar';
+  const s = el('span', 'rar');
   if (f.junk) { s.textContent = '雜物'; s.style.background = '#a6a6a6'; }
   else { s.textContent = RAR[f.rar].name; s.style.background = RAR[f.rar].color; }
   return s;
 }
 
-function showCatch(f, size, isNew, where) {
-  const d = document.createElement('div'); d.className = 'catch';
+function showCatch(f, size, isNew, where, item) {
+  const d = el('div', 'catch');
   d.appendChild(fishCanvas(f.id, 8));
-  const n = document.createElement('div'); n.className = 'fn'; n.textContent = f.name + ' ';
+  const n = el('div', 'fn', f.name + ' ');
   n.appendChild(rarTag(f)); d.appendChild(n);
-  const m = document.createElement('div'); m.className = 'meta'; m.textContent = `${size} cm ・ ${where}`; d.appendChild(m);
-  if (isNew && !f.junk) { const nw = document.createElement('div'); nw.className = 'new'; nw.textContent = '新魚種！'; d.appendChild(nw); }
-  const b = document.createElement('button'); b.className = 'okBtn'; b.textContent = '放進背包';
+  d.appendChild(el('div', 'meta', f.special || f.junk ? where : `${size} cm ・ ${where}`));
+  if (f.desc) d.appendChild(el('div', 'meta', f.desc));
+  d.appendChild(el('div', 'price', `市價約 $${fmtN(priceOf(item))}`));
+  if (isNew && !f.junk) d.appendChild(el('div', 'new', f.special ? '新發現！' : '新魚種！'));
+  const b = el('button', 'okBtn', '放進背包');
   b.onclick = closeDlg; d.appendChild(b);
-  openDlg(f.junk ? '釣到了……' : '釣到了！', d);
+  openDlg(f.special ? '撈到奇怪的東西！' : f.junk ? '釣到了……' : '釣到了！', d);
 }
 
-function openBag() {
-  if (boss || state === 'fight' || state === 'bite') return;
-  const groups = {};
-  for (const b of bag) {
-    const g = groups[b.id] || (groups[b.id] = { n: 0, max: 0 });
-    g.n++; g.max = Math.max(g.max, b.size);
+function moneyLine() {
+  const m = el('div', 'money');
+  m.append('持有金額 '); m.appendChild(el('b', null, '$' + fmtN(S.money)));
+  m.append(`　釣竿：${RODS[S.rod - 1].name}（Lv${S.rod}）`);
+  return m;
+}
+
+// ================= 背包、圖鑑 =================
+function openBag(tab) {
+  if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
+  tab = tab || 'bag';
+  const d = el('div');
+  d.appendChild(moneyLine());
+  // 選擇這次下竿要用的餌
+  d.appendChild(el('div', 'sect', '使用餌料'));
+  const chips = el('div', 'chips');
+  for (const b of BAITS) {
+    const n = b.id === 'bread' ? null : (S.baits[b.id] || 0);
+    if (n === 0) continue;
+    const c = el('button', 'chip' + (S.bait === b.id ? ' on' : ''), b.name + (n == null ? '' : ' ×' + n));
+    c.onclick = () => { S.bait = b.id; saveAll(); openBag(tab); };
+    chips.appendChild(c);
   }
-  const ids = Object.keys(groups).sort((a, b) => {
-    const fa = FISH_BY[a], fb = FISH_BY[b];
-    return (fb.junk ? -1 : fb.rar) - (fa.junk ? -1 : fa.rar) || FISH.indexOf(fa) - FISH.indexOf(fb);
-  });
-  const d = document.createElement('div');
-  if (!ids.length) { d.className = 'empty'; d.textContent = '還沒有漁獲，去水邊試試吧！'; }
-  else {
-    d.className = 'bagGrid';
+  d.appendChild(chips);
+  const tabs = el('div', 'tabs2');
+  for (const [k, name] of [['bag', `漁獲 ${bag.length}`], ['dex', `圖鑑 ${Object.keys(S.dex).length}/${FISH.length}`]]) {
+    const b = el('button', tab === k ? 'on' : '', name); b.onclick = () => openBag(k); tabs.appendChild(b);
+  }
+  d.appendChild(tabs);
+  const body = el('div', 'bagGrid');
+  if (tab === 'bag') {
+    const groups = {};
+    for (const b of bag) {
+      const g = groups[b.id] || (groups[b.id] = { n: 0, max: 0, v: 0 });
+      g.n++; g.max = Math.max(g.max, b.size); g.v += priceOf(b);
+    }
+    const ids = Object.keys(groups).sort((a, b) => {
+      const fa = FISH_BY[a], fb = FISH_BY[b];
+      return (fb.junk ? -1 : fb.rar) - (fa.junk ? -1 : fa.rar) || FISH.indexOf(fa) - FISH.indexOf(fb);
+    });
+    if (!ids.length) { body.className = 'empty'; body.textContent = '還沒有漁獲，去水邊試試吧！'; }
     for (const id of ids) {
       const f = FISH_BY[id], g = groups[id];
-      const c = document.createElement('div'); c.className = 'card';
+      const c = el('div', 'card');
       c.appendChild(fishCanvas(id, 3));
-      const n = document.createElement('div'); n.className = 'n'; n.textContent = f.name; c.appendChild(n);
+      c.appendChild(el('div', 'n', f.name));
       c.appendChild(rarTag(f));
-      const s = document.createElement('div'); s.className = 's'; s.textContent = `最大 ${g.max} cm`; c.appendChild(s);
-      const k = document.createElement('div'); k.className = 'c'; k.textContent = '×' + g.n; c.appendChild(k);
-      d.appendChild(c);
+      if (!f.special && !f.junk) c.appendChild(el('div', 's', `最大 ${g.max} cm`));
+      c.appendChild(el('div', 's', `估價 $${fmtN(g.v)}`));
+      c.appendChild(el('div', 'c', '×' + g.n));
+      body.appendChild(c);
+    }
+  } else {
+    // 圖鑑：沒釣過的顯示剪影和出沒地點
+    for (const f of FISH) {
+      const known = S.dex[f.id];
+      const c = el('div', 'card' + (known ? '' : ' unk'));
+      c.appendChild(fishCanvas(f.id, 3));
+      c.appendChild(el('div', 'n', known ? f.name : '？？？'));
+      if (known) {
+        c.appendChild(rarTag(f));
+        c.appendChild(el('div', 's', f.special || f.junk ? `撈到 ${known.n} 次` : `最大 ${known.max} cm`));
+      } else c.appendChild(el('div', 's', '出沒：' + f.water.map(w => WATER_NAME[w]).join('、')));
+      body.appendChild(c);
     }
   }
-  const kinds = ids.filter(id => !FISH_BY[id].junk).length;
-  openDlg(`背包（${bag.length} 件・魚種 ${kinds}/${FISH.length - 1}）`, d);
+  d.appendChild(body);
+  openDlg('背包', d);
+}
+
+// ================= 商店與對話 =================
+const NPC = {
+  tackle: {
+    title: '釣具行', who: '阿海伯', pal: { h: '#1f4e78', H: '#163a5a', c: '#c00000', C: '#900000' },
+    greet: () => [
+      '歡迎光臨！要換根好竿嗎？',
+      '大魚要配好竿，竹竿拉不動鮪魚的啦。',
+      '餌料要選對，魚才會咬。蚯蚓釣河魚、沙蠶釣海魚，記起來！',
+      '水裡的影子看到沒？影子越大，魚越大尾。',
+      '聽說皇帶魚只吃發光餌，我也只是聽說啦。',
+      `剛剛聽魚市場說，今天在高價收「${FISH_BY[hotList()[0].id].name}」喔！`,
+      '最近有人在河裡撈到 Switch 2，真的假的？',
+    ],
+  },
+  market: {
+    title: '魚市場', who: '阿珠姐', pal: { h: '#ff8fb1', H: '#e06a90', c: '#2e75b6', C: '#1f4e78' },
+    greet: () => [
+      '來來來，今天行情不錯喔！',
+      '有什麼好貨？拿出來看看！',
+      `今天「${FISH_BY[hotList()[0].id].name}」很搶手，有的話快拿來！`,
+      '最近一堆人在海邊撈到 iPhone，你也去碰碰運氣啊。',
+      '世界盃的球也有人撈到喔，球迷會出高價收。',
+      '破靴子我也收啦，一塊錢而已。',
+    ],
+  },
+};
+const NPC_LEGS = ['...pp..pp...', '...pp..pp...', '...pp..pp...', '...bb..bb...'];
+
+function openShop(kind, line) {
+  const npc = NPC[kind];
+  const d = el('div');
+  const top = el('div', 'npc');
+  top.appendChild(strSprite(SPR.d.concat(NPC_LEGS), Object.assign({}, PAL, npc.pal)));
+  const bub = el('div', 'bubble');
+  bub.appendChild(el('b', null, npc.who + '：'));
+  bub.append(line || pick(npc.greet()));
+  top.appendChild(bub);
+  d.appendChild(top);
+  d.appendChild(moneyLine());
+  if (kind === 'market') marketBody(d); else tackleBody(d);
+  openDlg(npc.title, d);
+}
+
+function xlTable(heads) {
+  const t = el('table', 'xl'), tr = el('tr');
+  for (const h of heads) tr.appendChild(el('th', null, h));
+  t.appendChild(tr);
+  return t;
+}
+function iconCell(id) { const td = el('td'); td.appendChild(fishCanvas(id, 2)); return td; }
+
+function marketBody(d) {
+  const left = HOT_PERIOD - Date.now() % HOT_PERIOD;
+  d.appendChild(el('div', 'sect', `今日行情（${Math.ceil(left / 60000)} 分鐘後更新）`));
+  const t = xlTable(['', '品名', '行情']);
+  for (const h of hotList()) {
+    const tr = el('tr');
+    tr.appendChild(iconCell(h.id));
+    tr.appendChild(el('td', null, FISH_BY[h.id].name));
+    tr.appendChild(el('td', 'num ' + (h.m >= 1 ? 'up' : 'down'), (h.m >= 1 ? '▲ ×' : '▼ ×') + h.m));
+    t.appendChild(tr);
+  }
+  d.appendChild(t);
+  d.appendChild(el('div', 'sect', '收購'));
+  if (!bag.length) { d.appendChild(el('div', 'empty', '背包是空的，先去釣幾尾再來。')); return; }
+  const items = bag.map(b => ({ b, p: priceOf(b) })).sort((a, b) => b.p - a.p);
+  const t2 = xlTable(['', '品名', '尺寸', '價格', '']);
+  for (const it of items) {
+    const f = FISH_BY[it.b.id], m = hotMult(f.id), tr = el('tr');
+    tr.appendChild(iconCell(f.id));
+    tr.appendChild(el('td', null, f.name));
+    tr.appendChild(el('td', 'num', f.special || f.junk ? '—' : String(it.b.size)));
+    tr.appendChild(el('td', 'num' + (m > 1 ? ' up' : m < 1 ? ' down' : ''), '$' + fmtN(it.p)));
+    const td = el('td'), sb = el('button', 'sbtn', '賣');
+    sb.onclick = () => sellItems([it.b]);
+    td.appendChild(sb); tr.appendChild(td);
+    t2.appendChild(tr);
+  }
+  d.appendChild(t2);
+  const row = el('div', 'btnrow');
+  const all = el('button', 'okBtn', `全部賣出 $${fmtN(items.reduce((a, b) => a + b.p, 0))}`);
+  all.onclick = () => sellItems(bag.slice());
+  const common = bag.filter(b => { const f = FISH_BY[b.id]; return f.junk || (!f.special && f.rar <= 1); });
+  const cb = el('button', 'okBtn alt', `只賣普通、少見（${common.length}）`);
+  cb.disabled = !common.length;
+  cb.onclick = () => sellItems(common);
+  row.append(all, cb);
+  d.appendChild(row);
+}
+
+function sellItems(list) {
+  if (!list.length) return;
+  let total = 0, best = null;
+  for (const b of list) {
+    const p = priceOf(b); total += p;
+    if (!best || p > best.p) best = { b, p };
+    const i = bag.indexOf(b); if (i >= 0) bag.splice(i, 1);
+  }
+  S.money += total; saveAll();
+  const f = FISH_BY[best.b.id];
+  let line;
+  if (list.length > 1) line = `總共 ${list.length} 件，$${fmtN(total)}，點一下錢喔！`;
+  else if (total >= 5000) line = `哇！${f.name}！這個好東西我收了，$${fmtN(total)}！`;
+  else if (f.junk) line = `${f.name}…好啦，算你 $${total}。`;
+  else line = pick([`這${f.special ? '個' : '尾'}${f.name}不錯喔！給你 $${fmtN(total)}。`, `${f.name}收了，$${fmtN(total)}，謝啦！`]);
+  openShop('market', line);
+}
+
+function tackleBody(d) {
+  d.appendChild(el('div', 'sect', '釣竿（等級越高，拉得動越強的魚）'));
+  const t = xlTable(['品名', '等級', '價格', '']);
+  for (const r of RODS) {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, r.name));
+    tr.appendChild(el('td', 'num', 'Lv' + r.lv));
+    tr.appendChild(el('td', 'num', r.price ? '$' + fmtN(r.price) : '—'));
+    const td = el('td');
+    if (r.lv <= S.rod) td.appendChild(el('span', 'own', r.lv === S.rod ? '使用中' : '已擁有'));
+    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(r.price, () => { S.rod = r.lv; }, `好眼光！${r.name}會陪你很久。`); td.appendChild(b); }
+    tr.appendChild(td); t.appendChild(tr);
+  }
+  d.appendChild(t);
+  d.appendChild(el('div', 'sect', '餌料（每次下竿用掉一個）'));
+  const t2 = xlTable(['品名', '適合', '價格', '持有', '']);
+  for (const b of BAITS) {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, b.name));
+    tr.appendChild(el('td', 'desc', b.desc));
+    tr.appendChild(el('td', 'num', b.price ? '$' + b.price : '免費'));
+    tr.appendChild(el('td', 'num', b.id === 'bread' ? '∞' : String(S.baits[b.id] || 0)));
+    const td = el('td', 'nowrap');
+    if (b.price) for (const n of [1, 10]) {
+      const bt = el('button', 'sbtn', '+' + n);
+      bt.onclick = () => buy(b.price * n, () => { S.baits[b.id] = (S.baits[b.id] || 0) + n; S.bait = b.id; }, `${b.name} ×${n}，拿去！已經幫你換上了。`);
+      td.appendChild(bt);
+    }
+    tr.appendChild(td); t2.appendChild(tr);
+  }
+  d.appendChild(t2);
+}
+
+function buy(cost, apply, line) {
+  if (S.money < cost) { openShop('tackle', pick(['錢不夠喔，先去釣幾尾賣一賣吧。', `還差 $${fmtN(cost - S.money)} 喔。`])); return; }
+  S.money -= cost; apply(); saveAll();
+  openShop('tackle', line);
 }
 
 // ================= 提示 =================
@@ -694,6 +1111,7 @@ function setBoss(on) {
 }
 
 // ================= 更新 =================
+let lastTile = T.PATH;
 function update(dt) {
   gameT += dt;
   const v = inputVec();
@@ -709,24 +1127,48 @@ function update(dt) {
       P.walkT += dt;
     }
     P.moving = moving;
+    // 走進店面格就打開商店
+    const here = tileAt(Math.floor(P.x), Math.floor(P.y));
+    if (TILES[here].shop && !TILES[lastTile].shop) { keys.clear(); joy.id = null; openShop(TILES[here].shop); }
+    lastTile = here;
   } else {
     P.moving = false;
-    if ((state === 'cast' || state === 'wait') && moving) { state = 'walk'; }
+    if ((state === 'cast' || state === 'wait') && moving) stopFishing();
   }
 
   if (state === 'cast') {
     castT += dt;
-    if (castT >= CFG.castTime) { state = 'wait'; waitT = rand(CFG.waitMin, CFG.waitMax); splash(spot.i + .5, spot.j + .5, 4); }
+    if (castT >= CFG.castTime) {
+      state = 'wait';
+      splash(spot.i + .5, spot.j + .5, 4);
+      // 附近有魚影就會游過來；沒有的話要等比較久
+      const s = nearestShadow(spot.i + .5, spot.j + .5, 4);
+      if (s) { s.target = { x: spot.i + .5, y: spot.j + .5 }; spot.shadow = s; waitT = rand(1, 2.5); }
+      else { spot.shadow = null; waitT = rand(CFG.waitMax, CFG.waitMax * 2); }
+    }
   } else if (state === 'wait') {
     waitT -= dt;
-    if (waitT <= 0) { state = 'bite'; biteT = CFG.biteWin; splash(spot.i + .5, spot.j + .5, 8); }
+    const s = spot.shadow;
+    const arrived = !s || Math.hypot((s.x - s.target.x) * CFG.cellW / CFG.cellH, s.y - s.target.y) < .3;
+    if (waitT <= 0 && arrived) { state = 'bite'; biteT = CFG.biteWin; splash(spot.i + .5, spot.j + .5, 8); }
   } else if (state === 'bite') {
     biteT -= dt;
-    if (biteT <= 0) { state = 'walk'; toast('魚跑掉了…上鉤時要快按！'); }
+    if (biteT <= 0) {
+      if (spot.shadow) removeShadow(spot.shadow);   // 魚被嚇跑了
+      spot.shadow = null;
+      stopFishing('魚跑掉了…上鉤時要快按！');
+    }
   } else if (state === 'fight') {
     updateFight(dt);
+  } else if (state === 'land') {
+    L.t += dt;
+    if (L.t >= CFG.landTime) {
+      state = 'caught'; catchShow = L.f.id;
+      showCatch(L.f, L.size, L.isNew, L.where, L.item);
+    }
   }
 
+  updateShadows(dt);
   for (let k = parts.length - 1; k >= 0; k--) {
     const p = parts[k];
     p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 9 * dt; p.life -= dt;
@@ -748,8 +1190,8 @@ function updateFight(dt) {
   if (F.surge > 0) F.surge -= dt;
   const s = F.str, surging = F.surge > 0;
   if (holding) {
-    F.prog += CFG.reelUp / s * dt * (surging ? 0.3 : 1);
-    F.tens += CFG.tensUp * s * dt * (surging ? 2.2 : 1);
+    F.prog += CFG.reelUp * (1 + .15 * (S.rod - 1)) / s * dt * (surging ? 0.3 : 1);   // 好竿子收線比較快
+    F.tens += CFG.tensUp * s * F.tensMul * dt * (surging ? 2.2 : 1);
   } else {
     F.tens -= CFG.tensDown * dt;
     F.prog -= CFG.slipDown * s * dt * (surging ? 2.5 : 1);
@@ -769,6 +1211,8 @@ const DARK_FILL = new Set([T.FOREST, T.SEA, T.DEEP]);   // 深色底配白字
 const FONT = '11px -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif';
 const FONT_B = '600 ' + FONT;
 const fmtN = n => n.toLocaleString('en-US');
+// 店面格顯示店名，其他格顯示假報表資料
+function cellLabel(i, j, t = tileAt(i, j)) { return !boss && TILES[t].shop ? TILES[t].name : cellText(i, j); }
 function cellText(i, j) {
   if (j === 0) return HEADS[i % HEADS.length];
   const k = i % HEADS.length;
@@ -815,7 +1259,7 @@ function openMap() {
   drawMap(x, w, h, null);
   d.appendChild(c);
   const lg = document.createElement('div'); lg.className = 'legend';
-  for (const t of [T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP]) {
+  for (const t of [T.SHOP_T, T.SHOP_M, T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP]) {
     const it = document.createElement('div');
     const sw = document.createElement('i'); sw.style.background = TILES[t].color;
     it.appendChild(sw); it.appendChild(document.createTextNode(TILES[t].name + (TILES[t].walk || TILES[t].water ? '' : '（不能走）')));
@@ -881,8 +1325,8 @@ function drawCell(i, j, x, y) {
   else { ctx.fillStyle = TILES[t].color; if (DARK_FILL.has(t)) fg = '#fff'; }
   ctx.fillRect(x, y, CW, CH);
   ctx.fillStyle = fg;
-  ctx.font = head ? FONT_B : FONT;
-  const txt = cellText(i, j);
+  ctx.font = head || (!boss && TILES[t].shop) ? FONT_B : FONT;
+  const txt = cellLabel(i, j, t);
   if (head) { ctx.textAlign = 'center'; ctx.fillText(txt, x + CW / 2, y + CH / 2 + .5); }
   else if (i % HEADS.length === 0) { ctx.textAlign = 'left'; ctx.fillText(txt, x + 4, y + CH / 2 + .5); }
   else { ctx.textAlign = 'right'; ctx.fillText(txt, x + CW - 4, y + CH / 2 + .5); }
@@ -899,6 +1343,17 @@ function drawWorld(ox, oy) {
     if (state === 'fight') { bx += Math.sin(gameT * 3.1) * CW * .25 * (F.surge > 0 ? 1.4 : 1); by += Math.cos(gameT * 2.3) * CH * .25; }
     bob = { x: bx, y: by };
   }
+  // 水裡游來游去的魚影（大小代表魚的大小）
+  for (const s of shadows) {
+    const sx = ox + s.x * CW, sy = oy + s.y * CH;
+    if (sx < -30 || sy < -30 || sx > VW + 30 || sy > VH + 30) continue;
+    const [rx, ry] = SHADOW_R[s.sz], wag = Math.sin(gameT * 8 + s.x * 3) * ry * .6;
+    ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.a);
+    ctx.fillStyle = s.w === 'deep' ? 'rgba(0,0,0,.42)' : 'rgba(0,25,50,.3)';
+    ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-rx * .8, 0); ctx.lineTo(-rx * 1.5, -ry + wag); ctx.lineTo(-rx * 1.5, ry + wag); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
   // 搏鬥中水下的魚影
   if (state === 'fight' && bob) {
     ctx.fillStyle = 'rgba(0,20,40,.35)';
@@ -913,23 +1368,27 @@ function drawWorld(ox, oy) {
   let lean = 0, shake = 0;
   const [ddx, ddy] = DIRS[P.dir];
   if (state === 'fight') { lean = holding ? 2 * u : u; shake = Math.sin(gameT * (holding ? 40 : 18)) * u * (F.surge > 0 ? 1.2 : .6); }
+  else if (state === 'land' && L.t < CFG.landFly) lean = 3 * u;   // 用力拉竿往後仰
   const bx0 = px - ddx * lean + shake, by0 = feet - ddy * lean;
   drawPlayer(bx0, by0, u);
 
   // 釣竿與釣線
+  let tip = null;
   if (state !== 'walk' || catchShow) {
     const hand = { x: bx0 + (P.dir === 'l' ? -3 : P.dir === 'r' ? 3 : 4) * u, y: by0 - 7 * u };
     let tx, ty;
     if (bob) {
       const dx = bob.x - hand.x, dy = bob.y - hand.y, l = Math.hypot(dx, dy) || 1;
       tx = hand.x + dx / l * 15 * u; ty = hand.y + dy / l * 15 * u - 10 * u;
-    } else { tx = hand.x + 4 * u; ty = hand.y - 16 * u; }
+    } else if (state === 'land') { tx = hand.x - ddx * 4 * u + 3 * u; ty = hand.y - 22 * u; }   // 竿子甩到頭上
+    else { tx = hand.x + 4 * u; ty = hand.y - 16 * u; }
     let bend = 0;
     if (state === 'fight') { bend = holding ? 1 : .5; tx += (bob.x - tx) * .18 * bend; ty += (bob.y - ty) * .3 * bend; }
     if (state === 'bite') bend = .4;
     const mx = (hand.x + tx) / 2, my = (hand.y + ty) / 2 - 4 * u * (1 - bend) + 6 * u * bend;
     ctx.strokeStyle = '#6b4423'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+    tip = { x: tx, y: ty };
     if (bob) {
       let bx = bob.x, by = bob.y;
       if (state === 'cast') {   // 拋出去的弧線
@@ -955,6 +1414,21 @@ function drawWorld(ox, oy) {
     }
   }
 
+  // 拉竿後魚飛到半空中甩尾，再落到手上
+  if (state === 'land' && L.t < CFG.landFly && tip) {
+    const k = L.t / CFG.landFly;
+    const sx0 = ox + (spot.i + .5) * CW, sy0 = oy + (spot.j + .5) * CH, ex = bx0, ey = by0 - 26 * u;
+    const fx = sx0 + (ex - sx0) * k, fy = sy0 + (ey - sy0) * k - Math.sin(k * Math.PI) * CH * 3.5;
+    ctx.strokeStyle = 'rgba(40,40,40,.7)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(tip.x, tip.y); ctx.lineTo(fx, fy); ctx.stroke();
+    const s = L.f.special ? 2 : [1.5, 2, 2.6][L.sz], flip = ex < sx0 ? -1 : 1;
+    ctx.save(); ctx.translate(fx, fy);
+    ctx.rotate(Math.sin(L.t * 26) * .6 + (k - .5) * flip * 1.2);   // 甩尾巴
+    ctx.scale(flip, 1 + Math.sin(L.t * 40) * .1);
+    ctx.drawImage(FISH_IMG[L.f.id], -FW * s / 2, -FH * s / 2, FW * s, FH * s);
+    ctx.restore();
+    if (Math.random() < .3) parts.push({ x: (fx - ox) / CW, y: (fy - oy) / CH, vx: rand(-.5, .5), vy: 0, life: .4 });   // 甩下來的水滴
+  }
   // 上鉤時頭上的「！」
   if (state === 'bite') {
     const ex = bx0, ey = by0 - 22 * u - Math.abs(Math.sin(gameT * 12)) * 2 * u;
@@ -969,8 +1443,9 @@ function drawWorld(ox, oy) {
     ctx.fillRect(bx0 + 6 * u, by0 - 18 * u + sy, u * 1.5, u * 2);
   }
   // 釣到後把魚舉起來
-  if (catchShow) {
-    const s = 2, img = FISH_IMG[catchShow];
+  const held = catchShow || (state === 'land' && L.t >= CFG.landFly ? L.f.id : null);
+  if (held) {
+    const s = 2, img = FISH_IMG[held];
     const hy = by0 - 32 * u - Math.abs(Math.sin(gameT * 5)) * 2 * u;
     ctx.drawImage(img, bx0 - FW * s / 2, hy, FW * s, FH * s);
   }
@@ -1034,10 +1509,10 @@ function drawJoy() {
 
 // 公式列、狀態列、按鈕狀態（公式列只顯示儲存格內容，不露出遊戲字眼）
 function updateUI(sel) {
-  const formula = cellText(sel[0], sel[1]);
+  const formula = cellLabel(sel[0], sel[1]);
   let btn = '', label = '', st = '就緒';
   if (!boss) {
-    if (state === 'walk') { btn = findSpot() ? '' : 'dim'; label = '下竿'; }
+    if (state === 'walk') { btn = findSpot() ? '' : 'dim'; label = '下竿<small>' + (S.bait === 'bread' ? '麵包屑' : BAIT_BY[S.bait].name + '×' + (S.baits[S.bait] || 0)) + '</small>'; }
     else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; st = '計算中…'; }
     else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; }
     else if (state === 'fight') {
@@ -1048,8 +1523,7 @@ function updateUI(sel) {
       $('ftip').textContent = F.surge > 0 ? '魚在掙扎！先放開！' : F.tens > .8 ? '張力太高，放開！' : '';
     } else { btn = 'dim'; label = '下竿'; }
   }
-  const total = Math.round(bag.reduce((a, b) => a + b.size, 0));
-  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length].join('|');
+  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length, S.money].join('|');
   if (key === lastUI) return;
   lastUI = key;
   $('namebox').textContent = addr(sel[0], sel[1]);
@@ -1057,7 +1531,7 @@ function updateUI(sel) {
   act.className = btn; act.innerHTML = label;
   $('st').textContent = st;
   $('cnt').textContent = '計數: ' + bag.length;
-  $('sum').textContent = '加總: ' + total.toLocaleString('en-US');
+  $('sum').textContent = '加總: ' + fmtN(S.money);   // 加總＝持有金額
   $('bagCount').textContent = bag.length || '';
 }
 

@@ -25,7 +25,11 @@
 - 背景格子只放文字與數字（`cellText()` 產生假報表資料），不畫插圖，要像手機看 Excel。
 - 右上角小地圖 `#miniBox`（偽裝成圖表），點擊 `openMap()` 放大。
 - 魚的像素圖由 `makeFish()` 依參數產生；人物像素圖 `SPR`／`PAL`。
-- 狀態 `state`：walk → cast → wait → bite → fight → caught；搏鬥資料在 `F`。
-- 背包 `bag` 存在 localStorage（`moyu.bag`）。
+- 特殊物品 `SPECIALS`（奇物，手繪像素圖 `rows`／`pal`）；餌料偏好 `LIKES`、`ONLY_BAIT`；裝備 `RODS`、`BAITS`。
+- 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級很吃力，差 2 級直接斷線。
+- 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。
+- 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
+- 狀態 `state`：walk → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
+- 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
 - `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
 - 程式註解使用繁體中文。
