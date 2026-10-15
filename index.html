@@ -225,14 +225,15 @@
     拖曳畫面移動人物<br>（電腦：方向鍵／WASD）<br>
     走到水邊，<b>按住</b>「下竿」蓄力，放開拋竿<br>
     按鈕閃爍時快按，按住收線！<br>
-    右邊的房子按鈕可以回城（兩間店就在旁邊）
+    右邊的房子按鈕可以回城（兩間店就在旁邊）<br>
+    走進水裡會自動搭船；暴風雨時有變種怪魚
   </div>
   <div class="note" id="toast"></div>
 </div>
 <div id="tabs"><span class="on" id="tab1">Q3彙總</span><span id="tab2">明細</span><span>+</span></div>
 <div id="status">
   <span id="st">就緒</span><span class="sp"></span>
-  <span id="cnt">計數: 0</span><span id="sum">加總: 0</span>
+  <span id="wx"></span><span id="cnt">計數: 0</span><span id="sum">加總: 0</span>
 </div>
 <div id="dlg"><div class="win"><div class="wt"><span id="dlgTitle"></span><button id="dlgX">✕</button></div><div class="wb" id="dlgBody"></div></div></div>
 
@@ -240,7 +241,7 @@
 // ================= 參數 =================
 const CFG = {
   cellW: 60, cellH: 24,  // 儲存格寬高（px），跟手機 Excel 一樣扁長
-  mapW: 44, mapH: 80,    // 地圖格數
+  mapW: 60, mapH: 80,    // 地圖格數（東邊是深海、遠洋）
   hdW: 34, hdH: 20,      // 列號寬、欄名高
   speed: 150,            // 移動速度（px/秒）
   miniW: 64,             // 小地圖寬度（px）
@@ -254,11 +255,12 @@ const CFG = {
   tensUp: 0.55,          // 按住時張力上升（每秒，乘上魚的力氣）
   tensDown: 0.9,         // 放開時張力下降（每秒）
   slipDown: 0.06,        // 放開時魚把線拉走（每秒，乘上魚的力氣）
+  surgeCap: 1.3,         // 掙扎頻率的力氣上限
   joyR: 42,              // 虛擬搖桿半徑（px）
 };
 
 // ================= 地形 =================
-const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8, SHOP_T: 9, SHOP_M: 10 };
+const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8, SHOP_T: 9, SHOP_M: 10, FAR: 11 };
 const TILES = [
   { name: '草地', color: '#C6E0B4', walk: true },
   { name: '樹林', color: '#70AD47' },
@@ -271,10 +273,11 @@ const TILES = [
   { name: '碼頭', color: '#C9A26B', walk: true },
   { name: '釣具行', color: '#F8CBAD', walk: true, shop: 'tackle' },
   { name: '魚市場', color: '#D9D2E9', walk: true, shop: 'market' },
+  { name: '海水・遠洋', color: '#002060', water: 'far' },
 ];
 
 // ================= 魚種 =================
-// rar：0 普通 1 少見 2 稀有 3 史詩 4 傳說 5 奇物；lv 是魚的力量等級；price 是魚市場的基本收購價
+// rar：0 普通 1 少見 2 稀有 3 史詩 4 傳說 5 奇物 6 變種；lv 是魚的力量等級；price 是魚市場的基本收購價
 const RAR = [
   { name: '普通', w: 60, color: '#7f7f7f', str: 0.75, lv: 1 },
   { name: '少見', w: 26, color: '#2e75b6', str: 1.0, lv: 2 },
@@ -282,6 +285,7 @@ const RAR = [
   { name: '史詩', w: 3.5, color: '#c55a11', str: 1.45, lv: 4 },
   { name: '傳說', w: 0.8, color: '#c00000', str: 1.75, lv: 5 },
   { name: '奇物', w: 0, color: '#d63384', str: 0.5, lv: 1 },
+  { name: '變種', w: 0, color: '#00a050', str: 1.6, lv: 5 },
 ];
 const FISH = [
   // 淡水・池塘
@@ -348,9 +352,63 @@ const LIKES = {
   mahi: ['squid'], tuna: ['squid'], marlin: ['squid'], oarfish: ['glow'],
 };
 const ONLY_BAIT = { oarfish: 'glow' };   // 只吃這種餌
+// 遠洋的魚（要有漁船才到得了）
+FISH.push(
+  { id: 'sunfish', name: '翻車魚', water: ['far'], rar: 2, size: [100, 300], price: 4000, shape: 'round', body: '#9aa8b8', belly: '#dde4ea', fin: '#7a8898' },
+  { id: 'whaleshark', name: '鯨鯊', water: ['far'], rar: 3, size: [400, 1200], price: 12000, shape: 'normal', body: '#3a5a7a', belly: '#c8d4dc', fin: '#2a4a6a', spots: '#e0e8f0' },
+  { id: 'coelacanth', name: '腔棘魚', water: ['far'], rar: 4, size: [100, 200], price: 30000, shape: 'normal', body: '#2a4a8a', belly: '#6a8ac0', fin: '#1a3a6a', spots: '#d0d8e8' },
+);
+['tuna', 'marlin', 'mahi'].forEach(id => FISH.find(f => f.id === id).water.push('far'));
+// 掠食魚：只有牠們會咬誘餌
+['zacco', 'catfish', 'salmon', 'scad', 'grouper', 'mahi', 'tuna', 'marlin', 'coelacanth'].forEach(id => { FISH.find(f => f.id === id).pred = true; });
+Object.assign(LIKES, { sunfish: ['squid'], whaleshark: ['shrimp'], coelacanth: ['squid'] });
+
+// 變種怪魚：只在暴風雨時出現，要釣暗紅色的巨大魚影
+const MUTANTS = [
+  { id: 'octopus', name: '八爪章魚', water: ['sea', 'deep', 'far'], lv: 4, w: 3, size: [150, 400], price: 15000, desc: '八隻觸手同時抓著釣線，眼睛還會發光。',
+    rows: ['....kkkkkk....', '...kppppppk...', '..kppppppppk..', '..kpwkppwkpk..', '..kppppppppk..', '..kpppPPpppk..', '...kppppppk...', '..kpkpkpkpkk..', '.kpkkpkkpkkpk.', '.kp.kp..kp.kp.', 'kpk.kpk.kpk.kp', 'kp..kp...kp.kp', '.k...k....k..k'],
+    pal: { k: '#3a0a2a', p: '#b03a8a', P: '#d070b0', w: '#ffee55' } },
+  { id: 'piranha', name: '食人魚', water: ['river', 'pond'], lv: 3, w: 4, size: [20, 45], price: 3000, desc: '牙齒比你的釣鉤還利，小心手指。',
+    shape: 'normal', body: '#5a6070', belly: '#e04030', fin: '#3a404a', teeth: true },
+  { id: 'glowkoi', name: '輻射錦鯉', water: ['pond'], lv: 4, w: 2, size: [50, 120], price: 8000, desc: '在暴風雨裡發出詭異的綠光。',
+    shape: 'normal', body: '#b8ff8a', belly: '#e8ffd0', fin: '#40d040', patch: '#20b030' },
+  { id: 'croc', name: '史前巨鱷', water: ['river'], lv: 5, w: 1.5, size: [600, 1100], price: 50000, desc: '學名帝鱷，據說一億年前就在這條河裡了。',
+    rows: ['......k.k.k.k.k.k.........', '.....kgkgkgkgkgkgkkkkkk...', 'kkk.kgggggggggggggggggwkk.', 'kggkgggggggggggggggggggggk', 'kkgggggggggggggggggggtgtgk', '..kllllllllllllllllllllllk', '...kgk..kgk.....kgk..kgk..', '...kk...kk......kk...kk...'],
+    pal: { k: '#1a2a10', g: '#4a6a2a', l: '#a8b878', w: '#ff3030', t: '#ffffff' } },
+  { id: 'angler', name: '燈籠鮟鱇王', water: ['deep', 'far'], lv: 5, w: 1.5, size: [200, 500], price: 25000, desc: '頭上的燈籠會把人催眠，別盯著看。',
+    rows: ['...........yy...', '..........kyyk..', '.........k......', '....kkkkkk......', '..kkdddddddk....', '.kddddddddwdk...', 'kkdddddddddddk..', 'k.kddddddtttttk.', 'kkdddddddtdtdtk.', '.kddddddddddk...', '..kkdddddddk....', '....kkkkkkk.....'],
+    pal: { k: '#0a0a14', d: '#3a2a4a', w: '#ffffff', t: '#e8e8d0', y: '#aaff44' } },
+];
+MUTANTS.forEach(m => { m.mutant = true; m.rar = 6; FISH.push(m); });
+
+// ================= 誘餌、船 =================
+const LURES = [
+  { id: 'spinner', name: '亮片', price: 300, waters: ['pond', 'river'], cut: .3, desc: '淡水掠食魚' },
+  { id: 'minnow', name: '米諾', price: 1200, waters: ['sea', 'deep'], cut: .4, desc: '近海、深海掠食魚' },
+  { id: 'jig', name: '鐵板', price: 5000, waters: ['deep', 'far'], cut: .5, desc: '深海、遠洋，旗魚更常出現' },
+];
+const LURE_BY = Object.fromEntries(LURES.map(l => [l.id, l]));
+const BOATS = [
+  { lv: 1, name: '舢舨', price: 0, speed: 85, waters: ['pond', 'river', 'sea'], desc: '池塘、河川、近海' },
+  { lv: 2, name: '漁船', price: 15000, speed: 175, waters: ['pond', 'river', 'sea', 'deep', 'far'], desc: '全部水域（含深海、遠洋）' },
+];
+
+// ================= 天氣（每 3 分鐘換一次） =================
+const WEATHERS = [
+  { id: 'sun', name: '晴天', w: 40 },
+  { id: 'cloud', name: '陰天', w: 20 },
+  { id: 'rain', name: '小雨', w: 22, wait: .8, rain: 70 },
+  { id: 'storm', name: '暴風雨', w: 18, wait: .7, rain: 170, severe: true },
+];
+const WEATHER_PERIOD = 3 * 60 * 1000;
+function weatherAt(p) {
+  let r = mulberry32(p * 104729 + 7)() * WEATHERS.reduce((a, b) => a + b.w, 0);
+  for (const wx of WEATHERS) { r -= wx.w; if (r <= 0) return wx; }
+  return WEATHERS[0];
+}
 FISH.forEach(f => { f.bait = LIKES[f.id] || []; });
 const FISH_BY = Object.fromEntries(FISH.map(f => [f.id, f]));
-const WATER_NAME = { pond: '池塘', river: '河川', sea: '近海', deep: '深海' };
+const WATER_NAME = { pond: '池塘', river: '河川', sea: '近海', deep: '深海', far: '遠洋' };
 
 // ================= 裝備 =================
 const RODS = [
@@ -374,6 +432,7 @@ const BAIT_BY = Object.fromEntries(BAITS.map(b => [b.id, b]));
 // 魚的力量等級：稀有度決定，特別大尾再加 1
 function fishLv(f, ratio) {
   if (f.junk || f.special) return 1;
+  if (f.mutant) return f.lv;
   return Math.min(5, RAR[f.rar].lv + (ratio > .8 ? 1 : 0));
 }
 
@@ -441,7 +500,7 @@ function genMap() {
     const e = seaEdge(j);
     for (let i = 0; i < W; i++) {
       let t = T.GRASS;
-      if (i >= e + 6) t = T.DEEP; else if (i >= e) t = T.SEA; else if (i >= e - 1) t = T.SAND;
+      if (i >= e + 16) t = T.FAR; else if (i >= e + 6) t = T.DEEP; else if (i >= e) t = T.SEA; else if (i >= e - 1) t = T.SAND;
       setT(i, j, t);
     }
   }
@@ -563,6 +622,7 @@ function makeFish(f) {
   // 眼睛
   const ex = Math.round(cx + rx - (f.shape === 'round' ? 2.5 : 3));
   set(ex, cy - 2, '#ffffff'); set(ex + 1, cy - 2, '#111111');
+  if (f.teeth) { set(cx + rx - 1, cy, '#ffffff'); set(cx + rx - 2, cy + 1, '#ffffff'); set(cx + rx - 3, cy, '#ffffff'); }
   if (f.whisker) { set(cx + rx, cy + 1, '#222'); set(cx + rx + 1, cy + 2, '#222'); set(cx + rx + 1, cy, '#222'); }
   // 外框
   const out = g.map(r => r.slice());
@@ -627,10 +687,10 @@ const parts = [];
 let bag = [];
 try { bag = JSON.parse(localStorage.getItem('moyu.bag') || '[]').filter(b => FISH_BY[b.id]); } catch (e) {}
 // 金錢、裝備、圖鑑
-const S = { money: 200, rod: 1, baits: {}, bait: 'bread', dex: {} };
+const S = { money: 200, rod: 1, baits: {}, bait: 'bread', dex: {}, lures: {}, boat: 1 };   // 一開始送一艘舢舨
 let hadSave = false;
 try { const raw = localStorage.getItem('moyu.save'); if (raw) { Object.assign(S, JSON.parse(raw)); hadSave = true; } } catch (e) {}
-if (!BAIT_BY[S.bait]) S.bait = 'bread';
+if (!BAIT_BY[S.bait] && !(LURE_BY[S.bait] && S.lures[S.bait])) S.bait = 'bread';
 function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); d.n++; d.max = Math.max(d.max, b.size); }
 if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
 function saveAll() {
@@ -720,12 +780,13 @@ function goHome() {
 $('logo').addEventListener('click', () => setBoss(!boss));
 document.addEventListener('visibilitychange', () => { if (document.hidden && !boss) setBoss(true); });
 
+const pick = a => a[Math.floor(Math.random() * a.length)];
 // ================= 水裡的魚影 =================
 // 影子越大，上鉤的魚越大尾、越稀有
-const SHADOW_N = { pond: 16, river: 26, sea: 36, deep: 40 };
-const SHADOW_P = { pond: [.5, .4], river: [.45, .4], sea: [.35, .45], deep: [.2, .45] };   // 小、中的機率，其餘是大
-const SHADOW_R = [[6, 2.2], [10, 3.6], [16, 5.5]];   // 小／中／大魚影的半徑（px）
-const waterCells = { pond: [], river: [], sea: [], deep: [] };
+const SHADOW_N = { pond: 16, river: 26, sea: 36, deep: 40, far: 40 };
+const SHADOW_P = { pond: [.5, .4], river: [.45, .4], sea: [.35, .45], deep: [.2, .45], far: [.15, .4] };   // 小、中的機率，其餘是大
+const SHADOW_R = [[6, 2.2], [10, 3.6], [16, 5.5], [26, 9]];   // 小／中／大／變種怪影的半徑（px）
+const waterCells = { pond: [], river: [], sea: [], deep: [], far: [] };
 for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const w = TILES[tileAt(i, j)].water; if (w) waterCells[w].push([i, j]); }
 const shadows = [];
 function spawnShadow(w) {
@@ -733,6 +794,14 @@ function spawnShadow(w) {
   shadows.push({ x: c[0] + .5, y: c[1] + .5, w, sz: r < p[0] ? 0 : r < p[0] + p[1] ? 1 : 2, a: rand(0, 6.28), sp: rand(.4, .9), turn: rand(1, 3), target: null });
 }
 for (const w in SHADOW_N) for (let k = 0; k < SHADOW_N[w]; k++) spawnShadow(w);
+// 暴風雨時出現的變種怪影（sz 3）
+function spawnMutantShadows(n) {
+  for (let k = 0; k < n; k++) {
+    const m = pick(MUTANTS), w = pick(m.water), c = pick(waterCells[w]);
+    shadows.push({ x: c[0] + .5, y: c[1] + .5, w, sz: 3, a: rand(0, 6.28), sp: rand(.5, 1), turn: rand(1, 3), target: null });
+  }
+}
+function clearMutantShadows() { for (let k = shadows.length - 1; k >= 0; k--) if (shadows[k].sz === 3 && !shadows[k].target) shadows.splice(k, 1); }
 const waterOf = (x, y) => TILES[tileAt(Math.floor(x), Math.floor(y))].water;
 function updateShadows(dt) {
   const k = CFG.cellH / CFG.cellW;   // 橫向一格比較寬，換算成相同的螢幕速度
@@ -759,7 +828,7 @@ function nearestShadow(cx, cy, maxD) {
   }
   return best;
 }
-function removeShadow(s) { const i = shadows.indexOf(s); if (i >= 0) { shadows.splice(i, 1); spawnShadow(s.w); } }
+function removeShadow(s) { const i = shadows.indexOf(s); if (i >= 0) { shadows.splice(i, 1); if (s.sz === 3) { if (weather.severe) spawnMutantShadows(1); } else spawnShadow(s.w); } }
 
 // ================= 釣魚流程 =================
 // 蓄力：0→1→0 來回擺盪，放開那一刻的值就是力道
@@ -776,7 +845,6 @@ function aimSpot(power, dir = P.dir) {
 }
 // 哪個方向拋得到水（優先面向的方向）
 function findCastDir() {
-  if (TILES[tileAt(Math.floor(P.x), Math.floor(P.y))].water) return null;
   for (const d of [P.dir, 'd', 'r', 'l', 'u']) if (aimSpot(1, d)) return d;
   return null;
 }
@@ -786,7 +854,9 @@ function doCast() {
   const pw = castPower(), s = aimSpot(pw);
   if (!s) { state = 'walk'; toast('沒拋進水裡，力道再大一點'); return; }
   // 每次下竿用掉一個餌（麵包屑免費）
-  if (S.bait !== 'bread') {
+  const lure = LURE_BY[S.bait];
+  if (lure && !lure.waters.includes(TILES[s.t].water)) toast(`${lure.name}不適合這片水域，可能只會釣到雜物`);
+  if (S.bait !== 'bread' && !lure) {
     if ((S.baits[S.bait] || 0) <= 0) { toast(`${BAIT_BY[S.bait].name}用完了，改用麵包屑`); S.bait = 'bread'; }
     else S.baits[S.bait]--;
     saveAll();
@@ -820,11 +890,15 @@ function press() {
 const SZ_MULT = [[2, 1, .2, .1, .05], [1, 1, 1, 1, 1], [.3, 1, 3, 4, 5]];
 const SZ_RATIO = [() => Math.pow(Math.random(), 2.5) * .6, () => Math.pow(Math.random(), 1.8), () => .4 + .6 * Math.pow(Math.random(), .8)];
 function pickFish(water, sz) {
-  const list = FISH.filter(f => f.water.includes(water));
+  const list = FISH.filter(f => f.water.includes(water)), lure = LURE_BY[S.bait];
   const ws = list.map(f => {
+    if (f.mutant) return 0;
     if (f.junk || f.special) return f.w;
     if (ONLY_BAIT[f.id] && S.bait !== ONLY_BAIT[f.id]) return 0;
-    return RAR[f.rar].w * (f.bait.includes(S.bait) ? 3 : .4) * SZ_MULT[sz][f.rar];
+    const base = RAR[f.rar].w * SZ_MULT[sz][f.rar];
+    // 誘餌只有掠食魚會咬；鐵板特別吸引旗魚
+    if (lure) return f.pred && lure.waters.includes(water) ? base * 3 * (lure.id === 'jig' && f.id === 'marlin' ? 2 : 1) : 0;
+    return base * (f.bait.includes(S.bait) ? 3 : .4);
   });
   let r = Math.random() * ws.reduce((a, b) => a + b, 0);
   for (let k = 0; k < list.length; k++) { r -= ws[k]; if (r <= 0) return list[k]; }
@@ -835,19 +909,30 @@ function startFight() {
   const sz = spot.shadow ? spot.shadow.sz : 1;
   if (spot.shadow) removeShadow(spot.shadow);
   spot.shadow = null;
-  const f = pickFish(TILES[spot.t].water, sz);
-  const ratio = f.special ? 0 : SZ_RATIO[sz]();
+  const water = TILES[spot.t].water;
+  // 變種怪影：釣上來的是變種怪魚
+  const muts = sz === 3 ? MUTANTS.filter(m => m.water.includes(water)) : [];
+  const f = muts.length ? pick(muts) : pickFish(water, Math.min(sz, 2));
+  const ratio = f.special ? 0 : f.mutant ? rand(.3, 1) : SZ_RATIO[Math.min(sz, 2)]();
   const size = f.special ? 0 : Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
   const lv = fishLv(f, ratio), diff = lv - S.rod;
   splash(spot.i + .5, spot.j + .5, 10);
   // 魚比釣竿強 2 級以上，一上鉤就斷線
-  if (diff >= 2) { state = 'walk'; toast(`啪！線斷了…這條魚太強（Lv${lv}），要換更好的釣竿`); return; }
-  const str = (f.junk || f.special ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio);
+  if (diff >= 2) { state = 'walk'; toast(`啪！線斷了…這條魚太強（Lv${lv}），要換更好的釣竿` + loseLure()); return; }
+  const str = (f.junk || f.special ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio) * (weather.severe ? 1.1 : 1);
   F = { f, size, str, lv, sz, tensMul: diff >= 1 ? 1.6 : diff < 0 ? .85 : 1, tens: 0.3, prog: 0.25, surge: 0, nextSurge: rand(1, 2.2), t: 0 };
   state = 'fight';
   $('flv').textContent = `魚力 Lv${lv}・${RODS[S.rod - 1].name} Lv${S.rod}` + (diff >= 1 ? '（竿子太弱，很吃力！）' : '');
   $('flv').className = 'lvrow' + (diff >= 1 ? ' warn' : '');
   $('fight').classList.add('on');
+}
+
+// 線斷掉時 30% 機率弄丟誘餌
+function loseLure() {
+  const lure = LURE_BY[S.bait];
+  if (!lure || Math.random() > .3) return '';
+  delete S.lures[lure.id]; S.bait = 'bread'; saveAll();
+  return `（${lure.name}也被扯走了…）`;
 }
 
 function endFight(ok, msg) {
@@ -870,7 +955,6 @@ function splash(x, y, n) {
 
 // ================= 對話框 =================
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-const pick = a => a[Math.floor(Math.random() * a.length)];
 function openDlg(title, body) {
   const b = $('dlgBody');
   // 同一個視窗重畫時保留捲動位置（例如連續買東西）
@@ -902,10 +986,10 @@ function showCatch(f, size, isNew, where, item) {
   d.appendChild(el('div', 'meta', f.special || f.junk ? where : `${size} cm ・ ${where}`));
   if (f.desc) d.appendChild(el('div', 'meta', f.desc));
   d.appendChild(el('div', 'price', `市價約 $${fmtN(priceOf(item))}`));
-  if (isNew && !f.junk) d.appendChild(el('div', 'new', f.special ? '新發現！' : '新魚種！'));
+  if (isNew && !f.junk) d.appendChild(el('div', 'new', f.special ? '新發現！' : f.mutant ? '新變種！' : '新魚種！'));
   const b = el('button', 'okBtn', '放進背包');
   b.onclick = closeDlg; d.appendChild(b);
-  openDlg(f.special ? '撈到奇怪的東西！' : f.junk ? '釣到了……' : '釣到了！', d);
+  openDlg(f.mutant ? '釣到變種怪魚！' : f.special ? '撈到奇怪的東西！' : f.junk ? '釣到了……' : '釣到了！', d);
 }
 
 function moneyLine() {
@@ -929,6 +1013,12 @@ function openBag(tab) {
     if (n === 0) continue;
     const c = el('button', 'chip' + (S.bait === b.id ? ' on' : ''), b.name + (n == null ? '' : ' ×' + n));
     c.onclick = () => { S.bait = b.id; saveAll(); openBag(tab); };
+    chips.appendChild(c);
+  }
+  for (const l of LURES) {
+    if (!S.lures[l.id]) continue;
+    const c = el('button', 'chip' + (S.bait === l.id ? ' on' : ''), l.name + '（誘餌）');
+    c.onclick = () => { S.bait = l.id; saveAll(); openBag(tab); };
     chips.appendChild(c);
   }
   d.appendChild(chips);
@@ -970,7 +1060,7 @@ function openBag(tab) {
       if (known) {
         c.appendChild(rarTag(f));
         c.appendChild(el('div', 's', f.special || f.junk ? `撈到 ${known.n} 次` : `最大 ${known.max} cm`));
-      } else c.appendChild(el('div', 's', '出沒：' + f.water.map(w => WATER_NAME[w]).join('、')));
+      } else c.appendChild(el('div', 's', '出沒：' + f.water.map(w => WATER_NAME[w]).join('、') + (f.mutant ? '・暴風雨' : '')));
       body.appendChild(c);
     }
   }
@@ -990,6 +1080,9 @@ const NPC = {
       '聽說皇帶魚只吃發光餌，我也只是聽說啦。',
       `剛剛聽魚市場說，今天在高價收「${FISH_BY[hotList()[0].id].name}」喔！`,
       '最近有人在河裡撈到 Switch 2，真的假的？',
+      '暴風雨的時候水裡會出現暗紅色的大影子，那是變種怪魚，有膽就去釣！',
+      '想去遠洋？要先買漁船，舢舨會被浪打翻的啦。',
+      `現在是${weather.name}，` + (weather.severe ? '外面風浪很大，小心點！' : '天氣不錯，適合出海。'),
     ],
   },
   market: {
@@ -1001,6 +1094,7 @@ const NPC = {
       '最近一堆人在海邊撈到 iPhone，你也去碰碰運氣啊。',
       '世界盃的球也有人撈到喔，球迷會出高價收。',
       '破靴子我也收啦，一塊錢而已。',
+      '變種的怪魚我也收，價錢很好喔！聽說史前巨鱷可以賣到五萬。',
     ],
   },
 };
@@ -1017,7 +1111,7 @@ function openShop(kind, line) {
   top.appendChild(bub);
   d.appendChild(top);
   d.appendChild(moneyLine());
-  if (kind === 'market') marketBody(d); else tackleBody(d);
+  if (kind === 'market') marketBody(d); else { tackleBody(d); tackleBody2(d); }
   openDlg(npc.title, d);
 }
 
@@ -1119,6 +1213,35 @@ function tackleBody(d) {
   d.appendChild(t2);
 }
 
+function tackleBody2(d) {
+  d.appendChild(el('div', 'sect', '誘餌（買一次一直用，魚比較快上鉤，但只有掠食魚會咬）'));
+  const t = xlTable(['品名', '適合', '價格', '']);
+  for (const l of LURES) {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, l.name));
+    tr.appendChild(el('td', 'desc', l.desc));
+    tr.appendChild(el('td', 'num', '$' + fmtN(l.price)));
+    const td = el('td');
+    if (S.lures[l.id]) td.appendChild(el('span', 'own', '已擁有'));
+    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(l.price, () => { S.lures[l.id] = true; S.bait = l.id; }, `${l.name}拿去，已經幫你裝上了。線斷掉的時候可能會弄丟喔！`); td.appendChild(b); }
+    tr.appendChild(td); t.appendChild(tr);
+  }
+  d.appendChild(t);
+  d.appendChild(el('div', 'sect', '船（走進水裡自動上船）'));
+  const t2 = xlTable(['品名', '可到', '價格', '']);
+  for (const bt of BOATS) {
+    const tr = el('tr');
+    tr.appendChild(el('td', null, bt.name));
+    tr.appendChild(el('td', 'desc', bt.desc));
+    tr.appendChild(el('td', 'num', bt.price ? '$' + fmtN(bt.price) : '贈送'));
+    const td = el('td');
+    if (bt.lv <= S.boat) td.appendChild(el('span', 'own', bt.lv === S.boat ? '使用中' : '已擁有'));
+    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(bt.price, () => { S.boat = bt.lv; }, `${bt.name}開得又快又穩，遠洋就靠它了！`); td.appendChild(b); }
+    tr.appendChild(td); t2.appendChild(tr);
+  }
+  d.appendChild(t2);
+}
+
 function buy(cost, apply, line) {
   if (S.money < cost) { openShop('tackle', pick(['錢不夠喔，先去釣幾尾賣一賣吧。', `還差 $${fmtN(cost - S.money)} 喔。`])); return; }
   S.money -= cost; apply(); saveAll();
@@ -1146,7 +1269,18 @@ function setBoss(on) {
 }
 
 // ================= 更新 =================
-let lastTile = T.PATH;
+let lastTile = T.PATH, lastBlockT = -9;
+// 天氣：依時間決定，大家看到的一樣
+let weatherP = Math.floor(Date.now() / WEATHER_PERIOD), weather = weatherAt(weatherP);
+if (weather.severe) spawnMutantShadows(8);
+function checkWeather() {
+  const p = Math.floor(Date.now() / WEATHER_PERIOD);
+  if (p === weatherP) return;
+  const old = weather; weatherP = p; weather = weatherAt(p);
+  if (old === weather) return;
+  if (weather.severe) { spawnMutantShadows(8); toast('暴風雨來了！水裡出現暗紅色的巨大怪影…'); }
+  else { if (old.severe) clearMutantShadows(); toast(`天氣轉為${weather.name}` + (weather.rain ? '，魚比較容易上鉤' : '')); }
+}
 function update(dt) {
   gameT += dt;
   const v = inputVec();
@@ -1156,9 +1290,17 @@ function update(dt) {
     if (moving) {
       hideHint();
       if (Math.abs(v.x) > Math.abs(v.y)) P.dir = v.x > 0 ? 'r' : 'l'; else P.dir = v.y > 0 ? 'd' : 'u';
-      const nx = P.x + v.x * CFG.speed / CFG.cellW * dt, ny = P.y + v.y * CFG.speed / CFG.cellH * dt;
+      // 在船上用船速，暴風雨時船開比較慢
+      const sp = onBoat() ? BOATS[S.boat - 1].speed * (weather.severe ? .7 : 1) : CFG.speed;
+      const nx = P.x + v.x * sp / CFG.cellW * dt, ny = P.y + v.y * sp / CFG.cellH * dt;
       if (free(nx, P.y)) P.x = nx;
       if (free(P.x, ny)) P.y = ny;
+      // 船開不進去的水域給提示
+      const ahead = tileAt(Math.floor(P.x + v.x * .7), Math.floor(P.y + v.y * .7));
+      if (TILES[ahead].water && !canEnter(ahead) && gameT - lastBlockT > 2.5) {
+        lastBlockT = gameT;
+        toast(`${BOATS[S.boat - 1].name}開不進${WATER_NAME[TILES[ahead].water]}，要漁船才行`);
+      }
       P.walkT += dt;
     }
     P.moving = moving;
@@ -1184,6 +1326,8 @@ function update(dt) {
       const s = nearestShadow(spot.i + .5, spot.j + .5, 5);
       if (s) { s.target = { x: spot.i + .5, y: spot.j + .5 }; spot.shadow = s; waitT = rand(1, 2.5); }
       else { spot.shadow = null; waitT = rand(CFG.waitMax, CFG.waitMax * 2); }
+      // 下雨魚比較快上鉤；誘餌也會縮短等待
+      waitT *= (weather.wait || 1) * (1 - (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0));
     }
   } else if (state === 'wait') {
     waitT -= dt;
@@ -1208,6 +1352,7 @@ function update(dt) {
   }
 
   updateShadows(dt);
+  checkWeather();
   for (let k = parts.length - 1; k >= 0; k--) {
     const p = parts[k];
     p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 9 * dt; p.life -= dt;
@@ -1215,9 +1360,12 @@ function update(dt) {
   }
 }
 
+// 能不能站在這一格：陸地，或是船開得進去的水域
+function canEnter(t) { return TILES[t].walk || (TILES[t].water && S.boat > 0 && BOATS[S.boat - 1].waters.includes(TILES[t].water)); }
+const onBoat = () => !!TILES[tileAt(Math.floor(P.x), Math.floor(P.y))].water;
 function free(x, y) {
   for (const [ox, oy] of [[-.16, 0], [.16, 0], [-.16, .4], [.16, .4]]) {
-    if (!TILES[tileAt(Math.floor(x + ox), Math.floor(y + oy))].walk) return false;
+    if (!canEnter(tileAt(Math.floor(x + ox), Math.floor(y + oy)))) return false;
   }
   return true;
 }
@@ -1225,7 +1373,8 @@ function free(x, y) {
 function updateFight(dt) {
   F.t += dt;
   F.nextSurge -= dt;
-  if (F.nextSurge <= 0) { F.surge = rand(.5, .9); F.nextSurge = rand(1.2, 3) / F.str; }
+  // 魚越強掙扎越頻繁，但有上限，不然最強的魚永遠拉不上來
+  if (F.nextSurge <= 0) { F.surge = rand(.5, .9); F.nextSurge = rand(1.5, 3.5) / Math.min(F.str, CFG.surgeCap); }
   if (F.surge > 0) F.surge -= dt;
   const s = F.str, surging = F.surge > 0;
   if (holding) {
@@ -1233,11 +1382,11 @@ function updateFight(dt) {
     F.tens += CFG.tensUp * s * F.tensMul * dt * (surging ? 2.2 : 1);
   } else {
     F.tens -= CFG.tensDown * dt;
-    F.prog -= CFG.slipDown * s * dt * (surging ? 2.5 : 1);
+    F.prog -= CFG.slipDown * s * dt * (surging ? 1.8 : 1);
   }
   F.tens = clamp(F.tens, 0, 1);
   if (Math.random() < dt * 6) splash(spot.i + .5 + rand(-.3, .3), spot.j + .5 + rand(-.3, .3), 2);
-  if (F.tens >= 1) return endFight(false, '線斷了！張力太大，記得適時放開');
+  if (F.tens >= 1) return endFight(false, '線斷了！張力太大，記得適時放開' + loseLure());
   if (F.prog <= 0) return endFight(false, '魚掙脫了…');
   if (F.prog >= 1) return endFight(true);
 }
@@ -1246,7 +1395,7 @@ function updateFight(dt) {
 // 每格都填上看起來像報表的資料，不畫插圖
 const ITEMS = ['筆電', '螢幕', '滑鼠', '鍵盤', '耳機', '喇叭', '印表機', '投影機', '路由器', '硬碟', '隨身碟', '網路卡', '電源', '機殼', '主機板', '顯示卡'];
 const HEADS = ['品項', '1月', '2月', '3月', 'Q1', '4月', '5月', '6月', 'Q2', '上半年', '目標', '達成率', '成長率', '單價', '數量', '金額'];
-const DARK_FILL = new Set([T.FOREST, T.SEA, T.DEEP]);   // 深色底配白字
+const DARK_FILL = new Set([T.FOREST, T.SEA, T.DEEP, T.FAR]);   // 深色底配白字
 const FONT = '11px -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif';
 const FONT_B = '600 ' + FONT;
 const fmtN = n => n.toLocaleString('en-US');
@@ -1298,7 +1447,7 @@ function openMap() {
   drawMap(x, w, h, null);
   d.appendChild(c);
   const lg = document.createElement('div'); lg.className = 'legend';
-  for (const t of [T.SHOP_T, T.SHOP_M, T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP]) {
+  for (const t of [T.SHOP_T, T.SHOP_M, T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP, T.FAR]) {
     const it = document.createElement('div');
     const sw = document.createElement('i'); sw.style.background = TILES[t].color;
     it.appendChild(sw); it.appendChild(document.createTextNode(TILES[t].name + (TILES[t].walk || TILES[t].water ? '' : '（不能走）')));
@@ -1347,6 +1496,7 @@ function render() {
   } else {
     sel = [2, 1];
   }
+  if (!boss && weather.rain) drawRain();
   // Excel 選取框
   ctx.strokeStyle = '#217346'; ctx.lineWidth = 2;
   ctx.strokeRect(ox + sel[0] * CW, oy + sel[1] * CH, CW, CH);
@@ -1357,6 +1507,27 @@ function render() {
   if (!boss && joy.id !== null) drawJoy();
   if (!boss) { mctx.setTransform(2, 0, 0, 2, 0, 0); drawMap(mctx, CFG.miniW, MINI_H, { x: camX / CW, y: camY / CH, w: gw / CW, h: gh / CH }); }
   updateUI(sel);
+}
+
+// 雨絲用時間算位置，不用另外記狀態；暴風雨加暗、閃電
+function drawRain() {
+  const storm = weather.severe, n = weather.rain, t = gameT;
+  if (storm) { ctx.fillStyle = 'rgba(20,30,55,.22)'; ctx.fillRect(0, 0, VW, VH); }
+  ctx.strokeStyle = storm ? 'rgba(60,80,120,.45)' : 'rgba(70,110,160,.35)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  const slant = storm ? 7 : 2, len = storm ? 16 : 10;
+  for (let k = 0; k < n; k++) {
+    const h = hash(k, 77), sp = 380 + h % 260;
+    const x = ((h % 997) / 997 * (VW + 60) + t * slant * 20) % (VW + 60) - 30;
+    const y = ((h >> 10) % 991 / 991 * (VH + 40) + t * sp) % (VH + 40) - 20;
+    ctx.moveTo(x, y); ctx.lineTo(x - slant, y + len);
+  }
+  ctx.stroke();
+  if (storm) {   // 閃電
+    const ph = t % 7.3;
+    const a = ph < .1 ? .45 : ph > .18 && ph < .25 ? .3 : 0;
+    if (a) { ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.fillRect(0, 0, VW, VH); }
+  }
 }
 
 function drawCell(i, j, x, y) {
@@ -1393,7 +1564,7 @@ function drawWorld(ox, oy) {
     if (sx < -30 || sy < -30 || sx > VW + 30 || sy > VH + 30) continue;
     const [rx, ry] = SHADOW_R[s.sz], wag = Math.sin(gameT * 8 + s.x * 3) * ry * .6;
     ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.a);
-    ctx.fillStyle = s.w === 'deep' ? 'rgba(0,0,0,.42)' : 'rgba(0,25,50,.3)';
+    ctx.fillStyle = s.sz === 3 ? 'rgba(110,0,30,.55)' : s.w === 'deep' || s.w === 'far' ? 'rgba(0,0,0,.42)' : 'rgba(0,25,50,.3)';
     ctx.beginPath(); ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-rx * .8, 0); ctx.lineTo(-rx * 1.5, -ry + wag); ctx.lineTo(-rx * 1.5, ry + wag); ctx.closePath(); ctx.fill();
     ctx.restore();
@@ -1404,17 +1575,22 @@ function drawWorld(ox, oy) {
     const fx = bob.x + Math.sin(gameT * 4) * 6, fy = bob.y + 5;
     ctx.beginPath(); ctx.ellipse(fx, fy, 14, 5, Math.sin(gameT * 2) * .5, 0, Math.PI * 2); ctx.fill();
   }
-  // 影子
-  ctx.fillStyle = 'rgba(0,0,0,.18)';
-  ctx.beginPath(); ctx.ellipse(px, feet, 6 * u, 2 * u, 0, 0, Math.PI * 2); ctx.fill();
+  // 影子（在船上就不畫）
+  const boat = onBoat();
+  if (!boat) {
+    ctx.fillStyle = 'rgba(0,0,0,.18)';
+    ctx.beginPath(); ctx.ellipse(px, feet, 6 * u, 2 * u, 0, 0, Math.PI * 2); ctx.fill();
+  }
 
   // 搏鬥時往後仰、晃動
   let lean = 0, shake = 0;
   const [ddx, ddy] = DIRS[P.dir];
   if (state === 'fight') { lean = holding ? 2 * u : u; shake = Math.sin(gameT * (holding ? 40 : 18)) * u * (F.surge > 0 ? 1.2 : .6); }
   else if (state === 'land' && L.t < CFG.landFly) lean = 3 * u;   // 用力拉竿往後仰
-  const bx0 = px - ddx * lean + shake, by0 = feet - ddy * lean;
+  const bob2 = boat ? Math.sin(gameT * 3) * 1.5 : 0;   // 船上隨浪起伏
+  const bx0 = px - ddx * lean + shake, by0 = feet - ddy * lean + bob2;
   drawPlayer(bx0, by0, u);
+  if (boat) drawBoat(px, feet + bob2);
 
   // 釣竿與釣線
   let tip = null;
@@ -1514,6 +1690,17 @@ function drawWorld(ox, oy) {
   for (const p of parts) ctx.fillRect(ox + p.x * CW - u, oy + p.y * CH - u, 2 * u, 2 * u);
 }
 
+// 船身蓋住人物的腿
+function drawBoat(cx, feet) {
+  const big = S.boat >= 2, w = big ? 22 : 16;
+  ctx.fillStyle = big ? '#f2f2f2' : '#8a5a2b';
+  ctx.beginPath(); ctx.moveTo(cx - w, feet - 8); ctx.lineTo(cx + w, feet - 8); ctx.lineTo(cx + w - 5, feet + 3); ctx.lineTo(cx - w + 5, feet + 3); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = big ? '#c00000' : '#5e3b18';
+  ctx.fillRect(cx - w, feet - 9, w * 2, 3);
+  ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(cx, feet + 3, w + 2, 3, 0, 0, Math.PI); ctx.stroke();   // 船邊的水花
+}
+
 function drawPlayer(cx, feet, u) {
   const flip = P.dir === 'l';
   const rows = SPR[P.dir === 'l' ? 'r' : P.dir];
@@ -1573,7 +1760,7 @@ function updateUI(sel) {
   let btn = '', label = '', st = '就緒';
   if (!boss) {
     if (state === 'charge') { btn = 'charge'; label = '放開拋竿<small>力道 ' + Math.round(castPower() * 100) + '%</small>'; }
-    else if (state === 'walk') { btn = findCastDir() ? '' : 'dim'; label = '下竿<small>' + (S.bait === 'bread' ? '麵包屑' : BAIT_BY[S.bait].name + '×' + (S.baits[S.bait] || 0)) + '</small>'; }
+    else if (state === 'walk') { btn = findCastDir() ? '' : 'dim'; label = '下竿<small>' + (S.bait === 'bread' ? '麵包屑' : LURE_BY[S.bait] ? LURE_BY[S.bait].name + '（誘餌）' : BAIT_BY[S.bait].name + '×' + (S.baits[S.bait] || 0)) + '</small>'; }
     else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; st = '計算中…'; }
     else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; }
     else if (state === 'fight') {
@@ -1584,13 +1771,14 @@ function updateUI(sel) {
       $('ftip').textContent = F.surge > 0 ? '魚在掙扎！先放開！' : F.tens > .8 ? '張力太高，放開！' : '';
     } else { btn = 'dim'; label = '下竿'; }
   }
-  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length, S.money].join('|');
+  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length, S.money, weather.name, boss].join('|');
   if (key === lastUI) return;
   lastUI = key;
   $('namebox').textContent = addr(sel[0], sel[1]);
   $('formula').textContent = formula;
   act.className = btn; act.innerHTML = label;
   $('st').textContent = st;
+  $('wx').textContent = boss ? '' : weather.name;   // 天氣放在狀態列，像 Excel 的狀態訊息
   $('cnt').textContent = '計數: ' + bag.length;
   $('sum').textContent = '加總: ' + fmtN(S.money);   // 加總＝持有金額
   $('bagCount').textContent = bag.length || '';

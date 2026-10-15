@@ -30,6 +30,10 @@
 - 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。
 - 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
 - 拋竿：按住蓄力（state `charge`，`castPower()` 0→1→0 擺盪），放開 `doCast()`；落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
+- 誘餌 `LURES`（永久，只有 `pred` 掠食魚會咬，線斷 30% 弄丟）；船 `BOATS`（走進水裡自動上船，`canEnter()` 決定能去的水域，一開始送舢舨）。
+- 遠洋 `T.FAR`（地圖最東邊，要漁船）。
+- 天氣 `WEATHERS`／`weatherAt()`，每 3 分鐘依時間換；暴風雨（`severe`）出現變種怪影（魚影 sz 3），釣到 `MUTANTS` 變種怪魚。
+- 搏鬥掙扎頻率有上限 `CFG.surgeCap`，確保最強的魚用好竿子拉得上來。
 - 回城 `goHome()`：回到兩間店中間（`SPAWN`）。畫面永遠以人物為中心，地圖外畫成樹林。
 - 狀態 `state`：walk → charge → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
