@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#217346">
 <title>Q3_銷售報表_final_v3.xlsx</title>
 <style>
@@ -14,22 +14,17 @@
     display: flex; flex-direction: column;
     -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
   }
-  /* 標題列 */
+  /* ===== Excel 外框 ===== */
   #titlebar {
     background: #217346; color: #fff; height: 36px; flex: none;
     display: flex; align-items: center; gap: 10px; padding: 0 10px;
   }
-  #titlebar .logo {
-    width: 22px; height: 22px; background: #fff; color: #217346; border-radius: 3px;
-    font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px;
+  /* 左上角 X 圖示＝隱藏功能（老闆鍵） */
+  #logo {
+    width: 24px; height: 24px; background: #fff; color: #217346; border-radius: 3px; border: 0;
+    font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;
   }
   #titlebar .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #titlebar button {
-    background: none; border: 0; color: #fff; font-size: 16px; width: 32px; height: 30px;
-    border-radius: 3px; cursor: pointer;
-  }
-  #titlebar button:active { background: rgba(255,255,255,.2); }
-  /* 功能區 */
   #ribbon {
     flex: none; background: #f3f3f3; border-bottom: 1px solid #d4d4d4;
     display: flex; gap: 2px; padding: 0 6px; height: 30px; align-items: flex-end;
@@ -37,71 +32,119 @@
   }
   #ribbon span { padding: 5px 10px; color: #444; }
   #ribbon span.on { background: #fff; border: 1px solid #d4d4d4; border-bottom: 0; color: #217346; font-weight: 600; }
-  /* 公式列 */
-  #fbar {
-    flex: none; display: flex; align-items: stretch; height: 26px; border-bottom: 1px solid #d4d4d4;
-  }
-  #namebox {
-    width: 64px; border-right: 1px solid #d4d4d4; padding: 4px 6px; font-size: 12px;
-  }
+  #fbar { flex: none; display: flex; align-items: stretch; height: 26px; border-bottom: 1px solid #d4d4d4; }
+  #namebox { width: 64px; border-right: 1px solid #d4d4d4; padding: 4px 6px; font-size: 12px; }
   #fx { width: 30px; color: #888; font-style: italic; text-align: center; padding-top: 4px; border-right: 1px solid #d4d4d4; }
   #formula { flex: 1; padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
-  /* 表格 */
-  #sheet { flex: 1; position: relative; overflow: hidden; touch-action: none; background: #fff; }
-  #grid { display: grid; position: absolute; left: 0; top: 0; }
-  .c {
-    border-right: 1px solid #e1e1e1; border-bottom: 1px solid #e1e1e1;
-    padding: 0 4px; font-size: 12px; line-height: 21px; height: 22px;
-    white-space: nowrap; overflow: hidden; text-align: right;
-  }
-  .c.t { text-align: left; }
-  .hd { background: #f3f3f3; color: #555; text-align: center; border-color: #d4d4d4; padding: 0; }
-  .hd.on { background: #d2e8da; color: #217346; font-weight: 600; }
-  .c.th { font-weight: 600; background: #ddebf7; text-align: center; }
-  /* 偽裝成「設定格式化的條件」的遊戲顏色 */
-  .c.s { background: #c6efce; color: #006100; }
-  .c.h { background: #a9dfb5; color: #006100; font-weight: 600; }
-  .c.f { background: #ffeb9c; color: #9c5700; font-weight: 600; }
-  .c.x { background: #ffc7ce; color: #9c0006; }
-  body.boss .c.s, body.boss .c.h, body.boss .c.f, body.boss .c.x { background: #fff; color: #222; font-weight: 400; }
-  /* 選取框（跟著蛇頭） */
-  #sel {
-    position: absolute; border: 2px solid #217346; pointer-events: none;
-    transition: left .08s linear, top .08s linear;
-  }
-  #sel::after {
-    content: ""; position: absolute; right: -4px; bottom: -4px; width: 6px; height: 6px;
-    background: #217346; border: 1px solid #fff;
-  }
-  /* 註解（說明）框 */
-  #note {
-    position: absolute; right: 10px; top: 40px; max-width: 230px; background: #ffffe1;
-    border: 1px solid #a0a0a0; box-shadow: 2px 2px 4px rgba(0,0,0,.2);
-    padding: 6px 8px; font-size: 12px; line-height: 1.6; color: #333;
-  }
-  #note b { display: block; }
-  body.boss #note { display: none; }
-  /* 工作表分頁與狀態列 */
   #tabs {
     flex: none; height: 28px; background: #f3f3f3; border-top: 1px solid #d4d4d4;
     display: flex; align-items: stretch; padding-left: 8px; gap: 2px;
   }
-  #tabs span { padding: 5px 12px; color: #444; cursor: pointer; }
+  #tabs span { padding: 5px 12px; color: #444; }
   #tabs span.on { background: #fff; color: #217346; font-weight: 600; border-bottom: 2px solid #217346; }
   #status {
-    flex: none; height: 24px; background: #217346; color: #fff; font-size: 12px;
-    display: flex; align-items: center; gap: 16px; padding: 0 10px;
-    padding-bottom: env(safe-area-inset-bottom);
+    flex: none; min-height: 24px; background: #217346; color: #fff; font-size: 12px;
+    display: flex; align-items: center; gap: 16px; padding: 0 10px env(safe-area-inset-bottom);
   }
   #status .sp { flex: 1; }
   @media (max-width: 480px) { #ribbon span:nth-child(n+5) { display: none; } }
+
+  /* ===== 遊戲區 ===== */
+  #stage { flex: 1; position: relative; overflow: hidden; touch-action: none; background: #fff; }
+  #cv { position: absolute; left: 0; top: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+
+  /* 右側按鈕：下竿／拉竿 */
+  #actBtn {
+    position: absolute; right: 16px; bottom: 20px; width: 92px; height: 92px; border-radius: 50%;
+    border: 3px solid #1a5c38; background: radial-gradient(circle at 35% 30%, #3fa36a, #217346 70%);
+    color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 1px; font-family: inherit;
+    box-shadow: 0 4px 0 #134a2c, 0 6px 12px rgba(0,0,0,.25); cursor: pointer; touch-action: none;
+    text-shadow: 0 1px 0 rgba(0,0,0,.4);
+  }
+  #actBtn small { display: block; font-size: 11px; font-weight: 400; opacity: .85; letter-spacing: 0; }
+  #actBtn.dim { filter: grayscale(.7) brightness(.95); opacity: .75; }
+  #actBtn.wait { background: radial-gradient(circle at 35% 30%, #5b9bd5, #2e75b6 70%); border-color: #1f4e78; box-shadow: 0 4px 0 #1f4e78, 0 6px 12px rgba(0,0,0,.25); }
+  /* 上鉤時明暗閃爍，提醒準備拉魚 */
+  #actBtn.bite {
+    background: radial-gradient(circle at 35% 30%, #ffe27a, #f0a500 70%); border-color: #a86f00; color: #5a3500;
+    text-shadow: none; animation: biteFlash .28s steps(2, jump-none) infinite;
+  }
+  @keyframes biteFlash {
+    0%   { filter: brightness(1.5); box-shadow: 0 0 0 6px rgba(255,220,80,.9), 0 0 28px 10px #ffd34d; transform: scale(1.08); }
+    100% { filter: brightness(.55); box-shadow: 0 4px 0 #a86f00; transform: scale(1); }
+  }
+  #actBtn.fight { background: radial-gradient(circle at 35% 30%, #f07a5a, #c0392b 70%); border-color: #7b1f16; box-shadow: 0 4px 0 #7b1f16, 0 6px 12px rgba(0,0,0,.25); }
+  #actBtn.hold { transform: translateY(3px) scale(.96); box-shadow: 0 1px 0 #7b1f16; }
+
+  /* 背包按鈕（在拉魚按鈕上方） */
+  #bagBtn {
+    position: absolute; right: 34px; bottom: 128px; width: 56px; height: 56px; border-radius: 10px;
+    background: #fff8e8; border: 2px solid #8a5a2b; box-shadow: 0 3px 0 #8a5a2b; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  #bagBtn canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+  #bagCount {
+    position: absolute; right: -6px; top: -6px; min-width: 20px; height: 20px; border-radius: 10px;
+    background: #c00000; color: #fff; font-size: 11px; font-weight: 700; line-height: 20px; padding: 0 5px;
+  }
+  #bagCount:empty { display: none; }
+
+  /* 搏鬥量表 */
+  #fight {
+    position: absolute; left: 50%; top: 30px; transform: translateX(-50%); width: min(78%, 320px);
+    background: rgba(255,255,255,.94); border: 1px solid #a0a0a0; box-shadow: 2px 2px 6px rgba(0,0,0,.2);
+    padding: 6px 8px; font-size: 12px; display: none;
+  }
+  #fight.on { display: block; }
+  #fight .row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  #fight .lb { width: 34px; color: #555; }
+  #fight .bar { flex: 1; height: 12px; background: #eee; border: 1px solid #bbb; position: relative; overflow: hidden; }
+  #fight .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; }
+  #tens i { background: #70ad47; }
+  #tens::after { content: ""; position: absolute; right: 15%; top: 0; bottom: 0; border-left: 2px dashed #c00000; }
+  #prog i { background: #2e75b6; }
+  #fight .tip { text-align: center; color: #c00000; font-weight: 600; height: 16px; }
+
+  /* 說明（Excel 註解樣式）與提示訊息 */
+  .note {
+    position: absolute; background: #ffffe1; border: 1px solid #a0a0a0; box-shadow: 2px 2px 4px rgba(0,0,0,.2);
+    padding: 6px 8px; font-size: 12px; line-height: 1.6; color: #333; pointer-events: none;
+  }
+  #hint { left: 44px; top: 30px; max-width: 220px; }
+  #toast { left: 50%; top: 120px; transform: translateX(-50%); white-space: nowrap; opacity: 0; transition: opacity .3s; }
+  #toast.on { opacity: 1; }
+
+  /* 對話框（釣到魚／背包） */
+  #dlg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; z-index: 10; padding: 16px; }
+  #dlg.on { display: flex; }
+  .win { background: #fff; border: 1px solid #217346; box-shadow: 0 8px 30px rgba(0,0,0,.35); width: min(100%, 360px); max-height: 86vh; display: flex; flex-direction: column; }
+  .wt { background: #217346; color: #fff; padding: 6px 10px; display: flex; align-items: center; font-weight: 600; }
+  .wt span { flex: 1; }
+  .wt button { background: none; border: 0; color: #fff; font-size: 18px; width: 30px; cursor: pointer; }
+  .wb { padding: 12px; overflow-y: auto; }
+  .catch { text-align: center; }
+  .catch canvas { width: 224px; height: 112px; image-rendering: pixelated; background: repeating-linear-gradient(0deg, #f7fbff 0 8px, #eef5fc 8px 16px); border: 1px solid #ddd; }
+  .catch .fn { font-size: 20px; font-weight: 700; margin-top: 8px; }
+  .catch .meta { color: #555; margin-top: 4px; }
+  .catch .new { display: inline-block; margin-top: 6px; background: #c00000; color: #fff; padding: 1px 8px; font-size: 12px; }
+  .rar { display: inline-block; padding: 0 6px; color: #fff; font-size: 12px; font-weight: 600; vertical-align: middle; border-radius: 2px; }
+  .okBtn { display: block; margin: 14px auto 0; background: #217346; color: #fff; border: 0; padding: 8px 22px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .bagGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .card { border: 1px solid #d4d4d4; padding: 6px 4px; text-align: center; font-size: 12px; position: relative; }
+  .card canvas { width: 84px; height: 42px; image-rendering: pixelated; }
+  .card .n { font-weight: 600; }
+  .card .c { position: absolute; right: 4px; top: 2px; font-weight: 700; color: #217346; }
+  .card .s { color: #777; }
+  .empty { color: #777; text-align: center; padding: 24px 0; }
+
+  /* 隱藏模式：只剩普通的 Excel */
+  body.boss #actBtn, body.boss #bagBtn, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
 </style>
 </head>
 <body>
 <div id="titlebar">
-  <div class="logo">X</div>
+  <button id="logo" title="Excel">X</button>
   <div class="name">Q3_銷售報表_final_v3.xlsx - 已儲存</div>
-  <button id="saveBtn" title="儲存">💾</button>
 </div>
 <div id="ribbon">
   <span>檔案</span><span class="on">常用</span><span>插入</span><span>公式</span><span>資料</span><span>校閱</span><span>檢視</span>
@@ -109,258 +152,881 @@
 <div id="fbar">
   <div id="namebox">A1</div>
   <div id="fx">fx</div>
-  <div id="formula">地區</div>
+  <div id="formula"></div>
 </div>
-<div id="sheet">
-  <div id="grid"></div>
-  <div id="sel"></div>
-  <div id="note">
-    <b>王經理：</b>
-    綠色區塊依各區業績自動標示。<br>
-    滑動或方向鍵 → 移動<br>
-    點黃色儲存格 → 吃掉它<br>
-    💾 或 Esc → 老闆鍵<br>
-    點表格開始
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="fight">
+    <div class="row"><span class="lb">張力</span><div class="bar" id="tens"><i></i></div></div>
+    <div class="row"><span class="lb">收線</span><div class="bar" id="prog"><i></i></div></div>
+    <div class="tip" id="ftip"></div>
   </div>
+  <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
+  <button id="actBtn">下竿</button>
+  <div class="note" id="hint">
+    拖曳畫面移動人物<br>（電腦：方向鍵／WASD）<br>
+    走到藍色水邊，按右下「下竿」<br>
+    按鈕閃爍時快按，按住收線！
+  </div>
+  <div class="note" id="toast"></div>
 </div>
 <div id="tabs"><span class="on" id="tab1">Q3彙總</span><span id="tab2">明細</span><span>+</span></div>
 <div id="status">
   <span id="st">就緒</span><span class="sp"></span>
-  <span id="avg">平均值: 0</span><span id="sum">加總: 0</span>
+  <span id="cnt">計數: 0</span><span id="sum">加總: 0</span>
 </div>
+<div id="dlg"><div class="win"><div class="wt"><span id="dlgTitle"></span><button id="dlgX">✕</button></div><div class="wb" id="dlgBody"></div></div></div>
 
 <script>
-// ===== 參數 =====
+// ================= 參數 =================
 const CFG = {
-  maxCols: 9,       // 最多資料欄數（窄螢幕會自動減少）
-  minColW: 58,      // 每欄最小寬度（px）
-  cellH: 22,        // 儲存格高度（px）
-  rowHdW: 34,       // 列號寬度
-  startLen: 3,      // 蛇的起始長度
-  tick0: 190,       // 起始每步毫秒數
-  tickMin: 75,      // 最快每步毫秒數
-  tickStep: 6,      // 每吃一個加快多少毫秒
-  swipeMin: 18,     // 滑動判定距離（px）
+  cell: 32,              // 每格大小（px）
+  mapW: 64, mapH: 48,    // 地圖格數
+  hdW: 34, hdH: 20,      // 列號寬、欄名高
+  speed: 4.2,            // 移動速度（格/秒）
+  castTime: 0.45,        // 拋竿動畫秒數
+  waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
+  biteWin: 1.3,          // 上鉤後可以拉竿的秒數
+  reelUp: 0.45,          // 按住時收線進度（每秒）
+  tensUp: 0.55,          // 按住時張力上升（每秒，乘上魚的力氣）
+  tensDown: 0.9,         // 放開時張力下降（每秒）
+  slipDown: 0.06,        // 放開時魚把線拉走（每秒，乘上魚的力氣）
+  joyR: 42,              // 虛擬搖桿半徑（px）
 };
 
+// ================= 地形 =================
+const T = { GRASS: 0, FOREST: 1, SAND: 2, PATH: 3, POND: 4, RIVER: 5, SEA: 6, DEEP: 7, DOCK: 8 };
+const TILES = [
+  { name: '草地', color: '#C6E0B4', walk: true },
+  { name: '樹林', color: '#70AD47' },
+  { name: '沙灘', color: '#FFE699', walk: true },
+  { name: '小徑', color: '#D9D9D9', walk: true },
+  { name: '淡水・池塘', color: '#DDEBF7', water: 'pond' },
+  { name: '淡水・河川', color: '#9BC2E6', water: 'river' },
+  { name: '海水・近海', color: '#5B9BD5', water: 'sea' },
+  { name: '海水・深海', color: '#1F4E78', water: 'deep' },
+  { name: '碼頭', color: '#C9A26B', walk: true },
+];
+
+// ================= 魚種 =================
+// rar：0 普通 1 少見 2 稀有 3 史詩 4 傳說；price 先記著，之後商店販賣用
+const RAR = [
+  { name: '普通', w: 60, color: '#7f7f7f', str: 0.75 },
+  { name: '少見', w: 26, color: '#2e75b6', str: 1.0 },
+  { name: '稀有', w: 10, color: '#7030a0', str: 1.2 },
+  { name: '史詩', w: 3.5, color: '#c55a11', str: 1.45 },
+  { name: '傳說', w: 0.8, color: '#c00000', str: 1.75 },
+];
+const FISH = [
+  // 淡水・池塘
+  { id: 'mosq', name: '大肚魚', water: ['pond'], rar: 0, size: [3, 6], price: 5, shape: 'slim', body: '#9aa59a', belly: '#e3e7da', fin: '#7b867b' },
+  { id: 'tilapia', name: '吳郭魚', water: ['pond', 'river'], rar: 0, size: [15, 35], price: 30, shape: 'normal', body: '#6f7f60', belly: '#c9cfb0', fin: '#4f5e42', stripe: '#5d6b50' },
+  { id: 'crucian', name: '鯽魚', water: ['pond'], rar: 0, size: [10, 25], price: 25, shape: 'normal', body: '#b49a5c', belly: '#e6d7a8', fin: '#8a7440' },
+  { id: 'koi', name: '錦鯉', water: ['pond'], rar: 2, size: [30, 70], price: 400, shape: 'normal', body: '#f7f7f2', belly: '#ffffff', fin: '#ff8a50', patch: '#f05a1a' },
+  { id: 'goldkoi', name: '黃金錦鯉', water: ['pond'], rar: 3, size: [40, 80], price: 1500, shape: 'normal', body: '#ffcf33', belly: '#fff0a0', fin: '#e8a000', spots: '#fff6c8' },
+  // 淡水・河川
+  { id: 'zacco', name: '溪哥', water: ['river'], rar: 0, size: [8, 18], price: 20, shape: 'slim', body: '#93b7cc', belly: '#eef4f7', fin: '#e86a5a', stripe: '#4f86ad' },
+  { id: 'ayu', name: '香魚', water: ['river'], rar: 1, size: [15, 30], price: 120, shape: 'slim', body: '#a3a46a', belly: '#e8ebd0', fin: '#d8b84a' },
+  { id: 'catfish', name: '鯰魚', water: ['river', 'pond'], rar: 1, size: [30, 90], price: 150, shape: 'slim', body: '#4f4b3c', belly: '#a8a48c', fin: '#3a372c', whisker: true },
+  { id: 'salmon', name: '櫻花鉤吻鮭', water: ['river'], rar: 3, size: [20, 45], price: 2000, shape: 'normal', body: '#9c907a', belly: '#f0e6dc', fin: '#7c705c', stripe: '#e8889c', spots: '#3d362c' },
+  // 海水・近海
+  { id: 'scad', name: '竹莢魚', water: ['sea'], rar: 0, size: [15, 35], price: 40, shape: 'slim', body: '#7fa6c4', belly: '#e4ecf2', fin: '#c8b04a' },
+  { id: 'porgy', name: '黑鯛', water: ['sea'], rar: 1, size: [20, 50], price: 220, shape: 'normal', body: '#4a4f57', belly: '#9aa0a8', fin: '#2f333a', stripe: '#3c4048' },
+  { id: 'puffer', name: '河豚', water: ['sea'], rar: 1, size: [15, 40], price: 180, shape: 'round', body: '#cbb474', belly: '#f4ecd2', fin: '#9a8550', spots: '#5a4a2a' },
+  { id: 'grouper', name: '石斑', water: ['sea', 'deep'], rar: 2, size: [30, 100], price: 600, shape: 'normal', body: '#8a5a3a', belly: '#c9a07a', fin: '#6a4028', spots: '#4e2c18' },
+  // 海水・深海
+  { id: 'mahi', name: '鬼頭刀', water: ['deep'], rar: 1, size: [60, 150], price: 300, shape: 'normal', body: '#2fae6a', belly: '#f2d43a', fin: '#1f7f9a', spots: '#1f8a52' },
+  { id: 'tuna', name: '黑鮪魚', water: ['deep'], rar: 2, size: [100, 300], price: 3000, shape: 'normal', body: '#1f3a66', belly: '#c8d4e0', fin: '#e8c43a' },
+  { id: 'marlin', name: '旗魚', water: ['deep'], rar: 3, size: [150, 350], price: 5000, shape: 'long', body: '#2a5a9a', belly: '#d0dcea', fin: '#1f3f78', stripe: '#6fa0d8' },
+  { id: 'oarfish', name: '皇帶魚', water: ['deep'], rar: 4, size: [300, 800], price: 20000, shape: 'eel', body: '#d8dde6', belly: '#eef1f5', fin: '#e03030', spots: '#8090a8' },
+  // 雜物
+  { id: 'boot', name: '破靴子', water: ['pond', 'river', 'sea', 'deep'], rar: 0, junk: true, w: 4, size: [24, 30], price: 1, shape: 'boot' },
+];
+const FISH_BY = Object.fromEntries(FISH.map(f => [f.id, f]));
+
+// ================= 小工具 =================
 const $ = id => document.getElementById(id);
-const grid = $('grid'), sheet = $('sheet'), sel = $('sel');
-const REGIONS = ['台北','新北','桃園','新竹','台中','彰化','嘉義','台南','高雄','屏東','宜蘭','花蓮','台東','基隆','苗栗','南投','雲林','澎湖','金門','馬祖'];
-const MONTHS = ['地區','7月','8月','9月','Q3合計','目標','達成率','成長率','備註'];
-const colName = i => String.fromCharCode(65 + i);
-const fmt = n => n.toLocaleString('en-US');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+function hash(x, y) {
+  let h = (x * 374761393 + y * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+function vnoise(x, y) {
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const r = (a, b) => (hash(a + 99, b + 7) % 1000) / 1000;
+  const s = t => t * t * (3 - 2 * t);
+  const a = r(xi, yi), b = r(xi + 1, yi), c = r(xi, yi + 1), d = r(xi + 1, yi + 1);
+  const u = s(xf), v = s(yf);
+  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+}
+function colName(i) {
+  let s = ''; i++;
+  while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); }
+  return s;
+}
+const addr = (i, j) => colName(i) + (j + 1);
 
-let COLS, ROWS, colW, cells = [], data = [], hdCols = [], hdRows = [];
-let snake, dir, dirQ, food, score, tick, timer, state = 'idle', boss = false;
-let best = 0;
-try { best = +localStorage.getItem('moyu.best') || 0; } catch (e) {}
+// ================= 產生地圖 =================
+const W = CFG.mapW, H = CFG.mapH;
+const map = new Uint8Array(W * H);
+const tileAt = (i, j) => (i < 0 || j < 0 || i >= W || j >= H) ? T.FOREST : map[j * W + i];
+const setT = (i, j, t) => { if (i >= 0 && j >= 0 && i < W && j < H) map[j * W + i] = t; };
+const seaEdge = y => 44 + Math.round(2.5 * Math.sin(y / 5) + 1.5 * Math.sin(y / 2.3 + 1));
+const SPAWN = { x: 16.5, y: 20.5 };
 
-// ===== 建立表格 =====
-function build() {
-  const w = sheet.clientWidth, h = sheet.clientHeight;
-  // 依螢幕寬度決定欄數，讓整個遊戲區都看得到
-  COLS = Math.max(5, Math.min(CFG.maxCols, Math.floor((w - CFG.rowHdW) / CFG.minColW)));
-  colW = Math.floor((w - CFG.rowHdW) / COLS);
-  ROWS = Math.max(8, Math.floor(h / CFG.cellH) - 2);   // 扣掉欄名列與標題列
-  grid.style.gridTemplateColumns = `${CFG.rowHdW}px repeat(${COLS}, ${colW}px)`;
-  grid.innerHTML = '';
-  cells = []; data = []; hdCols = []; hdRows = [];
-  const add = (cls, txt) => { const d = document.createElement('div'); d.className = 'c ' + cls; d.textContent = txt; grid.appendChild(d); return d; };
-  add('hd', '');
-  for (let x = 0; x < COLS; x++) hdCols.push(add('hd', colName(x)));
-  add('hd', '1');
-  for (let x = 0; x < COLS; x++) add('th', MONTHS[x] || '');
-  for (let y = 0; y < ROWS; y++) {
-    hdRows.push(add('hd', y + 2));
-    for (let x = 0; x < COLS; x++) {
-      const v = fakeVal(x, y);
-      data.push(v);
-      cells.push(add(x === 0 || x === 8 ? 't' : '', v));
+function genMap() {
+  for (let j = 0; j < H; j++) {
+    const e = seaEdge(j);
+    for (let i = 0; i < W; i++) {
+      let t = T.GRASS;
+      if (i >= e + 9) t = T.DEEP; else if (i >= e) t = T.SEA; else if (i >= e - 2) t = T.SAND;
+      setT(i, j, t);
     }
   }
-}
-
-// 產生看起來像真的報表數字
-function fakeVal(x, y) {
-  const r = Math.random();
-  switch (x) {
-    case 0: return REGIONS[y % REGIONS.length] + (y >= REGIONS.length ? '二區' : '');
-    case 1: case 2: case 3: return fmt(Math.round(800 + r * 9000));
-    case 4: return fmt(Math.round(3000 + r * 25000));
-    case 5: return fmt(Math.round(5000 + r * 20000));
-    case 6: return (60 + r * 60).toFixed(1) + '%';
-    case 7: return (r * 30 - 10).toFixed(1) + '%';
-    default: return ['', '', '待確認', '已核', '見附件', ''][Math.floor(r * 6)];
+  // 一條由西往東流進海裡的河
+  for (let i = 0; i < W; i++) {
+    const ry = 32 + 3.5 * Math.sin(i / 6) + 1.5 * Math.sin(i / 2.7);
+    for (let j = 0; j < H; j++) {
+      const t = tileAt(i, j);
+      if (Math.abs(j - ry) < 1.4 && (t === T.GRASS || t === T.SAND)) setT(i, j, T.RIVER);
+    }
   }
+  // 池塘
+  for (const [cx, cy, r] of [[10, 10, 3.2], [30, 9, 2.6], [12, 42, 3], [34, 40, 2.4]]) {
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const dx = (i + .5 - cx) / r, dy = (j + .5 - cy) / (r * .8);
+      if (dx * dx + dy * dy < 1 && tileAt(i, j) === T.GRASS) setT(i, j, T.POND);
+    }
+  }
+  // 樹林（不長在水邊，讓水邊都走得到）
+  const nearWater = (i, j) => {
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (TILES[tileAt(i + di, j + dj)].water) return true;
+    return false;
+  };
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    if (tileAt(i, j) !== T.GRASS) continue;
+    const far = Math.hypot(i - SPAWN.x, j - SPAWN.y) > 5;
+    if ((i === 0 || j === 0 || j === H - 1) || (far && vnoise(i / 5, j / 5) > 0.62 && !nearWater(i, j))) setT(i, j, T.FOREST);
+  }
+  // 小徑：出生點往東到海邊，接碼頭伸進深海
+  const e20 = seaEdge(20);
+  for (let i = 4; i < e20; i++) setT(i, 20, T.PATH);
+  for (let i = e20; i <= e20 + 13; i++) setT(i, 20, T.DOCK);
+  for (let j = 18; j <= 22; j++) setT(e20 + 13, j, T.DOCK);
+  // 往南的小徑，過河的地方是木橋
+  for (let j = 20; j <= 44; j++) setT(22, j, tileAt(22, j) === T.RIVER ? T.DOCK : T.PATH);
+}
+genMap();
+
+// ================= 像素圖 =================
+function strSprite(rows, pal) {
+  const c = document.createElement('canvas');
+  c.width = rows[0].length; c.height = rows.length;
+  const x = c.getContext('2d');
+  rows.forEach((r, j) => [...r].forEach((ch, i) => { if (pal[ch]) { x.fillStyle = pal[ch]; x.fillRect(i, j, 1, 1); } }));
+  return c;
 }
 
-const idx = (x, y) => y * COLS + x;
-const addr = (x, y) => colName(x) + (y + 2);
-
-// ===== 遊戲 =====
-function reset() {
-  clearTimeout(timer);
-  const sy = Math.floor(ROWS / 2);
-  snake = [];
-  for (let i = 0; i < CFG.startLen; i++) snake.push({ x: 2 - i + 1, y: sy });
-  dir = { x: 1, y: 0 }; dirQ = [];
-  score = 0; tick = CFG.tick0;
-  placeFood();
-  state = 'idle';
-  draw();
-  setStatus('就緒');
-}
-
-function placeFood() {
-  const occ = new Set(snake.map(p => idx(p.x, p.y)));
-  let f;
-  do { f = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) }; }
-  while (occ.has(idx(f.x, f.y)));
-  food = f;
-}
-
-function start() {
-  if (state === 'over') reset();
-  if (state === 'run') return;
-  $('note').style.display = 'none';
-  state = 'run';
-  setStatus('編輯');
-  loop();
-}
-
-function loop() {
-  if (state !== 'run' || boss) return;
-  step();
-  if (state === 'run') timer = setTimeout(loop, tick);
-}
-
-function step() {
-  if (dirQ.length) dir = dirQ.shift();
-  const head = snake[0];
-  const nx = head.x + dir.x, ny = head.y + dir.y;
-  // 撞牆或撞到自己就結束（尾巴這一步會移開，所以不算）
-  const hitSelf = snake.slice(0, -1).some(p => p.x === nx && p.y === ny);
-  if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS || hitSelf) return gameOver();
-  snake.unshift({ x: nx, y: ny });
-  if (nx === food.x && ny === food.y) {
-    score++;
-    tick = Math.max(CFG.tickMin, tick - CFG.tickStep);
-    if (snake.length >= COLS * ROWS) return gameOver(true);
-    placeFood();
+// 用參數畫出每種魚的像素圖（28×14）
+const FW = 28, FH = 14;
+function makeFish(f) {
+  const g = Array.from({ length: FH }, () => new Array(FW).fill(null));
+  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < FW && y < FH) g[y][x] = c; };
+  if (f.shape === 'boot') {
+    return strSprite([
+      '............................',
+      '..........kkkkkk............',
+      '..........kbbbbk............',
+      '..........kbBBbk............',
+      '..........kbbbbk............',
+      '..........kbBBbk............',
+      '..........kbbbbk............',
+      '..........kbbbbbkkkk........',
+      '..........kbbbbbbbbbk.......',
+      '.........kbbbbbbbbbbbk......',
+      '.........kbbbbbbbbbbbk......',
+      '.........kkkkkkkkkkkkk......',
+      '.........kgggggggggggk......',
+      '..........kkkkkkkkkkk.......',
+    ], { k: '#2a1a10', b: '#6b4a2a', B: '#4e341c', g: '#3a3a3a' });
+  }
+  const P = {
+    normal: { cx: 15, rx: 8, ry: 3.6 }, slim: { cx: 15, rx: 9, ry: 2.4 }, round: { cx: 15, rx: 6, ry: 5 },
+    long: { cx: 12, rx: 8, ry: 3 }, eel: { cx: 15, rx: 12.5, ry: 1.8 },
+  }[f.shape];
+  const { cx, rx, ry } = P, cy = 7;
+  // 身體
+  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+    const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry;
+    if (dx * dx + dy * dy > 1) continue;
+    let c = (y + .5 - cy) > ry * 0.3 ? f.belly : f.body;
+    if (f.stripe && c === f.body && x % 3 === 0 && x < cx + rx - 3) c = f.stripe;
+    if (f.spots && (x * 7 + y * 13) % 6 === 0 && x < cx + rx - 3) c = f.spots;
+    if (f.patch && vnoise(x / 2.6, y / 2.6) > 0.5) c = f.patch;
+    g[y][x] = c;
+  }
+  // 尾巴
+  const tx = Math.round(cx - rx);
+  const tl = f.shape === 'eel' ? 2 : 4;
+  for (let i = 0; i < tl; i++) for (let y = -(i + 1); y <= i + 1; y++) {
+    if (i === tl - 1 && Math.abs(y) < i - 1) continue;   // 魚尾分叉
+    set(tx - i, cy - .5 + y, f.fin);
+  }
+  // 背鰭、腹鰭
+  const top = Math.round(cy - ry);
+  if (f.shape === 'long') {
+    for (let x = cx - 4; x <= cx + 3; x++) for (let h = 1; h <= 3 - Math.floor(Math.abs(x - cx + 1) / 2.5); h++) set(x, top - h, f.fin);
+    for (let x = cx + rx; x < cx + rx + 7; x++) set(x, cy - 1, '#2b2b2b');   // 旗魚的長嘴
+  } else if (f.shape === 'eel') {
+    for (let x = cx - 10; x <= cx + 9; x++) set(x, top - 1, f.fin);
+    for (let h = 1; h <= 4; h++) set(cx + 9 - h % 2, top - 1 - h, f.fin);   // 頭上的紅冠
+  } else if (f.shape === 'round') {
+    for (let a = 0; a < 12; a++) {   // 河豚的刺
+      const ang = a / 12 * Math.PI * 2;
+      set(cx - .5 + Math.cos(ang) * (rx + .8), cy - .5 + Math.sin(ang) * (ry + .8), f.fin);
+    }
   } else {
-    snake.pop();
+    for (let x = cx - 3; x <= cx + 1; x++) set(x, top - 1, f.fin);
+    for (let x = cx - 2; x <= cx - 1; x++) set(x, top - 2, f.fin);
   }
-  draw();
-}
-
-function gameOver(win) {
-  state = 'over';
-  clearTimeout(timer);
-  if (score > best) { best = score; try { localStorage.setItem('moyu.best', best); } catch (e) {} }
-  draw(true);
-  $('formula').textContent = win
-    ? `=全部填滿(${score})  完美！點表格重來`
-    : `#REF! 參照錯誤（${score} 筆，最高 ${best}）— 點表格重來`;
-  setStatus('錯誤');
-}
-
-// ===== 畫面 =====
-function draw(dead) {
-  const cls = new Array(COLS * ROWS).fill('');
-  snake.forEach((p, i) => cls[idx(p.x, p.y)] = dead ? 'x' : (i === 0 ? 'h' : 's'));
-  if (!dead) cls[idx(food.x, food.y)] = 'f';
-  for (let i = 0; i < cells.length; i++) {
-    const c = cells[i];
-    for (const k of ['s', 'h', 'f', 'x']) c.classList.toggle(k, cls[i] === k);
+  if (f.shape !== 'round' && f.shape !== 'eel') { set(cx - 1, cy + ry, f.fin); set(cx, cy + ry, f.fin); }
+  // 眼睛
+  const ex = Math.round(cx + rx - (f.shape === 'round' ? 2.5 : 3));
+  set(ex, cy - 2, '#ffffff'); set(ex + 1, cy - 2, '#111111');
+  if (f.whisker) { set(cx + rx, cy + 1, '#222'); set(cx + rx + 1, cy + 2, '#222'); set(cx + rx + 1, cy, '#222'); }
+  // 外框
+  const out = g.map(r => r.slice());
+  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+    if (g[y][x]) continue;
+    const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => g[y + b] && g[y + b][x + a] && g[y + b][x + a] !== '#2b2b2b' && g[y + b][x + a] !== '#222');
+    if (n) out[y][x] = '#1d1d1d';
   }
-  const h = snake[0];
-  sel.style.left = (CFG.rowHdW + h.x * colW - 1) + 'px';
-  sel.style.top = ((h.y + 2) * CFG.cellH - 1) + 'px';
-  sel.style.width = (colW + 1) + 'px';
-  sel.style.height = (CFG.cellH + 1) + 'px';
-  hdCols.forEach((d, i) => d.classList.toggle('on', i === h.x));
-  hdRows.forEach((d, i) => d.classList.toggle('on', i === h.y));
-  $('namebox').textContent = addr(h.x, h.y);
-  if (state !== 'over') $('formula').textContent = h.x === 0 ? data[idx(h.x, h.y)] : `=VLOOKUP(${addr(0, h.y)},明細!A:${colName(h.x)},${h.x + 1},FALSE)`;
-  // 狀態列：加總其實是分數
-  $('sum').textContent = '加總: ' + fmt(score);
-  $('avg').textContent = '最高: ' + fmt(Math.max(best, score));
+  const c = document.createElement('canvas'); c.width = FW; c.height = FH;
+  const x2 = c.getContext('2d');
+  out.forEach((r, y) => r.forEach((col, x) => { if (col) { x2.fillStyle = col; x2.fillRect(x, y, 1, 1); } }));
+  return c;
+}
+const FISH_IMG = Object.fromEntries(FISH.map(f => [f.id, makeFish(f)]));
+function fishCanvas(id, scale) {
+  const c = document.createElement('canvas');
+  c.width = FW * scale; c.height = FH * scale;
+  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  x.drawImage(FISH_IMG[id], 0, 0, c.width, c.height);
+  return c;
 }
 
-function setStatus(t) { $('st').textContent = t; }
+// 背包圖示
+const BAG_ROWS = [
+  '....kkkk....',
+  '...k....k...',
+  '..kkkkkkkk..',
+  '.kbBBBBBBbk.',
+  '.kbBBBBBBbk.',
+  '.kbbbbbbbbk.',
+  '.kbbbyybbbk.',
+  '.kbbbyybbbk.',
+  '.kbbbbbbbbk.',
+  '.kbbbbbbbbk.',
+  '..kkkkkkkk..',
+  '............',
+];
+$('bagIcon').getContext('2d').drawImage(strSprite(BAG_ROWS, { k: '#3b2414', b: '#a0622d', B: '#c8813f', y: '#ffd34d' }), 0, 0);
 
-// ===== 老闆鍵 =====
+// 人物（12×16 像素）：上半身 12 列，腿另外畫才能做走路動畫
+const PAL = { h: '#e0a526', H: '#b07c10', s: '#f1c27d', k: '#3b2a1a', c: '#217346', C: '#185c37', p: '#44546a', b: '#5b3a1e' };
+const SPR = {
+  d: ['...hhhhhh...', '..hhhhhhhh..', '.HHHHHHHHHH.', '...ssssss...', '...skssks...', '...ssssss...', '....ssss....', '..cccccccc..', '.sccCCCCccs.', '.scccccccs..', '..cccccccc..', '...pppppp...'],
+  u: ['...hhhhhh...', '..hhhhhhhh..', '.HHHHHHHHHH.', '...kkkkkk...', '...kkkkkk...', '...kkkkkk...', '....ssss....', '..cccccccc..', '.sccccccccs.', '.sccccccccs.', '..cccccccc..', '...pppppp...'],
+  r: ['...hhhhhh...', '..hhhhhhhh..', '..HHHHHHHHHH', '...kksssss..', '...ksssks...', '...kssssss..', '....ssss....', '...cccccc...', '...ccsccc...', '...ccsccc...', '...cccccc...', '...pppppp...'],
+};
+const LEGS = { d: [3, 7], u: [3, 7], r: [4, 6], l: [4, 6] };
+
+// ================= 遊戲狀態 =================
+const P = { x: SPAWN.x, y: SPAWN.y, dir: 'd', moving: false, walkT: 0 };
+let state = 'walk';     // walk / cast / wait / bite / fight / caught
+let spot = null;        // 釣點 {i, j, t, dir}
+let castT = 0, waitT = 0, biteT = 0, F = null, holding = false;
+let catchShow = null;   // 剛釣到的魚，舉在頭上
+let boss = false, gameT = 0;
+const parts = [];
+let bag = [];
+try { bag = JSON.parse(localStorage.getItem('moyu.bag') || '[]').filter(b => FISH_BY[b.id]); } catch (e) {}
+const saveBag = () => { try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); } catch (e) {} };
+
+// ================= 畫布 =================
+const cv = $('cv'), ctx = cv.getContext('2d');
+let VW = 0, VH = 0, DPR = 1;
+function resize() {
+  const r = $('stage').getBoundingClientRect();
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  VW = r.width; VH = r.height;
+  cv.width = Math.round(VW * DPR); cv.height = Math.round(VH * DPR);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ================= 輸入 =================
+const keys = new Set();
+const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+const DIRS = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
+
+function inputVec() {
+  let x = 0, y = 0;
+  if (keys.has('arrowleft') || keys.has('a')) x -= 1;
+  if (keys.has('arrowright') || keys.has('d')) x += 1;
+  if (keys.has('arrowup') || keys.has('w')) y -= 1;
+  if (keys.has('arrowdown') || keys.has('s')) y += 1;
+  if (joy.id !== null) {
+    const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.hypot(dx, dy);
+    if (l > CFG.joyR * 0.25) { x += dx / Math.max(l, CFG.joyR); y += dy / Math.max(l, CFG.joyR); }
+  }
+  const l = Math.hypot(x, y);
+  return l > 1 ? { x: x / l, y: y / l } : { x, y };
+}
+
+cv.addEventListener('pointerdown', e => {
+  if (boss) return;
+  joy.id = e.pointerId; joy.ox = joy.x = e.offsetX; joy.oy = joy.y = e.offsetY;
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { joy.x = e.offsetX; joy.y = e.offsetY; } });
+const joyEnd = e => { if (e.pointerId === joy.id) joy.id = null; };
+cv.addEventListener('pointerup', joyEnd);
+cv.addEventListener('pointercancel', joyEnd);
+
+// 下竿／拉竿按鈕：按下觸發，按住收線
+const act = $('actBtn');
+act.addEventListener('pointerdown', e => { e.preventDefault(); act.setPointerCapture(e.pointerId); press(); });
+const release = () => { holding = false; };
+act.addEventListener('pointerup', release);
+act.addEventListener('pointercancel', release);
+act.addEventListener('contextmenu', e => e.preventDefault());
+
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'escape') { setBoss(!boss); e.preventDefault(); return; }
+  if (boss) return;
+  if ($('dlg').classList.contains('on')) {
+    if (k === 'enter' || k === ' ') { closeDlg(); e.preventDefault(); }
+    return;
+  }
+  if (k === ' ' || k === 'j' || k === 'enter') { if (!e.repeat) press(); e.preventDefault(); return; }
+  if (k === 'i' || k === 'e') { openBag(); return; }
+  keys.add(k);
+  if (k.startsWith('arrow')) e.preventDefault();
+});
+document.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  keys.delete(k);
+  if (k === ' ' || k === 'j' || k === 'enter') release();
+});
+window.addEventListener('blur', () => { keys.clear(); release(); });
+
+$('bagBtn').addEventListener('click', openBag);
+$('logo').addEventListener('click', () => setBoss(!boss));
+document.addEventListener('visibilitychange', () => { if (document.hidden && !boss) setBoss(true); });
+
+// ================= 釣魚流程 =================
+function spotFrom(dir) {
+  const [dx, dy] = DIRS[dir];
+  for (let k = 1; k <= 2; k++) {
+    const i = Math.floor(P.x) + dx * k, j = Math.floor(P.y) + dy * k, t = tileAt(i, j);
+    if (TILES[t].water) return { i, j, t, dir };
+    if (!TILES[t].walk) return null;
+  }
+  return null;
+}
+function findSpot() {
+  if (TILES[tileAt(Math.floor(P.x), Math.floor(P.y))].water) return null;
+  for (const d of [P.dir, 'd', 'r', 'l', 'u']) { const s = spotFrom(d); if (s) return s; }
+  return null;
+}
+
+function press() {
+  if (boss) return;
+  if (state === 'walk') {
+    const s = findSpot();
+    if (!s) { toast('要站在水邊才能下竿喔'); return; }
+    spot = s; P.dir = s.dir; state = 'cast'; castT = 0;
+    hideHint();
+  } else if (state === 'cast' || state === 'wait') {
+    state = 'walk'; toast('收竿了');
+  } else if (state === 'bite') {
+    startFight(); holding = true;
+  } else if (state === 'fight') {
+    holding = true;
+  }
+}
+
+function pickFish(water) {
+  const list = FISH.filter(f => f.water.includes(water));
+  const ws = list.map(f => f.junk ? f.w : RAR[f.rar].w);
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+  for (let k = 0; k < list.length; k++) { r -= ws[k]; if (r <= 0) return list[k]; }
+  return list[0];
+}
+
+function startFight() {
+  const f = pickFish(TILES[spot.t].water);
+  const ratio = Math.pow(Math.random(), 1.8);
+  const size = Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
+  const str = (f.junk ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio);
+  F = { f, size, str, tens: 0.3, prog: 0.25, surge: 0, nextSurge: rand(1, 2.2), t: 0 };
+  state = 'fight';
+  $('fight').classList.add('on');
+  splash(spot.i + .5, spot.j + .5, 10);
+}
+
+function endFight(ok, msg) {
+  $('fight').classList.remove('on');
+  holding = false;
+  if (!ok) { state = 'walk'; F = null; toast(msg); return; }
+  const isNew = !bag.some(b => b.id === F.f.id);
+  bag.push({ id: F.f.id, size: F.size, t: Date.now() });
+  saveBag();
+  state = 'caught';
+  catchShow = F.f.id;
+  splash(spot.i + .5, spot.j + .5, 14);
+  showCatch(F.f, F.size, isNew, TILES[spot.t].name);
+  F = null;
+}
+
+function splash(x, y, n) {
+  for (let k = 0; k < n; k++) parts.push({ x, y, vx: rand(-1.5, 1.5), vy: rand(-3, -1), life: rand(.4, .8) });
+}
+
+// ================= 對話框 =================
+function openDlg(title, body) {
+  $('dlgTitle').textContent = title;
+  const b = $('dlgBody'); b.innerHTML = ''; b.appendChild(body);
+  $('dlg').classList.add('on');
+}
+function closeDlg() {
+  $('dlg').classList.remove('on');
+  if (state === 'caught') { state = 'walk'; catchShow = null; }
+}
+$('dlgX').addEventListener('click', closeDlg);
+$('dlg').addEventListener('click', e => { if (e.target.id === 'dlg') closeDlg(); });
+
+function rarTag(f) {
+  const s = document.createElement('span'); s.className = 'rar';
+  if (f.junk) { s.textContent = '雜物'; s.style.background = '#a6a6a6'; }
+  else { s.textContent = RAR[f.rar].name; s.style.background = RAR[f.rar].color; }
+  return s;
+}
+
+function showCatch(f, size, isNew, where) {
+  const d = document.createElement('div'); d.className = 'catch';
+  d.appendChild(fishCanvas(f.id, 8));
+  const n = document.createElement('div'); n.className = 'fn'; n.textContent = f.name + ' ';
+  n.appendChild(rarTag(f)); d.appendChild(n);
+  const m = document.createElement('div'); m.className = 'meta'; m.textContent = `${size} cm ・ ${where}`; d.appendChild(m);
+  if (isNew && !f.junk) { const nw = document.createElement('div'); nw.className = 'new'; nw.textContent = '新魚種！'; d.appendChild(nw); }
+  const b = document.createElement('button'); b.className = 'okBtn'; b.textContent = '放進背包';
+  b.onclick = closeDlg; d.appendChild(b);
+  openDlg(f.junk ? '釣到了……' : '釣到了！', d);
+}
+
+function openBag() {
+  if (boss || state === 'fight' || state === 'bite') return;
+  const groups = {};
+  for (const b of bag) {
+    const g = groups[b.id] || (groups[b.id] = { n: 0, max: 0 });
+    g.n++; g.max = Math.max(g.max, b.size);
+  }
+  const ids = Object.keys(groups).sort((a, b) => {
+    const fa = FISH_BY[a], fb = FISH_BY[b];
+    return (fb.junk ? -1 : fb.rar) - (fa.junk ? -1 : fa.rar) || FISH.indexOf(fa) - FISH.indexOf(fb);
+  });
+  const d = document.createElement('div');
+  if (!ids.length) { d.className = 'empty'; d.textContent = '還沒有漁獲，去水邊試試吧！'; }
+  else {
+    d.className = 'bagGrid';
+    for (const id of ids) {
+      const f = FISH_BY[id], g = groups[id];
+      const c = document.createElement('div'); c.className = 'card';
+      c.appendChild(fishCanvas(id, 3));
+      const n = document.createElement('div'); n.className = 'n'; n.textContent = f.name; c.appendChild(n);
+      c.appendChild(rarTag(f));
+      const s = document.createElement('div'); s.className = 's'; s.textContent = `最大 ${g.max} cm`; c.appendChild(s);
+      const k = document.createElement('div'); k.className = 'c'; k.textContent = '×' + g.n; c.appendChild(k);
+      d.appendChild(c);
+    }
+  }
+  const kinds = ids.filter(id => !FISH_BY[id].junk).length;
+  openDlg(`背包（${bag.length} 件・魚種 ${kinds}/${FISH.length - 1}）`, d);
+}
+
+// ================= 提示 =================
+let toastT;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1600);
+}
+let hintOn = true;
+function hideHint() { if (hintOn) { hintOn = false; $('hint').style.display = 'none'; } }
+setTimeout(hideHint, 9000);
+
+// ================= 隱藏功能（老闆鍵） =================
 function setBoss(on) {
   boss = on;
   document.body.classList.toggle('boss', on);
   $('tab1').classList.toggle('on', !on);
   $('tab2').classList.toggle('on', on);
-  if (on) {
-    clearTimeout(timer);
-    $('formula').textContent = '=SUM(B2:D' + (ROWS + 1) + ')';
-    setStatus('就緒');
-  } else if (state === 'run') {
-    setStatus('編輯');
-    loop();
+  joy.id = null; keys.clear(); holding = false;
+}
+
+// ================= 更新 =================
+function update(dt) {
+  gameT += dt;
+  const v = inputVec();
+  const moving = Math.abs(v.x) + Math.abs(v.y) > 0.01;
+
+  if (state === 'walk') {
+    if (moving) {
+      hideHint();
+      if (Math.abs(v.x) > Math.abs(v.y)) P.dir = v.x > 0 ? 'r' : 'l'; else P.dir = v.y > 0 ? 'd' : 'u';
+      const nx = P.x + v.x * CFG.speed * dt, ny = P.y + v.y * CFG.speed * dt;
+      if (free(nx, P.y)) P.x = nx;
+      if (free(P.x, ny)) P.y = ny;
+      P.walkT += dt;
+    }
+    P.moving = moving;
   } else {
-    draw(state === 'over');
+    P.moving = false;
+    if ((state === 'cast' || state === 'wait') && moving) { state = 'walk'; }
+  }
+
+  if (state === 'cast') {
+    castT += dt;
+    if (castT >= CFG.castTime) { state = 'wait'; waitT = rand(CFG.waitMin, CFG.waitMax); splash(spot.i + .5, spot.j + .5, 4); }
+  } else if (state === 'wait') {
+    waitT -= dt;
+    if (waitT <= 0) { state = 'bite'; biteT = CFG.biteWin; splash(spot.i + .5, spot.j + .5, 8); }
+  } else if (state === 'bite') {
+    biteT -= dt;
+    if (biteT <= 0) { state = 'walk'; toast('魚跑掉了…上鉤時要快按！'); }
+  } else if (state === 'fight') {
+    updateFight(dt);
+  }
+
+  for (let k = parts.length - 1; k >= 0; k--) {
+    const p = parts[k];
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 9 * dt; p.life -= dt;
+    if (p.life <= 0) parts.splice(k, 1);
   }
 }
-$('saveBtn').addEventListener('click', e => { e.stopPropagation(); setBoss(!boss); });
-$('tab1').addEventListener('click', () => boss && setBoss(false));
-$('tab2').addEventListener('click', () => !boss && setBoss(true));
-// 切走分頁／App 自動進入老闆模式
-document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'run') setBoss(true); });
 
-// ===== 操作 =====
-function turn(x, y) {
-  if (boss) return;
-  if (state !== 'run') start();
-  const last = dirQ.length ? dirQ[dirQ.length - 1] : dir;
-  if (last.x === -x && last.y === -y) return;   // 不能直接迴轉
-  if (last.x === x && last.y === y) return;
-  if (dirQ.length < 3) dirQ.push({ x, y });
+function free(x, y) {
+  for (const [ox, oy] of [[-.28, .05], [.28, .05], [-.28, .42], [.28, .42]]) {
+    if (!TILES[tileAt(Math.floor(x + ox), Math.floor(y + oy))].walk) return false;
+  }
+  return true;
 }
 
-const KEYS = {
-  ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
-  w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
-};
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' || e.key === 'b' || e.key === 'B') { setBoss(!boss); e.preventDefault(); return; }
-  const k = KEYS[e.key] || KEYS[e.key.toLowerCase()];
-  if (k) { turn(k[0], k[1]); e.preventDefault(); return; }
-  if ((e.key === 'Enter' || e.key === ' ') && !boss) { start(); e.preventDefault(); }
-});
+function updateFight(dt) {
+  F.t += dt;
+  F.nextSurge -= dt;
+  if (F.nextSurge <= 0) { F.surge = rand(.5, .9); F.nextSurge = rand(1.2, 3) / F.str; }
+  if (F.surge > 0) F.surge -= dt;
+  const s = F.str, surging = F.surge > 0;
+  if (holding) {
+    F.prog += CFG.reelUp / s * dt * (surging ? 0.3 : 1);
+    F.tens += CFG.tensUp * s * dt * (surging ? 2.2 : 1);
+  } else {
+    F.tens -= CFG.tensDown * dt;
+    F.prog -= CFG.slipDown * s * dt * (surging ? 2.5 : 1);
+  }
+  F.tens = clamp(F.tens, 0, 1);
+  if (Math.random() < dt * 6) splash(spot.i + .5 + rand(-.3, .3), spot.j + .5 + rand(-.3, .3), 2);
+  if (F.tens >= 1) return endFight(false, '線斷了！張力太大，記得適時放開');
+  if (F.prog <= 0) return endFight(false, '魚掙脫了…');
+  if (F.prog >= 1) return endFight(true);
+}
 
-// 觸控：滑動轉向，點一下開始／重來
-let tx = 0, ty = 0, moved = false;
-sheet.addEventListener('touchstart', e => {
-  const t = e.touches[0]; tx = t.clientX; ty = t.clientY; moved = false;
-  e.preventDefault();
-}, { passive: false });
-sheet.addEventListener('touchmove', e => {
-  const t = e.touches[0], dx = t.clientX - tx, dy = t.clientY - ty;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < CFG.swipeMin) return;
-  if (Math.abs(dx) > Math.abs(dy)) turn(Math.sign(dx), 0); else turn(0, Math.sign(dy));
-  tx = t.clientX; ty = t.clientY; moved = true;   // 一次滑動中可以連續轉彎
-  e.preventDefault();
-}, { passive: false });
-sheet.addEventListener('touchend', e => {
-  if (!moved && !boss && state !== 'run') start();
-  e.preventDefault();
-}, { passive: false });
-sheet.addEventListener('mousedown', () => { if (!boss && state !== 'run') start(); });
+// ================= 畫面 =================
+let lastUI = '';
+function render() {
+  const C = CFG.cell;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  const gw = VW - CFG.hdW, gh = VH - CFG.hdH;
+  // 隱藏模式固定顯示左上角的報表
+  const camX = boss ? 0 : W * C <= gw ? -(gw - W * C) / 2 : clamp(P.x * C - gw / 2, 0, W * C - gw);
+  const camY = boss ? 0 : H * C <= gh ? -(gh - H * C) / 2 : clamp(P.y * C - gh / 2, 0, H * C - gh);
+  const ox = CFG.hdW - camX, oy = CFG.hdH - camY;   // 地圖格 (0,0) 在螢幕上的位置
+  const i0 = Math.max(0, Math.floor(camX / C)), i1 = Math.min(W - 1, Math.floor((camX + gw) / C));
+  const j0 = Math.max(0, Math.floor(camY / C)), j1 = Math.min(H - 1, Math.floor((camY + gh) / C));
 
-// 視窗大小改變時（例如轉向），沒在玩才重建表格
-let rsT;
-window.addEventListener('resize', () => {
-  clearTimeout(rsT);
-  rsT = setTimeout(() => { if (state !== 'run') { build(); reset(); } }, 200);
-});
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, VW, VH);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(CFG.hdW, CFG.hdH, gw, gh); ctx.clip();
 
-build();
-reset();
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const x = ox + i * C, y = oy + j * C;
+    if (boss) drawBossCell(i, j, x, y); else drawTile(tileAt(i, j), i, j, x, y);
+  }
+  // 格線
+  ctx.strokeStyle = boss ? '#e1e1e1' : 'rgba(0,0,0,.08)'; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = i0; i <= i1 + 1; i++) { const x = Math.round(ox + i * C) - .5; ctx.moveTo(x, CFG.hdH); ctx.lineTo(x, VH); }
+  for (let j = j0; j <= j1 + 1; j++) { const y = Math.round(oy + j * C) - .5; ctx.moveTo(CFG.hdW, y); ctx.lineTo(VW, y); }
+  ctx.stroke();
+
+  let sel;
+  if (!boss) {
+    const sp = state === 'walk' ? findSpot() : spot;
+    drawWorld(ox, oy, sp);
+    sel = sp ? [sp.i, sp.j] : [Math.floor(P.x), Math.floor(P.y)];
+  } else {
+    sel = [2, 1];
+  }
+  // Excel 選取框
+  ctx.strokeStyle = '#217346'; ctx.lineWidth = 2;
+  ctx.strokeRect(ox + sel[0] * C, oy + sel[1] * C, C, C);
+  ctx.fillStyle = '#217346'; ctx.fillRect(ox + sel[0] * C + C - 3, oy + sel[1] * C + C - 3, 6, 6);
+  ctx.restore();
+
+  drawHeaders(ox, oy, i0, i1, j0, j1, sel);
+  if (!boss && joy.id !== null) drawJoy();
+  updateUI(sel);
+}
+
+function drawTile(t, i, j, x, y) {
+  const C = CFG.cell, u = C / 16, h = hash(i, j);
+  ctx.fillStyle = TILES[t].color; ctx.fillRect(x, y, C, C);
+  if (TILES[t].water) {
+    // 水波
+    const a = t === T.DEEP ? .22 : .45;
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    if (h % 3 === 0) {
+      const wx = (gameT * 5 + (h % 97)) % 12;
+      ctx.fillRect(x + (2 + wx) * u, y + (4 + h % 8) * u, 3 * u, u);
+    }
+  } else if (t === T.FOREST) {
+    ctx.fillStyle = '#7a5230'; ctx.fillRect(x + 7 * u, y + 11 * u, 2 * u, 4 * u);
+    ctx.fillStyle = '#3f6f2a';
+    ctx.fillRect(x + 4 * u, y + 3 * u, 8 * u, 8 * u); ctx.fillRect(x + 3 * u, y + 5 * u, 10 * u, 4 * u); ctx.fillRect(x + 6 * u, y + u, 4 * u, 2 * u);
+    ctx.fillStyle = '#5c9a3c'; ctx.fillRect(x + 5 * u, y + 4 * u, 2 * u, 2 * u);
+  } else if (t === T.GRASS) {
+    if (h % 5 === 0) { ctx.fillStyle = '#8fbf72'; const gx = h % 11 + 2, gy = (h >> 4) % 10 + 3; ctx.fillRect(x + gx * u, y + gy * u, u, 2 * u); ctx.fillRect(x + (gx + 2) * u, y + (gy - 1) * u, u, 3 * u); }
+    if (h % 23 === 0) { ctx.fillStyle = '#ff6b8a'; ctx.fillRect(x + 8 * u, y + 8 * u, 2 * u, 2 * u); }
+  } else if (t === T.SAND) {
+    if (h % 3 === 0) { ctx.fillStyle = '#e6c860'; ctx.fillRect(x + (h % 12 + 2) * u, y + ((h >> 3) % 12 + 2) * u, u, u); }
+  } else if (t === T.DOCK) {
+    ctx.fillStyle = '#a07a4a';
+    for (let k = 0; k < 4; k++) ctx.fillRect(x, y + (k * 4 + 3) * u, C, u * .6);
+  }
+}
+
+// 隱藏模式：畫成普通的報表
+const BOSS_HEAD = ['', '品項', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '合計'];
+function drawBossCell(i, j, x, y) {
+  const C = CFG.cell;
+  ctx.fillStyle = j === 0 && i > 0 && i < 12 ? '#ddebf7' : '#fff';
+  ctx.fillRect(x, y, C, C);
+  let txt = '';
+  if (j === 0 && i < 12) txt = BOSS_HEAD[i];
+  else if (i === 1 && j < 40) txt = 'P' + String(j).padStart(2, '0');
+  else if (i > 1 && i < 12 && j < 40) txt = String(100 + hash(i, j) % 900);
+  if (!txt) return;
+  ctx.fillStyle = '#222'; ctx.font = (j === 0 ? '600 ' : '') + '11px sans-serif';
+  ctx.textAlign = i === 1 || j === 0 ? 'center' : 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText(txt, i === 1 || j === 0 ? x + C / 2 : x + C - 3, y + C / 2);
+}
+
+function drawWorld(ox, oy, sp) {
+  const C = CFG.cell, u = C / 16;
+  const px = ox + P.x * C, py = oy + P.y * C;   // 人物中心
+  const feet = py + .45 * C;
+  // 浮標位置
+  let bob = null;
+  if (spot && (state === 'cast' || state === 'wait' || state === 'bite' || state === 'fight')) {
+    let bx = ox + (spot.i + .5) * C, by = oy + (spot.j + .5) * C;
+    if (state === 'fight') { bx += Math.sin(gameT * 3.1) * C * .3 * (F.surge > 0 ? 1.4 : 1); by += Math.cos(gameT * 2.3) * C * .25; }
+    bob = { x: bx, y: by };
+  }
+  // 搏鬥中水下的魚影
+  if (state === 'fight' && bob) {
+    ctx.fillStyle = 'rgba(0,20,40,.35)';
+    const fx = bob.x + Math.sin(gameT * 4) * 6, fy = bob.y + 6;
+    ctx.beginPath(); ctx.ellipse(fx, fy, C * .45, C * .18, Math.sin(gameT * 2) * .5, 0, Math.PI * 2); ctx.fill();
+  }
+  // 影子
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.beginPath(); ctx.ellipse(px, feet, 7 * u * .8, 2 * u, 0, 0, Math.PI * 2); ctx.fill();
+
+  // 搏鬥時往後仰、晃動
+  let lean = 0, shake = 0;
+  const [ddx, ddy] = DIRS[P.dir];
+  if (state === 'fight') { lean = holding ? 2 * u : u; shake = Math.sin(gameT * (holding ? 40 : 18)) * u * (F.surge > 0 ? 1.2 : .6); }
+  const bx0 = px - ddx * lean + shake, by0 = feet - ddy * lean;
+  drawPlayer(bx0, by0, u);
+
+  // 釣竿與釣線
+  if (state !== 'walk' || catchShow) {
+    const hand = { x: bx0 + (P.dir === 'l' ? -3 : P.dir === 'r' ? 3 : 4) * u, y: by0 - 7 * u };
+    let tx, ty;
+    if (bob) {
+      const dx = bob.x - hand.x, dy = bob.y - hand.y, l = Math.hypot(dx, dy) || 1;
+      tx = hand.x + dx / l * 15 * u; ty = hand.y + dy / l * 15 * u - 10 * u;
+    } else { tx = hand.x + 4 * u; ty = hand.y - 16 * u; }
+    let bend = 0;
+    if (state === 'fight') { bend = holding ? 1 : .5; tx += (bob.x - tx) * .18 * bend; ty += (bob.y - ty) * .3 * bend; }
+    if (state === 'bite') bend = .4;
+    const mx = (hand.x + tx) / 2, my = (hand.y + ty) / 2 - 4 * u * (1 - bend) + 6 * u * bend;
+    ctx.strokeStyle = '#6b4423'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.quadraticCurveTo(mx, my, tx, ty); ctx.stroke();
+    if (bob) {
+      let bx = bob.x, by = bob.y;
+      if (state === 'cast') {   // 拋出去的弧線
+        const k = clamp(castT / CFG.castTime, 0, 1);
+        bx = tx + (bob.x - tx) * k; by = ty + (bob.y - ty) * k - Math.sin(k * Math.PI) * C * 1.5;
+      }
+      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(tx, ty);
+      ctx.quadraticCurveTo((tx + bx) / 2, Math.max(ty, by) + (state === 'fight' ? 0 : C * .4), bx, by); ctx.stroke();
+      if (state !== 'fight') {
+        let dip = 0;
+        if (state === 'wait') dip = Math.sin(gameT * 3) * u * .6;
+        if (state === 'bite') dip = 2 * u + Math.sin(gameT * 30) * u;
+        if (state === 'bite' || state === 'wait') {   // 水面波紋
+          ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1;
+          const rr = ((gameT * (state === 'bite' ? 2.5 : 1)) % 1) * C * .45 + 3;
+          ctx.beginPath(); ctx.ellipse(bx, by + 2 * u, rr, rr * .45, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.fillStyle = '#fff'; ctx.fillRect(bx - 2 * u, by - u + dip, 4 * u, 2 * u);
+        ctx.fillStyle = '#e03030'; ctx.fillRect(bx - 2 * u, by - 3 * u + dip, 4 * u, 2 * u);
+        ctx.fillRect(bx - u * .5, by - 5 * u + dip, u, 2 * u);
+      }
+    }
+  }
+
+  // 上鉤時頭上的「！」
+  if (state === 'bite') {
+    const ex = bx0, ey = by0 - 22 * u - Math.abs(Math.sin(gameT * 12)) * 2 * u;
+    ctx.fillStyle = '#fff'; ctx.fillRect(ex - 4 * u, ey - 6 * u, 8 * u, 9 * u);
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5; ctx.strokeRect(ex - 4 * u, ey - 6 * u, 8 * u, 9 * u);
+    ctx.fillStyle = '#e03030'; ctx.fillRect(ex - u, ey - 5 * u, 2 * u, 4 * u); ctx.fillRect(ex - u, ey, 2 * u, 2 * u);
+  }
+  // 搏鬥時冒汗
+  if (state === 'fight' && F && F.tens > .65) {
+    ctx.fillStyle = '#7fc8ff';
+    const sy = (gameT * 20) % (4 * u);
+    ctx.fillRect(bx0 + 6 * u, by0 - 18 * u + sy, u * 1.5, u * 2);
+  }
+  // 釣到後把魚舉起來
+  if (catchShow) {
+    const s = 2, img = FISH_IMG[catchShow];
+    const hy = by0 - 32 * u - Math.abs(Math.sin(gameT * 5)) * 2 * u;
+    ctx.drawImage(img, bx0 - FW * s / 2, hy, FW * s, FH * s);
+  }
+  // 水花
+  ctx.fillStyle = '#fff';
+  for (const p of parts) ctx.fillRect(ox + p.x * C - u, oy + p.y * C - u, 2 * u, 2 * u);
+}
+
+function drawPlayer(cx, feet, u) {
+  const flip = P.dir === 'l';
+  const rows = SPR[P.dir === 'l' ? 'r' : P.dir];
+  const x0 = cx - 6 * u, y0 = feet - 16 * u;
+  for (let r = 0; r < rows.length; r++) for (let c = 0; c < 12; c++) {
+    const ch = rows[r][flip ? 11 - c : c];
+    if (ch === '.') continue;
+    ctx.fillStyle = PAL[ch]; ctx.fillRect(x0 + c * u, y0 + r * u, u + .5, u + .5);
+  }
+  // 腿：走路時左右輪流抬起
+  const step = P.moving ? Math.floor(P.walkT * 8) % 4 : 0;
+  LEGS[P.dir].forEach((lx, k) => {
+    const lift = (step === 1 && k === 0) || (step === 3 && k === 1) ? 1 : 0;
+    const x = x0 + (flip ? 10 - lx : lx) * u;
+    ctx.fillStyle = PAL.p; ctx.fillRect(x, y0 + 12 * u, 2 * u, (3 - lift) * u);
+    ctx.fillStyle = PAL.b; ctx.fillRect(x, y0 + (15 - lift) * u, 2 * u, u);
+  });
+}
+
+function drawHeaders(ox, oy, i0, i1, j0, j1, sel) {
+  const C = CFG.cell;
+  ctx.fillStyle = '#f3f3f3';
+  ctx.fillRect(0, 0, VW, CFG.hdH); ctx.fillRect(0, 0, CFG.hdW, VH);
+  ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.save(); ctx.beginPath(); ctx.rect(CFG.hdW, 0, VW, CFG.hdH); ctx.clip();
+  for (let i = i0; i <= i1; i++) {
+    const x = ox + i * C;
+    if (i === sel[0]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(x, 0, C, CFG.hdH); ctx.fillStyle = '#217346'; ctx.fillRect(x, CFG.hdH - 2, C, 2); }
+    ctx.fillStyle = i === sel[0] ? '#217346' : '#555';
+    ctx.fillText(colName(i), x + C / 2, CFG.hdH / 2 + 1);
+    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(x + C - 1, 0, 1, CFG.hdH);
+  }
+  ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.rect(0, CFG.hdH, CFG.hdW, VH); ctx.clip();
+  for (let j = j0; j <= j1; j++) {
+    const y = oy + j * C;
+    if (j === sel[1]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(0, y, CFG.hdW, C); ctx.fillStyle = '#217346'; ctx.fillRect(CFG.hdW - 2, y, 2, C); }
+    ctx.fillStyle = j === sel[1] ? '#217346' : '#555';
+    ctx.fillText(j + 1, CFG.hdW / 2, y + C / 2);
+    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(0, y + C - 1, CFG.hdW, 1);
+  }
+  ctx.restore();
+  ctx.fillStyle = '#d4d4d4'; ctx.fillRect(0, CFG.hdH - 1, VW, 1); ctx.fillRect(CFG.hdW - 1, 0, 1, VH);
+}
+
+function drawJoy() {
+  const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.hypot(dx, dy), k = l > CFG.joyR ? CFG.joyR / l : 1;
+  ctx.fillStyle = 'rgba(33,115,70,.12)'; ctx.strokeStyle = 'rgba(33,115,70,.4)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(joy.ox, joy.oy, CFG.joyR, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(33,115,70,.45)';
+  ctx.beginPath(); ctx.arc(joy.ox + dx * k, joy.oy + dy * k, 16, 0, Math.PI * 2); ctx.fill();
+}
+
+// 公式列、狀態列、按鈕狀態
+function updateUI(sel) {
+  let formula, btn, label, st;
+  if (boss) {
+    formula = '=SUM(C2:L40)'; btn = ''; label = ''; st = '就緒';
+  } else {
+    const here = TILES[tileAt(Math.floor(P.x), Math.floor(P.y))].name;
+    const sp = state === 'walk' ? findSpot() : spot;
+    if (sp) {
+      const w = TILES[sp.t].water, kinds = FISH.filter(f => !f.junk && f.water.includes(w)).length;
+      formula = `=釣點("${TILES[sp.t].name}", 魚種 ${kinds})`;
+    } else formula = `=區域("${here}")`;
+    st = '就緒';
+    if (state === 'walk') { btn = sp ? '' : 'dim'; label = '下竿'; }
+    else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; st = '等待中'; }
+    else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; st = '上鉤了'; }
+    else if (state === 'fight') {
+      btn = 'fight' + (holding ? ' hold' : ''); label = '拉！<small>按住收線</small>'; st = '搏鬥中';
+      $('tens').firstChild.style.width = (F.tens * 100) + '%';
+      $('tens').firstChild.style.background = F.tens > .85 ? '#c00000' : F.tens > .6 ? '#ed7d31' : '#70ad47';
+      $('prog').firstChild.style.width = (F.prog * 100) + '%';
+      $('ftip').textContent = F.surge > 0 ? '魚在掙扎！先放開！' : F.tens > .8 ? '張力太高，放開！' : '';
+    } else { btn = 'dim'; label = '下竿'; }
+  }
+  const total = Math.round(bag.reduce((a, b) => a + b.size, 0));
+  const key = [addr(sel[0], sel[1]), formula, btn, label, st, bag.length].join('|');
+  if (key === lastUI) return;
+  lastUI = key;
+  $('namebox').textContent = addr(sel[0], sel[1]);
+  $('formula').textContent = formula;
+  act.className = btn; act.innerHTML = label;
+  $('st').textContent = st;
+  $('cnt').textContent = '計數: ' + bag.length;
+  $('sum').textContent = '加總: ' + total.toLocaleString('en-US');
+  $('bagCount').textContent = bag.length || '';
+}
+
+// ================= 主迴圈 =================
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  if (!boss && !$('dlg').classList.contains('on')) update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>

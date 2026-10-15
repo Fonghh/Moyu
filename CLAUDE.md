@@ -19,7 +19,11 @@
 - 不要把任何金鑰、密碼、token 或憑證存進 repo。
 
 ## 程式結構（index.html）
-- `CFG`：所有手感與難度參數集中在這裡。
-- `build()` 依螢幕大小建立表格；`reset()`／`start()`／`step()` 是遊戲流程；`draw()` 更新畫面。
-- `setBoss()`：老闆鍵，切換偽裝模式並暫停。
+- `CFG`：所有手感與難度參數集中在這裡（移動速度、等魚時間、搏鬥張力等）。
+- 地形 `T`／`TILES`（顏色、能不能走、水域種類）；`genMap()` 產生地圖。
+- 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、像素圖參數）；稀有度 `RAR`。
+- 魚的像素圖由 `makeFish()` 依參數產生；人物像素圖 `SPR`／`PAL`。
+- 狀態 `state`：walk → cast → wait → bite → fight → caught；搏鬥資料在 `F`。
+- 背包 `bag` 存在 localStorage（`moyu.bag`）。
+- `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
 - 程式註解使用繁體中文。
