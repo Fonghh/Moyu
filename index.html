@@ -105,6 +105,18 @@
   #prog i { background: #2e75b6; }
   #fight .tip { text-align: center; color: #c00000; font-weight: 600; height: 16px; }
 
+  /* 右上角小地圖（看起來像插入的 Excel 圖表） */
+  #miniBox {
+    position: absolute; right: max(8px, env(safe-area-inset-right, 0px)); top: 28px; background: #fff; border: 1px solid #bfbfbf;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15); padding: 2px 4px 4px; cursor: pointer;
+  }
+  #miniBox .mt { font-size: 10px; color: #595959; text-align: center; line-height: 14px; }
+  #mini { display: block; image-rendering: pixelated; }
+  .bigmap { display: block; margin: 0 auto; image-rendering: pixelated; border: 1px solid #bfbfbf; }
+  .legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 4px 10px; margin-top: 10px; font-size: 12px; }
+  .legend i { display: inline-block; width: 16px; height: 11px; border: 1px solid #aaa; vertical-align: -1px; margin-right: 5px; }
+  .pos { margin-top: 8px; font-size: 12px; color: #c00000; }
+
   /* 說明（Excel 註解樣式）與提示訊息 */
   .note {
     position: absolute; background: #ffffe1; border: 1px solid #a0a0a0; box-shadow: 2px 2px 4px rgba(0,0,0,.2);
@@ -138,7 +150,7 @@
   .empty { color: #777; text-align: center; padding: 24px 0; }
 
   /* 隱藏模式：只剩普通的 Excel */
-  body.boss #actBtn, body.boss #bagBtn, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
+  body.boss #actBtn, body.boss #bagBtn, body.boss #miniBox, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
 </style>
 </head>
 <body>
@@ -161,6 +173,7 @@
     <div class="row"><span class="lb">收線</span><div class="bar" id="prog"><i></i></div></div>
     <div class="tip" id="ftip"></div>
   </div>
+  <div id="miniBox" title="區域分布圖"><div class="mt">區域分布</div><canvas id="mini"></canvas></div>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
   <button id="actBtn">下竿</button>
   <div class="note" id="hint">
@@ -180,10 +193,11 @@
 <script>
 // ================= 參數 =================
 const CFG = {
-  cell: 32,              // 每格大小（px）
-  mapW: 64, mapH: 48,    // 地圖格數
+  cellW: 60, cellH: 24,  // 儲存格寬高（px），跟手機 Excel 一樣扁長
+  mapW: 44, mapH: 80,    // 地圖格數
   hdW: 34, hdH: 20,      // 列號寬、欄名高
-  speed: 4.2,            // 移動速度（格/秒）
+  speed: 150,            // 移動速度（px/秒）
+  miniW: 96,             // 小地圖寬度（px）
   castTime: 0.45,        // 拋竿動畫秒數
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
   biteWin: 1.3,          // 上鉤後可以拉竿的秒數
@@ -273,30 +287,30 @@ const W = CFG.mapW, H = CFG.mapH;
 const map = new Uint8Array(W * H);
 const tileAt = (i, j) => (i < 0 || j < 0 || i >= W || j >= H) ? T.FOREST : map[j * W + i];
 const setT = (i, j, t) => { if (i >= 0 && j >= 0 && i < W && j < H) map[j * W + i] = t; };
-const seaEdge = y => 44 + Math.round(2.5 * Math.sin(y / 5) + 1.5 * Math.sin(y / 2.3 + 1));
-const SPAWN = { x: 16.5, y: 20.5 };
+const seaEdge = y => 28 + Math.round(1.5 * Math.sin(y / 8) + Math.sin(y / 3.5 + 1));
+const SPAWN = { x: 10.5, y: 32.5 };
 
 function genMap() {
   for (let j = 0; j < H; j++) {
     const e = seaEdge(j);
     for (let i = 0; i < W; i++) {
       let t = T.GRASS;
-      if (i >= e + 9) t = T.DEEP; else if (i >= e) t = T.SEA; else if (i >= e - 2) t = T.SAND;
+      if (i >= e + 6) t = T.DEEP; else if (i >= e) t = T.SEA; else if (i >= e - 1) t = T.SAND;
       setT(i, j, t);
     }
   }
   // 一條由西往東流進海裡的河
   for (let i = 0; i < W; i++) {
-    const ry = 32 + 3.5 * Math.sin(i / 6) + 1.5 * Math.sin(i / 2.7);
+    const ry = 54 + 6 * Math.sin(i / 4) + 2 * Math.sin(i / 1.7);
     for (let j = 0; j < H; j++) {
       const t = tileAt(i, j);
-      if (Math.abs(j - ry) < 1.4 && (t === T.GRASS || t === T.SAND)) setT(i, j, T.RIVER);
+      if (Math.abs(j - ry) < 2.2 && (t === T.GRASS || t === T.SAND)) setT(i, j, T.RIVER);
     }
   }
-  // 池塘
-  for (const [cx, cy, r] of [[10, 10, 3.2], [30, 9, 2.6], [12, 42, 3], [34, 40, 2.4]]) {
+  // 池塘（格子扁長，所以橢圓直向拉長）
+  for (const [cx, cy, rx, ry] of [[6, 14, 3, 6], [18, 12, 2.2, 5], [7, 70, 2.5, 5.5], [21, 72, 2, 4.5]]) {
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-      const dx = (i + .5 - cx) / r, dy = (j + .5 - cy) / (r * .8);
+      const dx = (i + .5 - cx) / rx, dy = (j + .5 - cy) / ry;
       if (dx * dx + dy * dy < 1 && tileAt(i, j) === T.GRASS) setT(i, j, T.POND);
     }
   }
@@ -307,16 +321,16 @@ function genMap() {
   };
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
     if (tileAt(i, j) !== T.GRASS) continue;
-    const far = Math.hypot(i - SPAWN.x, j - SPAWN.y) > 5;
-    if ((i === 0 || j === 0 || j === H - 1) || (far && vnoise(i / 5, j / 5) > 0.62 && !nearWater(i, j))) setT(i, j, T.FOREST);
+    const far = Math.hypot((i - SPAWN.x) * 2.5, j - SPAWN.y) > 8;
+    if ((i === 0 || j === 0 || j === H - 1) || (far && vnoise(i / 3, j / 7) > 0.62 && !nearWater(i, j))) setT(i, j, T.FOREST);
   }
   // 小徑：出生點往東到海邊，接碼頭伸進深海
-  const e20 = seaEdge(20);
-  for (let i = 4; i < e20; i++) setT(i, 20, T.PATH);
-  for (let i = e20; i <= e20 + 13; i++) setT(i, 20, T.DOCK);
-  for (let j = 18; j <= 22; j++) setT(e20 + 13, j, T.DOCK);
+  const PY = 32, ePY = seaEdge(PY);
+  for (let i = 2; i < ePY; i++) setT(i, PY, T.PATH);
+  for (let i = ePY; i <= ePY + 9; i++) setT(i, PY, T.DOCK);
+  for (let j = PY - 3; j <= PY + 3; j++) setT(ePY + 9, j, T.DOCK);
   // 往南的小徑，過河的地方是木橋
-  for (let j = 20; j <= 44; j++) setT(22, j, tileAt(22, j) === T.RIVER ? T.DOCK : T.PATH);
+  for (let j = PY; j <= 75; j++) setT(15, j, tileAt(15, j) === T.RIVER ? T.DOCK : T.PATH);
 }
 genMap();
 
@@ -514,6 +528,7 @@ document.addEventListener('keydown', e => {
   }
   if (k === ' ' || k === 'j' || k === 'enter') { if (!e.repeat) press(); e.preventDefault(); return; }
   if (k === 'i' || k === 'e') { openBag(); return; }
+  if (k === 'm') { openMap(); return; }
   keys.add(k);
   if (k.startsWith('arrow')) e.preventDefault();
 });
@@ -688,7 +703,7 @@ function update(dt) {
     if (moving) {
       hideHint();
       if (Math.abs(v.x) > Math.abs(v.y)) P.dir = v.x > 0 ? 'r' : 'l'; else P.dir = v.y > 0 ? 'd' : 'u';
-      const nx = P.x + v.x * CFG.speed * dt, ny = P.y + v.y * CFG.speed * dt;
+      const nx = P.x + v.x * CFG.speed / CFG.cellW * dt, ny = P.y + v.y * CFG.speed / CFG.cellH * dt;
       if (free(nx, P.y)) P.x = nx;
       if (free(P.x, ny)) P.y = ny;
       P.walkT += dt;
@@ -720,7 +735,7 @@ function update(dt) {
 }
 
 function free(x, y) {
-  for (const [ox, oy] of [[-.28, .05], [.28, .05], [-.28, .42], [.28, .42]]) {
+  for (const [ox, oy] of [[-.16, 0], [.16, 0], [-.16, .4], [.16, .4]]) {
     if (!TILES[tileAt(Math.floor(x + ox), Math.floor(y + oy))].walk) return false;
   }
   return true;
@@ -747,116 +762,152 @@ function updateFight(dt) {
 }
 
 // ================= 畫面 =================
+// 每格都填上看起來像報表的資料，不畫插圖
+const ITEMS = ['筆電', '螢幕', '滑鼠', '鍵盤', '耳機', '喇叭', '印表機', '投影機', '路由器', '硬碟', '隨身碟', '網路卡', '電源', '機殼', '主機板', '顯示卡'];
+const HEADS = ['品項', '1月', '2月', '3月', 'Q1', '4月', '5月', '6月', 'Q2', '上半年', '目標', '達成率', '成長率', '單價', '數量', '金額'];
+const DARK_FILL = new Set([T.FOREST, T.SEA, T.DEEP]);   // 深色底配白字
+const FONT = '11px -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif';
+const FONT_B = '600 ' + FONT;
+const fmtN = n => n.toLocaleString('en-US');
+function cellText(i, j) {
+  if (j === 0) return HEADS[i % HEADS.length];
+  const k = i % HEADS.length;
+  if (k === 0) return ITEMS[(j - 1) % ITEMS.length] + (j > ITEMS.length ? Math.ceil(j / ITEMS.length) : '');
+  const h = hash(i, j);
+  if (k === 11) return (60 + (h % 600) / 10).toFixed(1) + '%';
+  if (k === 12) return ((h % 400) / 10 - 12).toFixed(1) + '%';
+  if (k === 13) return fmtN(h % 9000 + 500);
+  if (k === 14) return String(h % 300 + 5);
+  if (k === 4 || k === 8) return fmtN(h % 40000 + 10000);
+  if (k === 9 || k === 15) return fmtN(h % 90000 + 20000);
+  return fmtN(h % 9000 + 1000);
+}
+
+// 小地圖：一格一個像素，先畫好備用
+const mapImg = document.createElement('canvas');
+mapImg.width = W; mapImg.height = H;
+{
+  const m = mapImg.getContext('2d');
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { m.fillStyle = TILES[tileAt(i, j)].color; m.fillRect(i, j, 1, 1); }
+}
+const MINI_H = Math.round(CFG.miniW * H * CFG.cellH / (W * CFG.cellW));
+const mini = $('mini'), mctx = mini.getContext('2d');
+mini.width = CFG.miniW * 2; mini.height = MINI_H * 2;
+mini.style.width = CFG.miniW + 'px'; mini.style.height = MINI_H + 'px';
+
+function drawMap(c, w, h, view) {
+  c.imageSmoothingEnabled = false;
+  c.clearRect(0, 0, w, h);
+  c.drawImage(mapImg, 0, 0, w, h);
+  const sx = w / W, sy = h / H;
+  if (view) { c.strokeStyle = 'rgba(0,0,0,.65)'; c.lineWidth = 1; c.strokeRect(view.x * sx, view.y * sy, view.w * sx, view.h * sy); }
+  c.fillStyle = '#c00000'; c.strokeStyle = '#fff'; c.lineWidth = 1;
+  c.beginPath(); c.arc(P.x * sx, P.y * sy, Math.max(2.5, w / 80), 0, Math.PI * 2); c.fill(); c.stroke();
+}
+
+function openMap() {
+  if (boss || state === 'fight' || state === 'bite') return;
+  const d = document.createElement('div');
+  const w = Math.min(320, window.innerWidth - 72), h = Math.round(w * H * CFG.cellH / (W * CFG.cellW));
+  const c = document.createElement('canvas');
+  c.width = w * 2; c.height = h * 2; c.style.width = w + 'px'; c.style.height = h + 'px'; c.className = 'bigmap';
+  const x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0);
+  drawMap(x, w, h, null);
+  d.appendChild(c);
+  const lg = document.createElement('div'); lg.className = 'legend';
+  for (const t of [T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP]) {
+    const it = document.createElement('div');
+    const sw = document.createElement('i'); sw.style.background = TILES[t].color;
+    it.appendChild(sw); it.appendChild(document.createTextNode(TILES[t].name + (TILES[t].walk || TILES[t].water ? '' : '（不能走）')));
+    lg.appendChild(it);
+  }
+  d.appendChild(lg);
+  const pos = document.createElement('div'); pos.className = 'pos';
+  pos.textContent = '● 目前位置：' + addr(Math.floor(P.x), Math.floor(P.y));
+  d.appendChild(pos);
+  openDlg('區域分布圖', d);
+}
+$('miniBox').addEventListener('click', openMap);
+
 let lastUI = '';
 function render() {
-  const C = CFG.cell;
+  const CW = CFG.cellW, CH = CFG.cellH;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.imageSmoothingEnabled = false;
   const gw = VW - CFG.hdW, gh = VH - CFG.hdH;
   // 隱藏模式固定顯示左上角的報表
-  const camX = boss ? 0 : W * C <= gw ? -(gw - W * C) / 2 : clamp(P.x * C - gw / 2, 0, W * C - gw);
-  const camY = boss ? 0 : H * C <= gh ? -(gh - H * C) / 2 : clamp(P.y * C - gh / 2, 0, H * C - gh);
+  const camX = boss ? 0 : W * CW <= gw ? -(gw - W * CW) / 2 : clamp(P.x * CW - gw / 2, 0, W * CW - gw);
+  const camY = boss ? 0 : H * CH <= gh ? -(gh - H * CH) / 2 : clamp(P.y * CH - gh / 2, 0, H * CH - gh);
   const ox = CFG.hdW - camX, oy = CFG.hdH - camY;   // 地圖格 (0,0) 在螢幕上的位置
-  const i0 = Math.max(0, Math.floor(camX / C)), i1 = Math.min(W - 1, Math.floor((camX + gw) / C));
-  const j0 = Math.max(0, Math.floor(camY / C)), j1 = Math.min(H - 1, Math.floor((camY + gh) / C));
+  const i0 = Math.max(0, Math.floor(camX / CW)), i1 = Math.min(W - 1, Math.floor((camX + gw) / CW));
+  const j0 = Math.max(0, Math.floor(camY / CH)), j1 = Math.min(H - 1, Math.floor((camY + gh) / CH));
 
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, VW, VH);
   ctx.save();
   ctx.beginPath(); ctx.rect(CFG.hdW, CFG.hdH, gw, gh); ctx.clip();
-
-  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-    const x = ox + i * C, y = oy + j * C;
-    if (boss) drawBossCell(i, j, x, y); else drawTile(tileAt(i, j), i, j, x, y);
-  }
+  ctx.textBaseline = 'middle';
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) drawCell(i, j, ox + i * CW, oy + j * CH);
   // 格線
-  ctx.strokeStyle = boss ? '#e1e1e1' : 'rgba(0,0,0,.08)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = boss ? '#e1e1e1' : 'rgba(0,0,0,.1)'; ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let i = i0; i <= i1 + 1; i++) { const x = Math.round(ox + i * C) - .5; ctx.moveTo(x, CFG.hdH); ctx.lineTo(x, VH); }
-  for (let j = j0; j <= j1 + 1; j++) { const y = Math.round(oy + j * C) - .5; ctx.moveTo(CFG.hdW, y); ctx.lineTo(VW, y); }
+  for (let i = i0; i <= i1 + 1; i++) { const x = Math.round(ox + i * CW) - .5; ctx.moveTo(x, CFG.hdH); ctx.lineTo(x, VH); }
+  for (let j = j0; j <= j1 + 1; j++) { const y = Math.round(oy + j * CH) - .5; ctx.moveTo(CFG.hdW, y); ctx.lineTo(VW, y); }
   ctx.stroke();
 
   let sel;
   if (!boss) {
     const sp = state === 'walk' ? findSpot() : spot;
-    drawWorld(ox, oy, sp);
+    drawWorld(ox, oy);
     sel = sp ? [sp.i, sp.j] : [Math.floor(P.x), Math.floor(P.y)];
   } else {
     sel = [2, 1];
   }
   // Excel 選取框
   ctx.strokeStyle = '#217346'; ctx.lineWidth = 2;
-  ctx.strokeRect(ox + sel[0] * C, oy + sel[1] * C, C, C);
-  ctx.fillStyle = '#217346'; ctx.fillRect(ox + sel[0] * C + C - 3, oy + sel[1] * C + C - 3, 6, 6);
+  ctx.strokeRect(ox + sel[0] * CW, oy + sel[1] * CH, CW, CH);
+  ctx.fillStyle = '#217346'; ctx.fillRect(ox + sel[0] * CW + CW - 3, oy + sel[1] * CH + CH - 3, 6, 6);
   ctx.restore();
 
   drawHeaders(ox, oy, i0, i1, j0, j1, sel);
   if (!boss && joy.id !== null) drawJoy();
+  if (!boss) { mctx.setTransform(2, 0, 0, 2, 0, 0); drawMap(mctx, CFG.miniW, MINI_H, { x: camX / CW, y: camY / CH, w: gw / CW, h: gh / CH }); }
   updateUI(sel);
 }
 
-function drawTile(t, i, j, x, y) {
-  const C = CFG.cell, u = C / 16, h = hash(i, j);
-  ctx.fillStyle = TILES[t].color; ctx.fillRect(x, y, C, C);
-  if (TILES[t].water) {
-    // 水波
-    const a = t === T.DEEP ? .22 : .45;
-    ctx.fillStyle = `rgba(255,255,255,${a})`;
-    if (h % 3 === 0) {
-      const wx = (gameT * 5 + (h % 97)) % 12;
-      ctx.fillRect(x + (2 + wx) * u, y + (4 + h % 8) * u, 3 * u, u);
-    }
-  } else if (t === T.FOREST) {
-    ctx.fillStyle = '#7a5230'; ctx.fillRect(x + 7 * u, y + 11 * u, 2 * u, 4 * u);
-    ctx.fillStyle = '#3f6f2a';
-    ctx.fillRect(x + 4 * u, y + 3 * u, 8 * u, 8 * u); ctx.fillRect(x + 3 * u, y + 5 * u, 10 * u, 4 * u); ctx.fillRect(x + 6 * u, y + u, 4 * u, 2 * u);
-    ctx.fillStyle = '#5c9a3c'; ctx.fillRect(x + 5 * u, y + 4 * u, 2 * u, 2 * u);
-  } else if (t === T.GRASS) {
-    if (h % 5 === 0) { ctx.fillStyle = '#8fbf72'; const gx = h % 11 + 2, gy = (h >> 4) % 10 + 3; ctx.fillRect(x + gx * u, y + gy * u, u, 2 * u); ctx.fillRect(x + (gx + 2) * u, y + (gy - 1) * u, u, 3 * u); }
-    if (h % 23 === 0) { ctx.fillStyle = '#ff6b8a'; ctx.fillRect(x + 8 * u, y + 8 * u, 2 * u, 2 * u); }
-  } else if (t === T.SAND) {
-    if (h % 3 === 0) { ctx.fillStyle = '#e6c860'; ctx.fillRect(x + (h % 12 + 2) * u, y + ((h >> 3) % 12 + 2) * u, u, u); }
-  } else if (t === T.DOCK) {
-    ctx.fillStyle = '#a07a4a';
-    for (let k = 0; k < 4; k++) ctx.fillRect(x, y + (k * 4 + 3) * u, C, u * .6);
-  }
+function drawCell(i, j, x, y) {
+  const CW = CFG.cellW, CH = CFG.cellH, t = tileAt(i, j), head = j === 0;
+  let fg = '#222';
+  if (boss) ctx.fillStyle = head ? '#ddebf7' : '#fff';
+  else { ctx.fillStyle = TILES[t].color; if (DARK_FILL.has(t)) fg = '#fff'; }
+  ctx.fillRect(x, y, CW, CH);
+  ctx.fillStyle = fg;
+  ctx.font = head ? FONT_B : FONT;
+  const txt = cellText(i, j);
+  if (head) { ctx.textAlign = 'center'; ctx.fillText(txt, x + CW / 2, y + CH / 2 + .5); }
+  else if (i % HEADS.length === 0) { ctx.textAlign = 'left'; ctx.fillText(txt, x + 4, y + CH / 2 + .5); }
+  else { ctx.textAlign = 'right'; ctx.fillText(txt, x + CW - 4, y + CH / 2 + .5); }
 }
 
-// 隱藏模式：畫成普通的報表
-const BOSS_HEAD = ['', '品項', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '合計'];
-function drawBossCell(i, j, x, y) {
-  const C = CFG.cell;
-  ctx.fillStyle = j === 0 && i > 0 && i < 12 ? '#ddebf7' : '#fff';
-  ctx.fillRect(x, y, C, C);
-  let txt = '';
-  if (j === 0 && i < 12) txt = BOSS_HEAD[i];
-  else if (i === 1 && j < 40) txt = 'P' + String(j).padStart(2, '0');
-  else if (i > 1 && i < 12 && j < 40) txt = String(100 + hash(i, j) % 900);
-  if (!txt) return;
-  ctx.fillStyle = '#222'; ctx.font = (j === 0 ? '600 ' : '') + '11px sans-serif';
-  ctx.textAlign = i === 1 || j === 0 ? 'center' : 'right'; ctx.textBaseline = 'middle';
-  ctx.fillText(txt, i === 1 || j === 0 ? x + C / 2 : x + C - 3, y + C / 2);
-}
-
-function drawWorld(ox, oy, sp) {
-  const C = CFG.cell, u = C / 16;
-  const px = ox + P.x * C, py = oy + P.y * C;   // 人物中心
-  const feet = py + .45 * C;
+function drawWorld(ox, oy) {
+  const CW = CFG.cellW, CH = CFG.cellH, u = 2;
+  const px = ox + P.x * CW, py = oy + P.y * CH;   // 人物中心
+  const feet = py + .4 * CH;
   // 浮標位置
   let bob = null;
   if (spot && (state === 'cast' || state === 'wait' || state === 'bite' || state === 'fight')) {
-    let bx = ox + (spot.i + .5) * C, by = oy + (spot.j + .5) * C;
-    if (state === 'fight') { bx += Math.sin(gameT * 3.1) * C * .3 * (F.surge > 0 ? 1.4 : 1); by += Math.cos(gameT * 2.3) * C * .25; }
+    let bx = ox + (spot.i + .5) * CW, by = oy + (spot.j + .5) * CH;
+    if (state === 'fight') { bx += Math.sin(gameT * 3.1) * CW * .25 * (F.surge > 0 ? 1.4 : 1); by += Math.cos(gameT * 2.3) * CH * .25; }
     bob = { x: bx, y: by };
   }
   // 搏鬥中水下的魚影
   if (state === 'fight' && bob) {
     ctx.fillStyle = 'rgba(0,20,40,.35)';
-    const fx = bob.x + Math.sin(gameT * 4) * 6, fy = bob.y + 6;
-    ctx.beginPath(); ctx.ellipse(fx, fy, C * .45, C * .18, Math.sin(gameT * 2) * .5, 0, Math.PI * 2); ctx.fill();
+    const fx = bob.x + Math.sin(gameT * 4) * 6, fy = bob.y + 5;
+    ctx.beginPath(); ctx.ellipse(fx, fy, 14, 5, Math.sin(gameT * 2) * .5, 0, Math.PI * 2); ctx.fill();
   }
   // 影子
   ctx.fillStyle = 'rgba(0,0,0,.18)';
-  ctx.beginPath(); ctx.ellipse(px, feet, 7 * u * .8, 2 * u, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(px, feet, 6 * u, 2 * u, 0, 0, Math.PI * 2); ctx.fill();
 
   // 搏鬥時往後仰、晃動
   let lean = 0, shake = 0;
@@ -883,19 +934,19 @@ function drawWorld(ox, oy, sp) {
       let bx = bob.x, by = bob.y;
       if (state === 'cast') {   // 拋出去的弧線
         const k = clamp(castT / CFG.castTime, 0, 1);
-        bx = tx + (bob.x - tx) * k; by = ty + (bob.y - ty) * k - Math.sin(k * Math.PI) * C * 1.5;
+        bx = tx + (bob.x - tx) * k; by = ty + (bob.y - ty) * k - Math.sin(k * Math.PI) * CH * 2;
       }
-      ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(40,40,40,.7)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(tx, ty);
-      ctx.quadraticCurveTo((tx + bx) / 2, Math.max(ty, by) + (state === 'fight' ? 0 : C * .4), bx, by); ctx.stroke();
+      ctx.quadraticCurveTo((tx + bx) / 2, Math.max(ty, by) + (state === 'fight' ? 0 : CH * .5), bx, by); ctx.stroke();
       if (state !== 'fight') {
         let dip = 0;
         if (state === 'wait') dip = Math.sin(gameT * 3) * u * .6;
         if (state === 'bite') dip = 2 * u + Math.sin(gameT * 30) * u;
         if (state === 'bite' || state === 'wait') {   // 水面波紋
-          ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 1;
-          const rr = ((gameT * (state === 'bite' ? 2.5 : 1)) % 1) * C * .45 + 3;
-          ctx.beginPath(); ctx.ellipse(bx, by + 2 * u, rr, rr * .45, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1;
+          const rr = ((gameT * (state === 'bite' ? 2.5 : 1)) % 1) * CH * .6 + 3;
+          ctx.beginPath(); ctx.ellipse(bx, by + 2 * u, rr * 1.6, rr * .5, 0, 0, Math.PI * 2); ctx.stroke();
         }
         ctx.fillStyle = '#fff'; ctx.fillRect(bx - 2 * u, by - u + dip, 4 * u, 2 * u);
         ctx.fillStyle = '#e03030'; ctx.fillRect(bx - 2 * u, by - 3 * u + dip, 4 * u, 2 * u);
@@ -925,7 +976,7 @@ function drawWorld(ox, oy, sp) {
   }
   // 水花
   ctx.fillStyle = '#fff';
-  for (const p of parts) ctx.fillRect(ox + p.x * C - u, oy + p.y * C - u, 2 * u, 2 * u);
+  for (const p of parts) ctx.fillRect(ox + p.x * CW - u, oy + p.y * CH - u, 2 * u, 2 * u);
 }
 
 function drawPlayer(cx, feet, u) {
@@ -948,26 +999,26 @@ function drawPlayer(cx, feet, u) {
 }
 
 function drawHeaders(ox, oy, i0, i1, j0, j1, sel) {
-  const C = CFG.cell;
+  const CW = CFG.cellW, CH = CFG.cellH;
   ctx.fillStyle = '#f3f3f3';
   ctx.fillRect(0, 0, VW, CFG.hdH); ctx.fillRect(0, 0, CFG.hdW, VH);
-  ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.save(); ctx.beginPath(); ctx.rect(CFG.hdW, 0, VW, CFG.hdH); ctx.clip();
   for (let i = i0; i <= i1; i++) {
-    const x = ox + i * C;
-    if (i === sel[0]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(x, 0, C, CFG.hdH); ctx.fillStyle = '#217346'; ctx.fillRect(x, CFG.hdH - 2, C, 2); }
+    const x = ox + i * CW;
+    if (i === sel[0]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(x, 0, CW, CFG.hdH); ctx.fillStyle = '#217346'; ctx.fillRect(x, CFG.hdH - 2, CW, 2); }
     ctx.fillStyle = i === sel[0] ? '#217346' : '#555';
-    ctx.fillText(colName(i), x + C / 2, CFG.hdH / 2 + 1);
-    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(x + C - 1, 0, 1, CFG.hdH);
+    ctx.fillText(colName(i), x + CW / 2, CFG.hdH / 2 + 1);
+    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(x + CW - 1, 0, 1, CFG.hdH);
   }
   ctx.restore();
   ctx.save(); ctx.beginPath(); ctx.rect(0, CFG.hdH, CFG.hdW, VH); ctx.clip();
   for (let j = j0; j <= j1; j++) {
-    const y = oy + j * C;
-    if (j === sel[1]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(0, y, CFG.hdW, C); ctx.fillStyle = '#217346'; ctx.fillRect(CFG.hdW - 2, y, 2, C); }
+    const y = oy + j * CH;
+    if (j === sel[1]) { ctx.fillStyle = '#d2e8da'; ctx.fillRect(0, y, CFG.hdW, CH); ctx.fillStyle = '#217346'; ctx.fillRect(CFG.hdW - 2, y, 2, CH); }
     ctx.fillStyle = j === sel[1] ? '#217346' : '#555';
-    ctx.fillText(j + 1, CFG.hdW / 2, y + C / 2);
-    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(0, y + C - 1, CFG.hdW, 1);
+    ctx.fillText(j + 1, CFG.hdW / 2, y + CH / 2 + .5);
+    ctx.fillStyle = '#d4d4d4'; ctx.fillRect(0, y + CH - 1, CFG.hdW, 1);
   }
   ctx.restore();
   ctx.fillStyle = '#d4d4d4'; ctx.fillRect(0, CFG.hdH - 1, VW, 1); ctx.fillRect(CFG.hdW - 1, 0, 1, VH);
@@ -981,24 +1032,16 @@ function drawJoy() {
   ctx.beginPath(); ctx.arc(joy.ox + dx * k, joy.oy + dy * k, 16, 0, Math.PI * 2); ctx.fill();
 }
 
-// 公式列、狀態列、按鈕狀態
+// 公式列、狀態列、按鈕狀態（公式列只顯示儲存格內容，不露出遊戲字眼）
 function updateUI(sel) {
-  let formula, btn, label, st;
-  if (boss) {
-    formula = '=SUM(C2:L40)'; btn = ''; label = ''; st = '就緒';
-  } else {
-    const here = TILES[tileAt(Math.floor(P.x), Math.floor(P.y))].name;
-    const sp = state === 'walk' ? findSpot() : spot;
-    if (sp) {
-      const w = TILES[sp.t].water, kinds = FISH.filter(f => !f.junk && f.water.includes(w)).length;
-      formula = `=釣點("${TILES[sp.t].name}", 魚種 ${kinds})`;
-    } else formula = `=區域("${here}")`;
-    st = '就緒';
-    if (state === 'walk') { btn = sp ? '' : 'dim'; label = '下竿'; }
-    else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; st = '等待中'; }
-    else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; st = '上鉤了'; }
+  const formula = cellText(sel[0], sel[1]);
+  let btn = '', label = '', st = '就緒';
+  if (!boss) {
+    if (state === 'walk') { btn = findSpot() ? '' : 'dim'; label = '下竿'; }
+    else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; st = '計算中…'; }
+    else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; }
     else if (state === 'fight') {
-      btn = 'fight' + (holding ? ' hold' : ''); label = '拉！<small>按住收線</small>'; st = '搏鬥中';
+      btn = 'fight' + (holding ? ' hold' : ''); label = '拉！<small>按住收線</small>'; st = '編輯';
       $('tens').firstChild.style.width = (F.tens * 100) + '%';
       $('tens').firstChild.style.background = F.tens > .85 ? '#c00000' : F.tens > .6 ? '#ed7d31' : '#70ad47';
       $('prog').firstChild.style.width = (F.prog * 100) + '%';

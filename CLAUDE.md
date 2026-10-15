@@ -22,6 +22,8 @@
 - `CFG`：所有手感與難度參數集中在這裡（移動速度、等魚時間、搏鬥張力等）。
 - 地形 `T`／`TILES`（顏色、能不能走、水域種類）；`genMap()` 產生地圖。
 - 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、像素圖參數）；稀有度 `RAR`。
+- 背景格子只放文字與數字（`cellText()` 產生假報表資料），不畫插圖，要像手機看 Excel。
+- 右上角小地圖 `#miniBox`（偽裝成圖表），點擊 `openMap()` 放大。
 - 魚的像素圖由 `makeFish()` 依參數產生；人物像素圖 `SPR`／`PAL`。
 - 狀態 `state`：walk → cast → wait → bite → fight → caught；搏鬥資料在 `F`。
 - 背包 `bag` 存在 localStorage（`moyu.bag`）。
