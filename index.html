@@ -223,7 +223,13 @@
   #miniBox { top: max(10px, env(safe-area-inset-top, 0px)); }
   #fight { top: max(56px, calc(env(safe-area-inset-top, 0px) + 46px)); }
   #hint { left: max(10px, env(safe-area-inset-left, 0px)); top: max(52px, calc(env(safe-area-inset-top, 0px) + 42px)); }
-  #toast { top: 34%; }
+  #toast { top: 40%; white-space: normal; max-width: 86%; text-align: center; }
+  /* 搏鬥：只有提示文字和捲線器的出線米數，張力看竿子、釣線顏色和畫面邊緣 */
+  #fight { background: rgba(0,0,0,.45); border: 0; box-shadow: none; color: #fff; text-align: center; padding: 6px 12px; border-radius: 10px; width: min(88%, 360px); }
+  #fight .cue { font-size: 17px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  #fight .meta { white-space: nowrap; font-size: 12px; opacity: .85; font-variant-numeric: tabular-nums; }
+  #fight .meta .warn, #flv.warn { color: #ffb3b3; font-weight: 600; }
+  #danger { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 90px 30px rgba(220,0,0,.75); transition: opacity .1s; }
   /* 隱藏模式：整個畫面換成 Excel 報表 */
   #bossView { position: fixed; inset: 0; display: none; flex-direction: column; background: #fff; z-index: 20; }
   body.boss #bossView { display: flex; }
@@ -238,11 +244,10 @@
   <div id="joyBase"><div id="joyKnob"></div></div>
   <div id="hud"><button id="logo" title="Excel">X</button><span id="info"></span></div>
   <div id="fight">
-    <div class="row"><span class="lb">張力</span><div class="bar" id="tens"><i></i></div></div>
-    <div class="row"><span class="lb">收線</span><div class="bar" id="prog"><i></i></div></div>
-    <div class="lvrow" id="flv"></div>
-    <div class="tip" id="ftip"></div>
+    <div class="cue" id="fcue"></div>
+    <div class="meta"><span id="fline"></span>・<span id="flv"></span></div>
   </div>
+  <div id="danger"></div>
   <div id="miniBox" title="區域分布圖"><div class="mt">區域分布</div><canvas id="mini"></canvas></div>
   <button id="homeBtn" title="回城"><canvas id="homeIcon" width="12" height="12"></canvas></button>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
@@ -251,7 +256,7 @@
     手機：左半邊拖曳＝走路，右半邊拖曳＝轉頭<br>
     電腦：WASD 走路，滑鼠拖曳或方向鍵轉頭<br>
     面向水面，<b>按住</b>「下竿」蓄力，放開拋竿<br>
-    出現「！」快按拉竿，按住收線<br>
+    出現「！」快按拉竿；搏鬥時魚往哪衝，竿子往反方向壓（左手拖曳／A、D），魚累了再按住收線<br>
     走去撞店門就能進店；房子按鈕回城
   </div>
   <div class="note" id="toast"></div>
@@ -542,7 +547,7 @@ const map = new Uint8Array(W * H);
 const tileAt = (i, j) => (i < 0 || j < 0 || i >= W || j >= H) ? T.FOREST : map[j * W + i];
 const setT = (i, j, t) => { if (i >= 0 && j >= 0 && i < W && j < H) map[j * W + i] = t; };
 const seaEdge = y => 28 + Math.round(1.5 * Math.sin(y / 8) + Math.sin(y / 3.5 + 1));
-const SPAWN = { x: 10.5, y: 32.5 };
+const SPAWN = { x: seaEdge(32) - 4.5, y: 32.5 };   // 小鎮在海邊，碼頭入口旁
 
 function genMap() {
   for (let j = 0; j < H; j++) {
@@ -585,8 +590,9 @@ function genMap() {
   for (let j = PY - 3; j <= PY + 3; j++) setT(ePY + 9, j, T.DOCK);
   // 往南的小徑，過河的地方是木橋
   for (let j = PY; j <= 75; j++) setT(15, j, tileAt(15, j) === T.RIVER ? T.DOCK : T.PATH);
-  // 商店（2×2 格，緊鄰小徑）：上排釣具行、魚市場，下排餐廳、遊藝場
-  for (const [i0, j0, t] of [[7, PY - 2, T.SHOP_T], [12, PY - 2, T.SHOP_M], [7, PY + 1, T.SHOP_R], [12, PY + 1, T.SHOP_G]])
+  // 商店（2×2 格，緊鄰小徑）：海邊的小鎮，北邊釣具行、魚市場，南邊餐廳、遊藝場
+  const sx = Math.floor(SPAWN.x);   // 小鎮中間那一欄，兩旁各兩間店
+  for (const [i0, j0, t] of [[sx - 2, PY - 2, T.SHOP_T], [sx + 1, PY - 2, T.SHOP_M], [sx - 2, PY + 1, T.SHOP_R], [sx + 1, PY + 1, T.SHOP_G]])
     for (let j = j0; j < j0 + 2; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
 }
 genMap();
@@ -600,89 +606,107 @@ function strSprite(rows, pal) {
   return c;
 }
 
-// 用參數畫出每種魚的像素圖（28×14）
-const FW = 28, FH = 14;
+// 用參數畫出每種魚的像素圖（56×28）：背深腹淺、鱗片、側線、鰓蓋、有反光的眼睛、魚鰭的鰭條
+const FW = 56, FH = 28;
+// 顏色變亮（k>0）或變暗（k<0）
+function shade(hex, k) {
+  const n = parseInt(hex.slice(1), 16), t = k < 0 ? 0 : 255, a = Math.abs(k);
+  const ch = v => Math.round(v + (t - v) * a);
+  return '#' + ((1 << 24) | (ch(n >> 16) << 16) | (ch(n >> 8 & 255) << 8) | ch(n & 255)).toString(16).slice(1);
+}
+const BOOT_ROWS = [
+  '..........kkkkkk............',
+  '..........kbbbbk............',
+  '..........kbBBbk............',
+  '..........kbbbbk............',
+  '..........kbBBbk............',
+  '..........kbbbbk............',
+  '..........kbbbbbkkkk........',
+  '..........kbbbbbbbbbk.......',
+  '.........kbbbbbbbbbbbk......',
+  '.........kbbbbbbbbbbbk......',
+  '.........kkkkkkkkkkkkk......',
+  '.........kgggggggggggk......',
+  '..........kkkkkkkkkkk.......',
+];
 function makeFish(f) {
-  const g = Array.from({ length: FH }, () => new Array(FW).fill(null));
-  const set = (x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < FW && y < FH) g[y][x] = c; };
-  if (f.rows) {   // 特殊物品：手繪像素圖置中
-    const sp = strSprite(f.rows, f.pal), c = document.createElement('canvas');
-    c.width = FW; c.height = FH;
-    c.getContext('2d').drawImage(sp, Math.floor((FW - sp.width) / 2), Math.floor((FH - sp.height) / 2));
+  const c = document.createElement('canvas'); c.width = FW; c.height = FH;
+  const x2 = c.getContext('2d'); x2.imageSmoothingEnabled = false;
+  if (f.rows || f.shape === 'boot') {   // 手繪的物品：放大兩倍置中
+    const sp = f.rows ? strSprite(f.rows, f.pal) : strSprite(BOOT_ROWS, { k: '#2a1a10', b: '#6b4a2a', B: '#4e341c', g: '#3a3a3a' });
+    x2.drawImage(sp, Math.floor((FW - sp.width * 2) / 2), Math.floor((FH - sp.height * 2) / 2), sp.width * 2, sp.height * 2);
     return c;
   }
-  if (f.shape === 'boot') {
-    return strSprite([
-      '............................',
-      '..........kkkkkk............',
-      '..........kbbbbk............',
-      '..........kbBBbk............',
-      '..........kbbbbk............',
-      '..........kbBBbk............',
-      '..........kbbbbk............',
-      '..........kbbbbbkkkk........',
-      '..........kbbbbbbbbbk.......',
-      '.........kbbbbbbbbbbbk......',
-      '.........kbbbbbbbbbbbk......',
-      '.........kkkkkkkkkkkkk......',
-      '.........kgggggggggggk......',
-      '..........kkkkkkkkkkk.......',
-    ], { k: '#2a1a10', b: '#6b4a2a', B: '#4e341c', g: '#3a3a3a' });
-  }
+  const g = Array.from({ length: FH }, () => new Array(FW).fill(null));
+  const set = (x, y, col) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < FW && y < FH) g[y][x] = col; };
   const P = {
-    normal: { cx: 15, rx: 8, ry: 3.6 }, slim: { cx: 15, rx: 9, ry: 2.4 }, round: { cx: 15, rx: 6, ry: 5 },
-    long: { cx: 12, rx: 8, ry: 3 }, eel: { cx: 15, rx: 12.5, ry: 1.8 },
+    normal: { cx: 30, rx: 16, ry: 7.2 }, slim: { cx: 30, rx: 18, ry: 4.8 }, round: { cx: 30, rx: 12, ry: 10 },
+    long: { cx: 24, rx: 16, ry: 6 }, eel: { cx: 30, rx: 25, ry: 3.6 },
   }[f.shape];
-  const { cx, rx, ry } = P, cy = 7;
+  const { cx, rx, ry } = P, cy = 14;
+  const back = shade(f.body, -.25), belly2 = shade(f.belly, -.1), sheen = shade(f.body, .18);
+  // 魚鰭（先畫，身體蓋在上面）：每兩排一條深色鰭條
+  const fin = (x, y, k) => set(x, y, k % 2 ? shade(f.fin, -.18) : f.fin);
+  const tx = Math.round(cx - rx) + 2;
+  const tl = f.shape === 'eel' ? 5 : f.shape === 'round' ? 7 : 10;
+  for (let i = 0; i < tl; i++) {
+    const spread = 1 + i * (f.shape === 'eel' ? .5 : .95);
+    for (let y = -Math.round(spread); y <= Math.round(spread); y++) {
+      if (f.shape !== 'eel' && i > tl * .55 && Math.abs(y) < spread * (i / tl) * .55) continue;   // 魚尾分叉
+      fin(tx - i, cy - .5 + y, y);
+    }
+  }
+  const top = Math.round(cy - ry);
+  if (f.shape === 'long') {   // 旗魚的大背鰭
+    for (let x = cx - 9; x <= cx + 6; x++) for (let h = 1; h <= 7 - Math.floor(Math.abs(x - cx + 2) / 1.6); h++) fin(x, top - h + 1, x);
+  } else if (f.shape === 'eel') {   // 皇帶魚的紅色背鰭和頭冠
+    for (let x = cx - 22; x <= cx + 18; x++) { set(x, top, f.fin); if (x % 3 === 0) set(x, top - 1, shade(f.fin, -.15)); }
+    for (let h = 1; h <= 8; h++) { set(cx + 19 - (h % 2), top - h, f.fin); set(cx + 18 - (h % 2), top - h, shade(f.fin, .15)); }
+  } else if (f.shape !== 'round') {
+    for (let x = cx - 7; x <= cx + 3; x++) for (let h = 1; h <= 4 - Math.floor(Math.abs(x - cx + 2) / 2.2); h++) fin(x, top - h + 1, x);
+    for (let x = cx - 3; x <= cx + 1; x++) { fin(x, cy + ry, x); fin(x - 1, cy + ry + 1, x); }   // 腹鰭
+    for (let x = cx - 10; x <= cx - 6; x++) fin(x, cy + ry - 1, x);                           // 臀鰭
+  }
   // 身體
+  const gx = cx + rx * .45;
   for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
     const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry;
     if (dx * dx + dy * dy > 1) continue;
-    let c = (y + .5 - cy) > ry * 0.3 ? f.belly : f.body;
-    if (f.stripe && c === f.body && x % 3 === 0 && x < cx + rx - 3) c = f.stripe;
-    if (f.spots && (x * 7 + y * 13) % 6 === 0 && x < cx + rx - 3) c = f.spots;
-    if (f.patch && vnoise(x / 2.6, y / 2.6) > 0.5) c = f.patch;
-    g[y][x] = c;
+    let col = dy < -.5 ? back : dy > .38 ? f.belly : dy > .2 ? belly2 : f.body;
+    if (dy < -.82) col = sheen;   // 背上的反光
+    if (f.stripe && dy < .38 && Math.floor(x / 2) % 3 === 0 && dx < .5) col = f.stripe;
+    if (f.spots && dx < .55 && hash(x >> 1, y >> 1) % 7 === 0) col = f.spots;
+    if (f.patch && vnoise(x / 5.2, y / 5.2) > .5) col = f.patch;
+    if (dy < .3 && dx < .45 && (x + (y % 4 < 2 ? 0 : 2)) % 4 === 0 && y % 2 === 0) col = shade(col, -.09);   // 鱗片
+    if (Math.abs(dy - .08) < .07 && dx > -.8 && dx < .42) col = shade(col, -.16);                          // 側線
+    if (Math.abs(x + .5 - gx - dy * dy * 3) < .7 && Math.abs(dy) < .78) col = shade(col, -.28);            // 鰓蓋
+    g[y][x] = col;
   }
-  // 尾巴
-  const tx = Math.round(cx - rx);
-  const tl = f.shape === 'eel' ? 2 : 4;
-  for (let i = 0; i < tl; i++) for (let y = -(i + 1); y <= i + 1; y++) {
-    if (i === tl - 1 && Math.abs(y) < i - 1) continue;   // 魚尾分叉
-    set(tx - i, cy - .5 + y, f.fin);
-  }
-  // 背鰭、腹鰭
-  const top = Math.round(cy - ry);
-  if (f.shape === 'long') {
-    for (let x = cx - 4; x <= cx + 3; x++) for (let h = 1; h <= 3 - Math.floor(Math.abs(x - cx + 1) / 2.5); h++) set(x, top - h, f.fin);
-    for (let x = cx + rx; x < cx + rx + 7; x++) set(x, cy - 1, '#2b2b2b');   // 旗魚的長嘴
-  } else if (f.shape === 'eel') {
-    for (let x = cx - 10; x <= cx + 9; x++) set(x, top - 1, f.fin);
-    for (let h = 1; h <= 4; h++) set(cx + 9 - h % 2, top - 1 - h, f.fin);   // 頭上的紅冠
-  } else if (f.shape === 'round') {
-    for (let a = 0; a < 12; a++) {   // 河豚的刺
-      const ang = a / 12 * Math.PI * 2;
-      set(cx - .5 + Math.cos(ang) * (rx + .8), cy - .5 + Math.sin(ang) * (ry + .8), f.fin);
+  if (f.shape === 'round') {   // 河豚的刺
+    for (let a = 0; a < 22; a++) {
+      const ang = a / 22 * Math.PI * 2;
+      set(cx - .5 + Math.cos(ang) * (rx + 1.2), cy - .5 + Math.sin(ang) * (ry + 1.2), f.fin);
+      set(cx - .5 + Math.cos(ang) * (rx + 2.2), cy - .5 + Math.sin(ang) * (ry + 2.2), shade(f.fin, -.2));
     }
-  } else {
-    for (let x = cx - 3; x <= cx + 1; x++) set(x, top - 1, f.fin);
-    for (let x = cx - 2; x <= cx - 1; x++) set(x, top - 2, f.fin);
   }
-  if (f.shape !== 'round' && f.shape !== 'eel') { set(cx - 1, cy + ry, f.fin); set(cx, cy + ry, f.fin); }
-  // 眼睛
-  const ex = Math.round(cx + rx - (f.shape === 'round' ? 2.5 : 3));
-  set(ex, cy - 2, '#ffffff'); set(ex + 1, cy - 2, '#111111');
-  if (f.teeth) { set(cx + rx - 1, cy, '#ffffff'); set(cx + rx - 2, cy + 1, '#ffffff'); set(cx + rx - 3, cy, '#ffffff'); }
-  if (f.whisker) { set(cx + rx, cy + 1, '#222'); set(cx + rx + 1, cy + 2, '#222'); set(cx + rx + 1, cy, '#222'); }
-  // 外框
-  const out = g.map(r => r.slice());
+  if (f.shape === 'long') for (let x = cx + rx - 1; x < cx + rx + 13; x++) { set(x, cy - 2, '#2b2b2b'); if (x < cx + rx + 6) set(x, cy - 1, '#444444'); }   // 旗魚的長嘴
+  // 眼睛：白眼圈、黑瞳孔、反光點
+  const ex = Math.round(cx + rx * (f.shape === 'round' ? .5 : .62)), ey = Math.round(cy - ry * .3);
+  for (let y = -2; y <= 1; y++) for (let x = -2; x <= 1; x++) if (x * x + y * y < 5) set(ex + x, ey + y, '#f4f4f4');
+  for (let y = -1; y <= 0; y++) for (let x = -1; x <= 0; x++) set(ex + x, ey + y, '#111111');
+  set(ex - 1, ey - 1, '#ffffff');
+  // 嘴
+  const mouth = shade(f.body, -.55);
+  set(cx + rx - 1, cy + 1, mouth); set(cx + rx - 2, cy + 1, mouth); set(cx + rx - 3, cy + 2, mouth);
+  if (f.teeth) for (let k = 0; k < 4; k++) set(cx + rx - 2 - k, cy + (k % 2), '#ffffff');
+  if (f.whisker) for (let k = 0; k < 6; k++) { set(cx + rx + k, cy + 1 + k * .5, '#222'); set(cx + rx + k, cy - k * .3, '#222'); }
+  // 外框用身體的深色，比純黑柔和
+  const outline = shade(f.body, -.6), out = g.map(r => r.slice());
   for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
     if (g[y][x]) continue;
-    const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => g[y + b] && g[y + b][x + a] && g[y + b][x + a] !== '#2b2b2b' && g[y + b][x + a] !== '#222');
-    if (n) out[y][x] = '#1d1d1d';
+    const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => { const v = g[y + b] && g[y + b][x + a]; return v && v !== '#2b2b2b' && v !== '#444444' && v !== '#222'; });
+    if (n) out[y][x] = outline;
   }
-  const c = document.createElement('canvas'); c.width = FW; c.height = FH;
-  const x2 = c.getContext('2d');
   out.forEach((r, y) => r.forEach((col, x) => { if (col) { x2.fillStyle = col; x2.fillRect(x, y, 1, 1); } }));
   return c;
 }
@@ -751,7 +775,7 @@ function saveAll() {
 const keys = new Set();
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };   // 左半邊：移動搖桿
 const look = { id: null, x: 0, y: 0 };                 // 右半邊（或滑鼠）：轉頭
-let yaw = Math.PI / 2, pitch = -0.12;                   // 視角：yaw 0 面向北；一開始面向西邊的小路，兩旁就是店
+let yaw = -Math.PI / 2, pitch = -0.1;                   // 視角：yaw 0 面向北；一開始面向東邊的大海和碼頭
 const cvEl = $('cv'), joyBase = $('joyBase'), joyKnob = $('joyKnob');
 
 // 回傳 f（前後）、s（左右）
@@ -759,8 +783,8 @@ function moveInput() {
   let f = 0, s = 0;
   if (keys.has('w') || keys.has('arrowup')) f += 1;
   if (keys.has('s') || keys.has('arrowdown')) f -= 1;
-  if (keys.has('a')) s -= 1;
-  if (keys.has('d')) s += 1;
+  if (keys.has('a') || (state === 'fight' && keys.has('arrowleft'))) s -= 1;
+  if (keys.has('d') || (state === 'fight' && keys.has('arrowright'))) s += 1;
   if (joy.id !== null) {
     const dx = joy.x - joy.ox, dy = joy.y - joy.oy, l = Math.hypot(dx, dy);
     if (l > CFG.joyR * .2) { s += dx / Math.max(l, CFG.joyR); f -= dy / Math.max(l, CFG.joyR); }
@@ -829,12 +853,12 @@ window.addEventListener('blur', () => { keys.clear(); release(); });
 
 $('bagBtn').addEventListener('click', openBag);
 $('homeBtn').addEventListener('click', goHome);
-// 回城：回到四間店中間，面向西邊（右前方釣具行、左前方餐廳）
+// 回城：回到海邊小鎮，面向大海
 function goHome() {
   if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
   if (state !== 'walk') stopFishing();
-  P.x = SPAWN.x; P.y = SPAWN.y; yaw = Math.PI / 2; pitch = -0.12; lastTile = T.PATH;
-  toast('回到小鎮了：右前方釣具行、左前方餐廳；轉身是魚市場、遊藝場');
+  P.x = SPAWN.x; P.y = SPAWN.y; yaw = -Math.PI / 2; pitch = -0.1; lastTile = T.PATH;
+  toast('回到海邊小鎮：左手邊魚市場、釣具行，右手邊遊藝場、餐廳，前面是碼頭');
 }
 $('logo').addEventListener('click', () => setBoss(true));
 $('logo2').addEventListener('click', () => setBoss(false));
@@ -974,10 +998,14 @@ function startFight() {
   // 魚比釣竿強 2 級以上，一上鉤就斷線
   if (diff >= 2) { state = 'walk'; toast(`啪！線斷了…這條魚太強（Lv${lv}），要換更好的釣竿` + loseLure()); return; }
   const str = (f.junk || f.special ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio) * (weather.severe ? 1.1 : 1);
-  F = { f, size, str, lv, sz, tensMul: diff >= 1 ? 1.6 : diff < 0 ? .85 : 1, tens: 0.3, prog: 0.25, surge: 0, nextSurge: rand(1, 2.2), t: 0 };
+  // 魚的位置用「玩家為中心的角度＋距離」記，玩家搏鬥時不會移動
+  const px = P.x * TX, pz = P.y * TZ, dx = spot.x * TX - px, dz = spot.y * TZ - pz;
+  F = newFight(f, size, str, lv, sz, diff >= 1 ? 1.35 : diff < 0 ? .85 : 1, Math.max(3, Math.hypot(dx, dz)));
+  F.px = px; F.pz = pz; F.a0 = Math.atan2(-dx, -dz);
+  if (!S.tipFight) { S.tipFight = 1; saveAll(); toast('魚往哪衝，竿子就往反方向壓；魚累了再收線'); }
   state = 'fight';
-  $('flv').textContent = `魚力 Lv${lv}・${RODS[S.rod - 1].name} Lv${S.rod}` + (diff >= 1 ? '（竿子太弱，很吃力！）' : '');
-  $('flv').className = 'lvrow' + (diff >= 1 ? ' warn' : '');
+  $('flv').textContent = `魚力 Lv${lv}・${RODS[S.rod - 1].name} Lv${S.rod}` + (diff >= 1 ? '（竿子太弱！）' : '');
+  $('flv').className = diff >= 1 ? 'warn' : '';
   $('fight').classList.add('on');
 }
 
@@ -1030,7 +1058,7 @@ function rarTag(f) {
 
 function showCatch(f, size, isNew, where, item) {
   const d = el('div', 'catch');
-  d.appendChild(fishCanvas(f.id, 8));
+  d.appendChild(fishCanvas(f.id, 4));
   const n = el('div', 'fn', f.name + ' ');
   n.appendChild(rarTag(f)); d.appendChild(n);
   d.appendChild(el('div', 'meta', f.special || f.junk ? where : `${size} cm ・ ${where}`));
@@ -1362,7 +1390,7 @@ const DISH_CACHE = {};
 function dishImg(fid, m) {
   const key = fid + m;
   if (DISH_CACHE[key]) return DISH_CACHE[key];
-  const f = FISH_BY[fid], c = document.createElement('canvas'); c.width = FW; c.height = FH;
+  const DW = 28, DH = 14, f = FISH_BY[fid], c = document.createElement('canvas'); c.width = DW; c.height = DH;
   const x = c.getContext('2d'), px = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
   const body = f.body || '#999999', belly = f.belly || '#dddddd';
   if (m === 'soup') {
@@ -1378,14 +1406,14 @@ function dishImg(fid, m) {
       px(3, 7, 3, 4, '#5aa02c'); px(22, 8, 2, 2, '#8fd14f');   // 紫蘇葉、山葵
       for (let k = 0; k < 4; k++) { px(7 + k * 4, 6 + (k % 2), 3, 4, belly); px(7 + k * 4, 6 + (k % 2), 3, 1, body); px(7 + k * 4, 10, 3, 1, '#7f7f7f'); }
     } else {
-      const t = document.createElement('canvas'); t.width = FW; t.height = FH;
+      const t = document.createElement('canvas'); t.width = DW; t.height = DH;
       const tx = t.getContext('2d'); tx.imageSmoothingEnabled = false;
       tx.drawImage(FISH_IMG[fid], 3, 0, 22, 11);
       tx.globalCompositeOperation = 'source-atop';
       tx.fillStyle = m === 'grill' ? 'rgba(110,55,10,.5)' : 'rgba(230,160,40,.6)';
-      tx.fillRect(0, 0, FW, FH);
+      tx.fillRect(0, 0, DW, DH);
       tx.fillStyle = m === 'grill' ? '#3a2210' : '#fff3c0';
-      for (let k = 0; k < FW; k++) for (let y = 0; y < 11; y++) {
+      for (let k = 0; k < DW; k++) for (let y = 0; y < 11; y++) {
         if (m === 'grill' ? (k + y) % 5 === 0 && k > 8 && k < 22 : hash(k, y) % 5 === 0) tx.fillRect(k, y, 1, 1);
       }
       x.drawImage(t, 0, 0);
@@ -1394,7 +1422,7 @@ function dishImg(fid, m) {
   return (DISH_CACHE[key] = c);
 }
 function dishCanvas(b, scale) {
-  const c = document.createElement('canvas'); c.width = FW * scale; c.height = FH * scale;
+  const c = document.createElement('canvas'); c.width = 28 * scale; c.height = 14 * scale;
   const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
   x.drawImage(dishImg(b.id, b.dish), 0, 0, c.width, c.height);
   return c;
@@ -1581,6 +1609,103 @@ function setBoss(on) {
   if (state === 'charge') state = 'walk';   // 蓄力到一半被切走就取消
 }
 
+// ================= 搏鬥（擬真手感） =================
+// 魚有自己的動作：往左右衝、往外衝、游過來、甩頭、跳水、休息。
+// 玩家用竿子左右壓（側壓）跟收線應對；張力太大捲線器會洩線，太鬆魚會脫鉤，甩頭跳水時硬收會斷線。
+const JUMPERS = new Set(['zacco', 'ayu', 'salmon', 'scad', 'mahi', 'marlin', 'tuna', 'piranha', 'koi', 'goldkoi', 'glowkoi']);
+const FIGHT = {
+  reelSpeed: 3.2,   // 收線速度（公尺/秒）
+  drag: .8,         // 張力超過這個值，捲線器開始出線
+  lineBase: 40,     // 線長（公尺），好竿子多 10 公尺
+  slackLose: 1.4,   // 鬆線超過幾秒魚就脫鉤
+  landD: 2.2,       // 拉到幾公尺內算拉到腳邊
+  stamRate: .9,     // 體力消耗倍率（越大越快拉上來）
+};
+function newFight(f, size, str, lv, sz, tensMul, d) {
+  return { f, size, str, lv, sz, tensMul, d, th: 0, stam: 1, tens: .35, spike: 0, slack: 0, rod: 0, turn: 0,
+    act: 'run', dir: 0, actT: rand(1, 1.8), t: 0, jump: 0, drag: false, jumper: JUMPERS.has(f.id) };
+}
+// 換下一個動作：越有體力越愛衝，越累越常休息
+function nextAct(F) {
+  const s = F.stam, w = {
+    run: .25 + 1.6 * s, charge: .35 + .3 * s, shake: .25 + .4 * s,
+    jump: F.jumper && s > .25 ? .35 + .4 * s : 0, rest: .25 + 1.4 * (1 - s),
+  };
+  let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
+  for (const k in w) { r -= w[k]; if (r <= 0) { F.act = k; break; } }
+  F.turn = 0; F.turned = false;
+  if (F.act === 'run') { F.dir = Math.random() < .3 ? 0 : (Math.random() < .5 ? -1 : 1); F.actT = rand(1.2, 2.8); }
+  else if (F.act === 'charge') F.actT = rand(.9, 1.7);
+  else if (F.act === 'shake') F.actT = rand(.6, 1);
+  else if (F.act === 'jump') { F.actT = 1.1; F.jump = 0; }
+  else F.actT = rand(1, 2.2);
+}
+// 推進一步。inp = { rod: -1～1 竿子左右, reel: 是否收線 }；env = { rodLv, reelBuff, soupBuff, inWater(th, d) }
+// 回傳 null（繼續）或 { ok, msg }
+function stepFight(F, inp, dt, env) {
+  F.t += dt;
+  F.rod += (inp.rod - F.rod) * Math.min(1, dt * 6);
+  F.actT -= dt;
+  if (F.actT <= 0) nextAct(F);
+  const power = F.str * (.35 + .65 * F.stam);
+  let pull = .25 * power, dd = 0, dth = 0, side = 0;
+  const reel = inp.reel ? 1 : 0;
+  if (F.act === 'run') {
+    pull = power;
+    if (F.dir === 0) dd += (1.6 + 1.8 * power) * dt;
+    else {
+      dd += .5 * dt;
+      dth = -F.dir * (1.8 + 1.6 * power) / Math.max(F.d, 4) * dt;   // dir +1 從玩家看是往右
+      // 側壓：竿子往魚跑的反方向壓，魚會被扭回來、體力掉得快；順著魚，張力小但魚一直跑
+      const k = -F.rod * F.dir;
+      if (k > .3) { side = k; F.turn += k * dt / (.6 + .4 * F.str); if (F.turn > 1) { F.act = 'rest'; F.actT = rand(.8, 1.4); F.turned = true; } }
+      else if (k < -.3) pull *= .55;
+    }
+  } else if (F.act === 'charge') { pull = .1 * power; dd -= (2.2 + 1.4 * power) * dt; }
+  else if (F.act === 'shake') pull = power * (.6 + Math.abs(Math.sin(F.t * 22)) * .5);
+  else if (F.act === 'jump') { pull = .45 * power; F.jump += dt; }
+  // 收線：魚在衝的時候收不太動
+  const reelSp = FIGHT.reelSpeed * (1 + .15 * (env.rodLv - 1)) * (1 + .3 * env.reelBuff);
+  dd -= reel * reelSp * ({ run: .18, charge: 1.2, rest: 1, shake: .4, jump: .3 })[F.act] * dt;
+  // 張力：魚拉的力＋收線＋側壓
+  let target = pull * .55 + reel * ({ run: .45, charge: .2, rest: .15, shake: .5, jump: .55 })[F.act] + side * .18;
+  if (F.act === 'charge') target = reel ? .3 : .03;   // 魚游過來不收線就會鬆線
+  target *= F.tensMul * (1 - .25 * env.soupBuff);
+  F.tens += (target - F.tens) * Math.min(1, dt * 5);
+  // 洩線：超過上限捲線器自動出線，不會馬上斷
+  F.drag = F.tens > FIGHT.drag;
+  if (F.drag) { dd += (F.tens - FIGHT.drag) * 18 * dt; F.tens = FIGHT.drag + (F.tens - FIGHT.drag) * .3; }
+  // 甩頭、跳水時還在硬收：瞬間張力暴增
+  if ((F.act === 'shake' || F.act === 'jump') && reel && Math.random() < dt * 2.4 * F.tensMul) F.spike = Math.max(F.spike, .35 + Math.random() * .2);
+  F.spike = Math.max(0, F.spike - dt * 1.2);
+  // 體力：有張力才會累，側壓累得更快；越強的魚體力越多
+  F.stam = Math.max(0, F.stam - dt * FIGHT.stamRate * (.01 + F.tens * .085 + side * .05) / Math.pow(F.str, 1.6));
+  // 位置（魚只能在水裡，撞到岸就掉頭）
+  const nth = clamp(F.th + dth, -1.3, 1.3), nd = Math.max(.8, F.d + dd);
+  if (env.inWater(nth, nd)) { F.th = nth; F.d = nd; }
+  else { F.d = Math.max(.8, F.d + Math.min(0, dd)); if (F.act === 'run') F.dir = F.dir === 0 ? (Math.random() < .5 ? -1 : 1) : -F.dir; }
+  // 結果
+  if (F.tens + F.spike >= 1) return { ok: false, msg: '啪！線斷了…甩頭、跳水的時候別硬收' };
+  if (F.d > FIGHT.lineBase + 10 * (env.rodLv - 1)) return { ok: false, msg: '線被拉光了…魚往外衝時要側壓、別讓牠一直跑' };
+  F.slack = F.tens < .08 ? F.slack + dt : Math.max(0, F.slack - dt * 2);
+  if (F.slack > FIGHT.slackLose) return { ok: false, msg: '線鬆掉了，魚脫鉤…魚游過來時要快收線' };
+  if (F.d < FIGHT.landD) {
+    if (F.stam < .35) return { ok: true };
+    F.act = 'run'; F.dir = 0; F.actT = rand(1.2, 2); F.d = FIGHT.landD + .3;   // 還有力氣，最後再衝一次
+  }
+  return null;
+}
+// 給畫面用的提示文字
+function fightCue(F) {
+  if (F.act === 'jump') return '跳出水面了！先別收線';
+  if (F.act === 'shake') return '甩頭！放鬆一下';
+  if (F.act === 'charge') return '朝你游過來了，快收線！';
+  if (F.act === 'rest') return F.turned ? '扭過來了！趁現在收線' : '魚累了，收線！';
+  if (F.dir < 0) return '← 往左衝！竿子往右壓';
+  if (F.dir > 0) return '往右衝！→ 竿子往左壓';
+  return '往外衝！別硬收，等牠停';
+}
+
 // ================= 更新 =================
 let lastTile = T.PATH, lastBlockT = -9, shopTouch = false;
 // 天氣：依時間決定，大家看到的一樣
@@ -1597,8 +1722,10 @@ function checkWeather() {
 
 function update(dt) {
   gameT += dt;
-  if (keys.has('arrowleft')) yaw += 1.8 * dt;
-  if (keys.has('arrowright')) yaw -= 1.8 * dt;
+  if (state !== 'fight') {
+    if (keys.has('arrowleft')) yaw += 1.8 * dt;
+    if (keys.has('arrowright')) yaw -= 1.8 * dt;
+  }
   const v = moveInput();
   const moving = Math.abs(v.f) + Math.abs(v.s) > 0.01;
 
@@ -1683,25 +1810,23 @@ function free(x, y) {
   return true;
 }
 
+// 魚在世界中的位置（公尺）
+function fishWorld(Fi, th = Fi.th, d = Fi.d) { const a = Fi.a0 + th; return [Fi.px - Math.sin(a) * d, Fi.pz - Math.cos(a) * d]; }
 function updateFight(dt) {
-  F.t += dt;
-  F.nextSurge -= dt;
-  // 魚越強掙扎越頻繁，但有上限，不然最強的魚永遠拉不上來
-  if (F.nextSurge <= 0) { F.surge = rand(.5, .9); F.nextSurge = rand(1.5, 3.5) / Math.min(F.str, CFG.surgeCap); }
-  if (F.surge > 0) F.surge -= dt;
-  const s = F.str, surging = F.surge > 0;
-  if (holding) {
-    F.prog += CFG.reelUp * (1 + .15 * (S.rod - 1)) * (1 + .3 * hasBuff('grill')) / s * dt * (surging ? 0.3 : 1);   // 好竿子、烤魚收線比較快
-    F.tens += CFG.tensUp * s * F.tensMul * (1 - .25 * hasBuff('soup')) * dt * (surging ? 2.2 : 1);   // 魚湯：張力漲比較慢
-  } else {
-    F.tens -= CFG.tensDown * dt;
-    F.prog -= CFG.slipDown * s * dt * (surging ? 1.8 : 1);
-  }
-  F.tens = clamp(F.tens, 0, 1);
-  if (Math.random() < dt * 6) splash(spot.x + rand(-.15, .15), spot.y + rand(-.3, .3), 3);
-  if (F.tens >= 1) return endFight(false, '線斷了！張力太大，記得適時放開' + loseLure());
-  if (F.prog <= 0) return endFight(false, '魚掙脫了…');
-  if (F.prog >= 1) return endFight(true);
+  const v = moveInput();
+  const r = stepFight(F, { rod: clamp(v.s, -1, 1), reel: holding }, dt, {
+    rodLv: S.rod, reelBuff: hasBuff('grill'), soupBuff: hasBuff('soup'),
+    inWater: (th, d) => { const [x, z] = fishWorld(F, th, d); return !!TILES[tileAt(Math.floor(x / TX), Math.floor(z / TZ))].water; },
+  });
+  const [fx, fz] = fishWorld(F);
+  spot.x = fx / TX; spot.y = fz / TZ;
+  // 鏡頭慢慢跟著魚轉，魚一直在視線前方
+  let da = F.a0 + F.th - yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); yaw += da * Math.min(1, dt * 1.6);
+  // 魚衝刺、甩頭時水面有水花
+  if ((F.act === 'run' && Math.random() < dt * 10) || (F.act === 'shake' && Math.random() < dt * 16)) splash(spot.x, spot.y, 2);
+  if (F.act === 'jump' && F.jump < .1 && Math.random() < .5) splash(spot.x, spot.y, 8);
+  if (F.spike > .3 && navigator.vibrate) navigator.vibrate(30);   // 有支援的手機會震一下
+  if (r) { if (r.ok) endFight(true); else endFight(false, r.msg + (r.msg.startsWith('啪') ? loseLure() : '')); }
 }
 
 // 水花（公尺座標，畫在 3D 世界裡）
@@ -2013,12 +2138,14 @@ const partGeo = new THREE.BufferGeometry();
 partGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(200 * 3), 3));
 const partPts = new THREE.Points(partGeo, new THREE.PointsMaterial({ color: 0xffffff, size: .14, transparent: true, opacity: .9 }));
 partPts.frustumCulled = false; scene.add(partPts);
+const fightShadow = new THREE.Mesh(fishShadowGeo, new THREE.MeshBasicMaterial({ color: 0x000a14, transparent: true, opacity: .55, depthWrite: false }));
+fightShadow.renderOrder = 1; fightShadow.visible = false; scene.add(fightShadow);
 const FISH_TEX = {};
 function fishTex(id) {
   if (!FISH_TEX[id]) { const t = new THREE.CanvasTexture(FISH_IMG[id]); t.magFilter = t.minFilter = THREE.NearestFilter; FISH_TEX[id] = t; }
   return FISH_TEX[id];
 }
-const fishSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: fishTex('tilapia') }));
+const fishSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: fishTex('tilapia'), alphaTest: .5 }));   // 透明的地方不擋住後面的水面
 fishSprite.visible = false; scene.add(fishSprite);
 
 // ---- 船：在水上時出現在腳下 ----
@@ -2066,10 +2193,6 @@ function bobberPos(out) {
   out.set(spot.x * TX, WATER_Y + .05, spot.y * TZ);
   if (state === 'wait') out.y += Math.sin(gameT * 3) * .03;
   if (state === 'bite') out.y -= .1 + Math.abs(Math.sin(gameT * 30)) * .06;
-  if (state === 'fight') {
-    const k = F && F.surge > 0 ? 1.6 : 1;
-    out.x += Math.sin(gameT * 3.1) * .7 * k; out.z += Math.cos(gameT * 2.3) * .6 * k; out.y -= .05;
-  }
   return out;
 }
 function render3D(dt) {
@@ -2077,7 +2200,7 @@ function render3D(dt) {
   // 相機：走路晃動、船上隨浪起伏、搏鬥時抖動
   const walkBob = P.moving && !boat ? Math.sin(P.walkT * 9) * .05 : 0;
   const wave = boat ? Math.sin(gameT * 1.6) * .08 : 0;
-  const shake = state === 'fight' ? (holding ? .012 : .006) * (F && F.surge > 0 ? 2.2 : 1) : 0;
+  const shake = state === 'fight' && F ? .004 + F.tens * .01 + F.spike * .05 : 0;
   camera.position.set(P.x * TX, (boat ? WATER_Y + 1.35 : CFG.eye) + walkBob + wave, P.y * TZ);
   camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : 0, 'YXZ');
   camera.updateMatrixWorld();
@@ -2094,15 +2217,18 @@ function render3D(dt) {
   else if (state === 'cast') tilt = castT < .15 ? -1.45 : -1.15;
   else if (state === 'wait') tilt = -1.1;
   else if (state === 'bite') { tilt = -1.1; bend = .08 + Math.abs(Math.sin(gameT * 30)) * .05; }
-  else if (state === 'fight') { tilt = -.7; bend = (holding ? .2 : .1) + (F && F.surge > 0 ? .1 : 0) + Math.sin(gameT * 20) * .02; }
+  else if (state === 'fight') { tilt = -.65 - (F.act === 'jump' ? .25 : 0); bend = .04 + F.tens * .32 + F.spike * .4 + Math.sin(gameT * 24) * .015 * (F.act === 'shake' ? 3 : 1); }
   else if (state === 'land') tilt = -.25;
   rodRig.rotation.x += (tilt - rodRig.rotation.x) * Math.min(1, dt * 14);
   rodSegs.forEach(g => { g.rotation.x = -bend; });
+  // 竿子左右壓
+  const lean = state === 'fight' && F ? -F.rod * .5 : 0;
+  rodRig.rotation.z += (lean - rodRig.rotation.z) * Math.min(1, dt * 10);
   rodRig.updateMatrixWorld(true);
   const tip = rodTip.getWorldPosition(V1);
 
   // 浮標與釣線
-  const showBob = spot && (state === 'cast' || state === 'wait' || state === 'bite' || state === 'fight');
+  const showBob = spot && (state === 'cast' || state === 'wait' || state === 'bite');   // 搏鬥時浮標被拖進水裡
   bobber.visible = !!showBob; ripple.visible = false;
   let lineEnd = null, sag = 0;
   if (showBob) {
@@ -2111,7 +2237,7 @@ function render3D(dt) {
       const k = clamp(castT / castDur, 0, 1);
       bobber.position.lerpVectors(tip, target, k); bobber.position.y += Math.sin(k * Math.PI) * (2 + castDur * 6);
     } else bobber.position.copy(target);
-    lineEnd = bobber.position; sag = state === 'fight' ? 0 : state === 'cast' ? .2 : 1.2;
+    lineEnd = bobber.position; sag = state === 'cast' ? .2 : 1.2;
     if (state === 'wait' || state === 'bite') {
       const r = ((gameT * (state === 'bite' ? 2.5 : .9)) % 1);
       ripple.visible = true; ripple.position.set(bobber.position.x, WATER_Y + .02, bobber.position.z);
@@ -2119,8 +2245,30 @@ function render3D(dt) {
     }
   }
 
+  // 搏鬥：線拉進水裡、水下的魚影、跳出水面或拉近時看得到整條魚
+  fishSprite.visible = false; fightShadow.visible = false;
+  if (state === 'fight' && F) {
+    const fx = spot.x * TX, fz = spot.y * TZ;
+    lineEnd = V2.set(fx, WATER_Y - .05, fz); sag = 0;
+    const heading = F.act === 'run' && F.dir ? F.a0 + F.th - F.dir * Math.PI / 2 : F.act === 'charge' ? F.a0 + F.th + Math.PI : F.a0 + F.th;
+    const len = [1, 1.5, 2.2, 3.6][F.sz] || 1.5;
+    fightShadow.visible = true; fightShadow.position.set(fx, WATER_Y - .25, fz);
+    fightShadow.rotation.y = Math.PI / 2 + heading + Math.sin(gameT * 14) * .2;   // 魚頭朝游的方向 fightShadow.scale.set(len, 1, len);
+    const jumping = F.act === 'jump' && F.jump < 1;
+    if (jumping || F.d < 5) {   // 跳出水面甩動，或拉近到腳邊時露出水面
+      const k = jumping ? F.jump : 0, up = jumping ? Math.sin(k * Math.PI) * (1.2 + len * .4) : .05;
+      fishSprite.position.set(fx, WATER_Y + up + len * .2, fz);
+      fishSprite.scale.set(len, len / 2, 1);
+      fishSprite.material.map = fishTex(F.f.id);
+      fishSprite.material.rotation = jumping ? Math.sin(F.t * 18) * .8 + (k - .5) * 1.2 : Math.sin(gameT * 20) * .35;
+      fishSprite.visible = true;
+      if (jumping) lineEnd = fishSprite.position;
+    }
+    // 張力越大，釣線越紅
+    const tt = clamp(F.tens + F.spike, 0, 1);
+    fishLine.material.color.setRGB(1, 1 - Math.max(0, tt - .45) * 1.6, 1 - tt * 1.4);
+  } else fishLine.material.color.setRGB(.95, .95, .95);
   // 拉上來的魚：從水面飛到眼前、甩尾，然後拿在面前
-  fishSprite.visible = false;
   const held = state === 'land' || (state === 'caught' && catchShow);
   if (held && L) {
     const front = V3.set(0, .05, -1.6).applyMatrix4(camera.matrixWorld);
@@ -2199,15 +2347,14 @@ function updateHud() {
   else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; }
   else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; }
   else if (state === 'fight') {
-    btn = 'fight' + (holding ? ' hold' : ''); label = '拉！<small>按住收線</small>';
-    $('tens').firstChild.style.width = (F.tens * 100) + '%';
-    $('tens').firstChild.style.background = F.tens > .85 ? '#c00000' : F.tens > .6 ? '#ed7d31' : '#70ad47';
-    $('prog').firstChild.style.width = (F.prog * 100) + '%';
-    $('ftip').textContent = F.surge > 0 ? '魚在掙扎！先放開！' : F.tens > .8 ? '張力太高，放開！' : '';
+    btn = 'fight' + (holding ? ' hold' : ''); label = '收線<small>按住捲線</small>';
+    $('fcue').textContent = F.drag ? '嘶——捲線器在出線！' : fightCue(F);
+    $('fline').textContent = `出線 ${F.d.toFixed(1)} m`;
   } else { btn = 'dim'; label = '下竿'; }
   const nb = METHODS.filter(m => hasBuff(m.id)).length;
   const info = `$${fmtN(S.money)}・${weather.name}` + (nb ? `・加成 ${nb}` : '') + (onBoat() ? `・${BOATS[S.boat - 1].name}` : '');
   $('bang').classList.toggle('on', state === 'bite');
+  $('danger').style.opacity = state === 'fight' && F ? clamp((F.tens + F.spike - .62) / .3, 0, 1) : 0;   // 快斷線時畫面邊緣泛紅
   const key = [btn, label, info, bag.length].join('|');
   if (key === lastHud) return;
   lastHud = key;
