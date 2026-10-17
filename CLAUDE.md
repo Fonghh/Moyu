@@ -1,11 +1,11 @@
 # 上班摸魚（moyu）
 
-偽裝成 Excel 報表的手機網頁小遊戲。給在這個 repo 工作的 Claude 看的規則與說明。
+3D 第一人稱釣魚的手機網頁小遊戲，左上角 X 一按就變成 Excel 報表。給在這個 repo 工作的 Claude 看的規則與說明。
 
 ## 專案
-- 整個遊戲是單一檔案 `index.html`，純 HTML/CSS/JS，沒有建置步驟、沒有套件。
+- 整個遊戲是單一檔案 `index.html`，使用 three.js r128（從 cdnjs 載入），沒有建置步驟。
 - 主要玩家用手機（觸控）玩，也支援電腦鍵盤。修改時兩者都要顧到。
-- 偽裝要像真的：遊戲元素都要看起來像 Excel 的東西（條件式格式、選取框、公式列、狀態列）。
+- 平常是全螢幕 3D；隱藏模式（`#bossView`）要像真的 Excel 報表。
 
 ## 存檔（commit）規則
 - 存檔說明一律用繁體中文，N 接續上一版（看 `git tag` 的最新 vN）。
@@ -22,9 +22,12 @@
 - `CFG`：所有手感與難度參數集中在這裡（移動速度、等魚時間、搏鬥張力等）。
 - 地形 `T`／`TILES`（顏色、能不能走、水域種類）；`genMap()` 產生地圖。
 - 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、像素圖參數）；稀有度 `RAR`。
-- 背景格子只放文字與數字（`cellText()` 產生假報表資料），不畫插圖，要像手機看 Excel。
-- 右上角小地圖 `#miniBox`（偽裝成圖表），點擊 `openMap()` 放大。
-- 魚的像素圖由 `makeFish()` 依參數產生；人物像素圖 `SPR`／`PAL`。
+- 地圖仍是格子（`genMap()`），一格 = 東西 `TX`（5m）× 南北 `TZ`（2m）；邏輯座標用格子（`P.x`、`P.y`、魚影、`spot.x/y`），畫面換算成公尺。
+- 3D：`buildTerrain()` 地形與水面、`buildTrees()` 樹林、`buildShops()` 店面房子；`render3D()` 每幀更新相機、手上的釣竿（`rodRig`／`rodSegs`）、浮標、釣線、魚影 mesh、天氣、船。
+- 操作：觸控左半邊搖桿 `joy`、右半邊轉頭 `look`（`yaw`／`pitch`）；電腦 WASD、方向鍵、滑鼠拖曳。拋竿方向就是視線方向。
+- 店面是房子（不能走進去），撞到門 `shopTouch` 就打開商店。
+- 隱藏模式的報表 `drawSheet()`（`cellText()` 產生假資料）；右上角小地圖 `#miniBox`，點擊 `openMap()` 放大。
+- 魚的像素圖 `makeFish()`（也拿來做 3D 裡飛起來的魚 `fishSprite`）；店員像素圖用 `SPR`／`PAL`。
 - 特殊物品 `SPECIALS`（奇物，手繪像素圖 `rows`／`pal`）；餌料偏好 `LIKES`、`ONLY_BAIT`；裝備 `RODS`、`BAITS`。
 - 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級很吃力，差 2 級直接斷線。
 - 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。
@@ -37,7 +40,7 @@
 - 料理 `METHODS`（烤、炸、煮湯、生魚片）：餐廳 `restBody()` 代客料理，背包的 `b.dish` 是料理；吃 `eatDish()` 得到加成 `S.buffs`（`hasBuff()`）；料理只能賣給餐廳。
 - 客人委託 `S.quests`：`questFishList()` 只挑目前釣竿、船釣得到的魚（不含變種、奇物）。
 - 拉霸 `slotBody()`／`spinSlot()`／`slotPrize()`，大獎金條（`gold`，`noDex` 不進圖鑑、不會釣到）。
-- 回城 `goHome()`：回到四間店中間（`SPAWN`）。畫面永遠以人物為中心，地圖外畫成樹林。
+- 回城 `goHome()`：回到四間店中間（`SPAWN`），面向西邊。地圖外圍是一片大海。
 - 狀態 `state`：walk → charge → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
 - `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
