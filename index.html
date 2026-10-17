@@ -288,7 +288,7 @@ const CFG = {
   mapW: 60, mapH: 80,    // 地圖格數（東邊是深海、遠洋）
   hdW: 34, hdH: 20,      // 列號寬、欄名高
   speed: 5,              // 走路速度（公尺/秒）
-  eye: 1.65,             // 眼睛高度（公尺）
+  eye: 3,                // 眼睛高度（公尺）：高一點才看得清楚水面的魚影
   lookSpeed: .005,       // 拖曳轉頭的靈敏度
   miniW: 64,             // 小地圖寬度（px）
   castTime: 0.45,        // 拋竿動畫秒數（力道越大飛越久）
@@ -296,7 +296,7 @@ const CFG = {
   castMin: 2, castMax: 26,     // 拋竿距離（公尺）：最小力道～最大力道
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
   biteWin: 1.3,          // 上鉤後可以拉竿的秒數
-  landTime: 1.3, landFly: .9,   // 釣到後的動畫秒數、魚在空中飛的秒數
+  landTime: 1.9, landFly: 1.4,  // 釣到後的動畫秒數、把魚吊上來的秒數
   reelUp: 0.45,          // 按住時收線進度（每秒）
   tensUp: 0.55,          // 按住時張力上升（每秒，乘上魚的力氣）
   tensDown: 0.9,         // 放開時張力下降（每秒）
@@ -775,7 +775,7 @@ function saveAll() {
 const keys = new Set();
 const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };   // 左半邊：移動搖桿
 const look = { id: null, x: 0, y: 0 };                 // 右半邊（或滑鼠）：轉頭
-let yaw = -Math.PI / 2, pitch = -0.1;                   // 視角：yaw 0 面向北；一開始面向東邊的大海和碼頭
+let yaw = -Math.PI / 2, pitch = -0.28;                   // 視角：yaw 0 面向北；一開始面向東邊的大海和碼頭
 const cvEl = $('cv'), joyBase = $('joyBase'), joyKnob = $('joyKnob');
 
 // 回傳 f（前後）、s（左右）
@@ -857,7 +857,7 @@ $('homeBtn').addEventListener('click', goHome);
 function goHome() {
   if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
   if (state !== 'walk') stopFishing();
-  P.x = SPAWN.x; P.y = SPAWN.y; yaw = -Math.PI / 2; pitch = -0.1; lastTile = T.PATH;
+  P.x = SPAWN.x; P.y = SPAWN.y; yaw = -Math.PI / 2; pitch = -0.28; lastTile = T.PATH;
   toast('回到海邊小鎮：左手邊魚市場、釣具行，右手邊遊藝場、餐廳，前面是碼頭');
 }
 $('logo').addEventListener('click', () => setBoss(true));
@@ -1612,7 +1612,7 @@ function setBoss(on) {
 // ================= 搏鬥（擬真手感） =================
 // 魚有自己的動作：往左右衝、往外衝、游過來、甩頭、跳水、休息。
 // 玩家用竿子左右壓（側壓）跟收線應對；張力太大捲線器會洩線，太鬆魚會脫鉤，甩頭跳水時硬收會斷線。
-const JUMPERS = new Set(['zacco', 'ayu', 'salmon', 'scad', 'mahi', 'marlin', 'tuna', 'piranha', 'koi', 'goldkoi', 'glowkoi']);
+const JUMPERS = new Set(['zacco', 'ayu', 'salmon', 'scad', 'mahi', 'marlin', 'tuna', 'piranha', 'koi', 'goldkoi', 'glowkoi', 'tilapia', 'porgy', 'crucian']);
 const FIGHT = {
   reelSpeed: 3.2,   // 收線速度（公尺/秒）
   drag: .8,         // 張力超過這個值，捲線器開始出線
@@ -1623,18 +1623,18 @@ const FIGHT = {
 };
 function newFight(f, size, str, lv, sz, tensMul, d) {
   return { f, size, str, lv, sz, tensMul, d, th: 0, stam: 1, tens: .35, spike: 0, slack: 0, rod: 0, turn: 0,
-    act: 'run', dir: 0, actT: rand(1, 1.8), t: 0, jump: 0, drag: false, jumper: JUMPERS.has(f.id) };
+    act: 'run', dir: 0, actT: rand(1, 1.8), t: 0, vlat: 0, jump: 0, drag: false, jumper: JUMPERS.has(f.id) };
 }
 // 換下一個動作：越有體力越愛衝，越累越常休息
 function nextAct(F) {
   const s = F.stam, w = {
     run: .25 + 1.6 * s, charge: .35 + .3 * s, shake: .25 + .4 * s,
-    jump: F.jumper && s > .25 ? .35 + .4 * s : 0, rest: .25 + 1.4 * (1 - s),
+    jump: F.jumper && s > .2 ? .6 + .6 * s : 0, rest: .25 + 1.4 * (1 - s),
   };
   let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
   for (const k in w) { r -= w[k]; if (r <= 0) { F.act = k; break; } }
   F.turn = 0; F.turned = false;
-  if (F.act === 'run') { F.dir = Math.random() < .3 ? 0 : (Math.random() < .5 ? -1 : 1); F.actT = rand(1.2, 2.8); }
+  if (F.act === 'run') { F.dir = Math.random() < .3 ? 0 : (Math.random() < .5 ? -1 : 1); F.actT = rand(2.5, 4.5); }
   else if (F.act === 'charge') F.actT = rand(.9, 1.7);
   else if (F.act === 'shake') F.actT = rand(.6, 1);
   else if (F.act === 'jump') { F.actT = 1.1; F.jump = 0; }
@@ -1650,14 +1650,17 @@ function stepFight(F, inp, dt, env) {
   const power = F.str * (.35 + .65 * F.stam);
   let pull = .25 * power, dd = 0, dth = 0, side = 0;
   const reel = inp.reel ? 1 : 0;
+  // 橫向速度有慣性：魚慢慢加速、慢慢轉向，看得到線在水面上劃過去（vlat > 0 從玩家看是往右）
+  const vTarget = F.act === 'run' && F.dir ? F.dir * (1.1 + 1.1 * power) : 0;
+  F.vlat += (vTarget - F.vlat) * Math.min(1, dt * .9);
+  dth = -F.vlat / Math.max(F.d, 4) * dt;
   if (F.act === 'run') {
     pull = power;
     if (F.dir === 0) dd += (1.6 + 1.8 * power) * dt;
     else {
-      dd += .5 * dt;
-      dth = -F.dir * (1.8 + 1.6 * power) / Math.max(F.d, 4) * dt;   // dir +1 從玩家看是往右
+      dd += .4 * dt;
       // 側壓：竿子往魚跑的反方向壓，魚會被扭回來、體力掉得快；順著魚，張力小但魚一直跑
-      const k = -F.rod * F.dir;
+      const k = -F.rod * Math.sign(F.vlat) * Math.min(1, Math.abs(F.vlat) / 1.2);
       if (k > .3) { side = k; F.turn += k * dt / (.6 + .4 * F.str); if (F.turn > 1) { F.act = 'rest'; F.actT = rand(.8, 1.4); F.turned = true; } }
       else if (k < -.3) pull *= .55;
     }
@@ -1683,7 +1686,7 @@ function stepFight(F, inp, dt, env) {
   // 位置（魚只能在水裡，撞到岸就掉頭）
   const nth = clamp(F.th + dth, -1.3, 1.3), nd = Math.max(.8, F.d + dd);
   if (env.inWater(nth, nd)) { F.th = nth; F.d = nd; }
-  else { F.d = Math.max(.8, F.d + Math.min(0, dd)); if (F.act === 'run') F.dir = F.dir === 0 ? (Math.random() < .5 ? -1 : 1) : -F.dir; }
+  else { F.d = Math.max(.8, F.d + Math.min(0, dd)); F.vlat *= -.3; if (F.act === 'run') F.dir = F.dir === 0 ? (Math.random() < .5 ? -1 : 1) : -F.dir; }
   // 結果
   if (F.tens + F.spike >= 1) return { ok: false, msg: '啪！線斷了…甩頭、跳水的時候別硬收' };
   if (F.d > FIGHT.lineBase + 10 * (env.rodLv - 1)) return { ok: false, msg: '線被拉光了…魚往外衝時要側壓、別讓牠一直跑' };
@@ -1701,8 +1704,9 @@ function fightCue(F) {
   if (F.act === 'shake') return '甩頭！放鬆一下';
   if (F.act === 'charge') return '朝你游過來了，快收線！';
   if (F.act === 'rest') return F.turned ? '扭過來了！趁現在收線' : '魚累了，收線！';
-  if (F.dir < 0) return '← 往左衝！竿子往右壓';
-  if (F.dir > 0) return '往右衝！→ 竿子往左壓';
+  if (F.vlat < -.35) return '← 往左衝！竿子往右壓';
+  if (F.vlat > .35) return '往右衝！→ 竿子往左壓';
+  if (F.act === 'run' && F.dir) return '開始轉向了…看線往哪邊跑';
   return '往外衝！別硬收，等牠停';
 }
 
@@ -1822,8 +1826,11 @@ function updateFight(dt) {
   spot.x = fx / TX; spot.y = fz / TZ;
   // 鏡頭慢慢跟著魚轉，魚一直在視線前方
   let da = F.a0 + F.th - yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); yaw += da * Math.min(1, dt * 1.6);
+  const tp = -Math.atan2((onBoat() ? 2.4 : CFG.eye - WATER_Y), F.d) * .9;   // 也往下看向魚
+  pitch += (tp - pitch) * Math.min(1, dt * 1.2);
   // 魚衝刺、甩頭時水面有水花
-  if ((F.act === 'run' && Math.random() < dt * 10) || (F.act === 'shake' && Math.random() < dt * 16)) splash(spot.x, spot.y, 2);
+  // 魚跑的時候線入水的地方拖出水痕，跑越快越明顯
+  if ((F.act === 'run' && Math.random() < dt * (5 + Math.abs(F.vlat) * 12)) || (F.act === 'shake' && Math.random() < dt * 16)) splash(spot.x, spot.y, 2);
   if (F.act === 'jump' && F.jump < .1 && Math.random() < .5) splash(spot.x, spot.y, 8);
   if (F.spike > .3 && navigator.vibrate) navigator.vibrate(30);   // 有支援的手機會震一下
   if (r) { if (r.ok) endFight(true); else endFight(false, r.msg + (r.msg.startsWith('啪') ? loseLure() : '')); }
@@ -2067,8 +2074,8 @@ fishShape.lineTo(-.5, -.22); fishShape.lineTo(-.25, -.1); fishShape.quadraticCur
 const fishShadowGeo = new THREE.ShapeGeometry(fishShape); fishShadowGeo.rotateX(-Math.PI / 2);
 const SHADOW_LEN = [.7, 1.3, 2.1, 3.8];   // 小／中／大／變種怪影的長度（公尺）
 const shadowMat = {
-  normal: new THREE.MeshBasicMaterial({ color: 0x001a33, transparent: true, opacity: .38, depthWrite: false }),
-  dark: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .5, depthWrite: false }),
+  normal: new THREE.MeshBasicMaterial({ color: 0x001a33, transparent: true, opacity: .5, depthWrite: false }),
+  dark: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .62, depthWrite: false }),
   mutant: new THREE.MeshBasicMaterial({ color: 0x6a0018, transparent: true, opacity: .65, depthWrite: false }),
 };
 const shadowMeshes = new Set();
@@ -2147,6 +2154,79 @@ function fishTex(id) {
 }
 const fishSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: fishTex('tilapia'), alphaTest: .5 }));   // 透明的地方不擋住後面的水面
 fishSprite.visible = false; scene.add(fishSprite);
+// ---- 立體的魚：身體貼上像素魚的花紋，游動時身體擺動、尾巴甩動 ----
+// 魚頭朝 +x，長度 1（之後依尺寸縮放）
+const FISH_BODY = {   // 跟 makeFish() 的身體範圍一致，花紋才對得上；後三個數字是高、寬（相對長度）
+  normal: { cx: 30, rx: 16, ry: 7.2, h: .42, w: .2 }, slim: { cx: 30, rx: 18, ry: 4.8, h: .27, w: .13 },
+  round: { cx: 30, rx: 12, ry: 10, h: .8, w: .62 }, long: { cx: 24, rx: 16, ry: 6, h: .36, w: .17 }, eel: { cx: 30, rx: 25, ry: 3.6, h: .14, w: .07 },
+};
+const FISH3D = {};
+function finMesh(pts, color) {
+  const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]);
+  for (let k = 1; k < pts.length; k++) sh.lineTo(pts[k][0], pts[k][1]);
+  return new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: .92 }));
+}
+function make3DFish(f) {
+  if (FISH3D[f.id]) return FISH3D[f.id];
+  const B = FISH_BODY[f.shape] || FISH_BODY.normal, g = new THREE.Group();
+  const geo = new THREE.SphereGeometry(1, 28, 16);
+  // 貼圖座標：從側面投影到像素魚的身體範圍（兩側同一張圖）
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i);
+    uv.setXY(i, (B.cx + x * B.rx) / FW, 1 - (14 - y * B.ry) / FH);
+  }
+  geo.scale(.5, B.h / 2, B.w / 2);
+  const body = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: fishTex(f.id) }));
+  g.add(body);
+  const fin = f.fin || '#888888';
+  // 尾巴（分叉）掛在尾柄上，會左右甩
+  const tail = new THREE.Group(); tail.position.x = -.47; g.add(tail);
+  const th = f.shape === 'eel' ? .08 : f.shape === 'round' ? .28 : B.h * .62;
+  tail.add(finMesh([[0, 0], [-.26, th], [-.18, 0], [-.26, -th]], fin));
+  // 背鰭、臀鰭、胸鰭
+  if (f.shape === 'long') g.add(finMesh([[-.25, B.h * .4], [-.05, B.h * 1.25], [.18, B.h * .4]], fin));
+  else if (f.shape === 'eel') g.add(finMesh([[-.48, B.h * .45], [-.48, B.h * .8], [.42, B.h * .8], [.44, B.h * 2.2], [.47, B.h * .45]], fin));
+  else if (f.shape !== 'round') {
+    g.add(finMesh([[-.2, B.h * .42], [-.05, B.h * .85], [.12, B.h * .42]], fin));
+    g.add(finMesh([[-.25, -B.h * .4], [-.15, -B.h * .7], [-.08, -B.h * .4]], fin));
+  }
+  const pecs = [];
+  for (const sz of [1, -1]) {
+    const p = finMesh([[0, 0], [-.12, .05], [-.1, -.06]], fin);
+    p.position.set(.2, -B.h * .12, sz * B.w * .45); p.rotation.x = sz * -.6; g.add(p); pecs.push(p);
+  }
+  if (f.shape === 'long') {   // 旗魚的長嘴
+    const bill = new THREE.Mesh(new THREE.ConeGeometry(.02, .4, 6), new THREE.MeshLambertMaterial({ color: 0x2b2b2b }));
+    bill.rotation.z = -Math.PI / 2; bill.position.x = .68; g.add(bill);
+  }
+  return (FISH3D[f.id] = { g, body, base: Float32Array.from(geo.attributes.position.array), tail, pecs });
+}
+// 游動：身體像波浪一樣擺、尾巴甩、胸鰭划（amp 是用力程度）
+function animFish(o, t, amp) {
+  const p = o.body.geometry.attributes.position, b = o.base;
+  for (let i = 0; i < p.count; i++) {
+    const x = b[i * 3];
+    p.setZ(i, b[i * 3 + 2] + Math.sin(t * 10 - x * 6) * amp * (.5 - x) * .14);
+  }
+  p.needsUpdate = true;
+  o.tail.rotation.y = Math.sin(t * 10 - 3) * .55 * amp;
+  o.pecs.forEach((m, k) => { m.rotation.y = Math.sin(t * 6 + k * 3) * .4; });
+}
+const fish3d = new THREE.Group();   // 目前顯示的那條立體魚
+scene.add(fish3d); fish3d.visible = false;
+let fish3dId = null;
+function showFish3D(f, lenM) {
+  if (fish3dId !== f.id) {
+    fish3d.clear(); fish3d.add(make3DFish(f).g); fish3dId = f.id;
+  }
+  fish3d.scale.setScalar(lenM);
+  fish3d.visible = true;
+  return FISH3D[f.id];
+}
+// 魚的長度（公尺）：照尺寸，但太小看不到、太大塞不進畫面
+const fishLen = (f, size) => f.special || f.junk ? .5 : clamp(.25 + size / 110, .3, 3.2);
+
 
 // ---- 船：在水上時出現在腳下 ----
 const boats = [new THREE.Group(), new THREE.Group()];
@@ -2187,7 +2267,7 @@ for (let k = 0; k < RAIN_N; k++) { rainDrop[k * 3] = rand(-25, 25); rainDrop[k *
 buildTerrain(); buildTrees(); buildShops();
 
 // ================= 每一幀的 3D 畫面 =================
-const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3(), skyCol = new THREE.Color();
+const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3(), V4 = new THREE.Vector3(), V5 = new THREE.Vector3(), skyCol = new THREE.Color();
 let flash = 0;
 function bobberPos(out) {
   out.set(spot.x * TX, WATER_Y + .05, spot.y * TZ);
@@ -2201,7 +2281,7 @@ function render3D(dt) {
   const walkBob = P.moving && !boat ? Math.sin(P.walkT * 9) * .05 : 0;
   const wave = boat ? Math.sin(gameT * 1.6) * .08 : 0;
   const shake = state === 'fight' && F ? .004 + F.tens * .01 + F.spike * .05 : 0;
-  camera.position.set(P.x * TX, (boat ? WATER_Y + 1.35 : CFG.eye) + walkBob + wave, P.y * TZ);
+  camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : CFG.eye) + walkBob + wave, P.y * TZ);
   camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : 0, 'YXZ');
   camera.updateMatrixWorld();
 
@@ -2245,42 +2325,64 @@ function render3D(dt) {
     }
   }
 
-  // 搏鬥：線拉進水裡、水下的魚影、跳出水面或拉近時看得到整條魚
-  fishSprite.visible = false; fightShadow.visible = false;
+  // 搏鬥：線拉進水裡、水下的魚影；跳出水面或拉近時看得到立體的魚
+  fishSprite.visible = false; fightShadow.visible = false; fish3d.visible = false;
   if (state === 'fight' && F) {
-    const fx = spot.x * TX, fz = spot.y * TZ;
+    const fx = spot.x * TX, fz = spot.y * TZ, A = F.a0 + F.th;
     lineEnd = V2.set(fx, WATER_Y - .05, fz); sag = 0;
-    const heading = F.act === 'run' && F.dir ? F.a0 + F.th - F.dir * Math.PI / 2 : F.act === 'charge' ? F.a0 + F.th + Math.PI : F.a0 + F.th;
-    const len = [1, 1.5, 2.2, 3.6][F.sz] || 1.5;
+    // 魚頭朝游的方向，轉身要一點時間
+    const heading = Math.abs(F.vlat) > .3 ? A - Math.sign(F.vlat) * Math.PI / 2 : F.act === 'charge' ? A + Math.PI : A;
+    F.hd = F.hd == null ? heading : F.hd + Math.atan2(Math.sin(heading - F.hd), Math.cos(heading - F.hd)) * Math.min(1, dt * 3);
+    const len = fishLen(F.f, F.size);
     fightShadow.visible = true; fightShadow.position.set(fx, WATER_Y - .25, fz);
-    fightShadow.rotation.y = Math.PI / 2 + heading + Math.sin(gameT * 14) * .2;   // 魚頭朝游的方向 fightShadow.scale.set(len, 1, len);
-    const jumping = F.act === 'jump' && F.jump < 1;
-    if (jumping || F.d < 5) {   // 跳出水面甩動，或拉近到腳邊時露出水面
-      const k = jumping ? F.jump : 0, up = jumping ? Math.sin(k * Math.PI) * (1.2 + len * .4) : .05;
-      fishSprite.position.set(fx, WATER_Y + up + len * .2, fz);
-      fishSprite.scale.set(len, len / 2, 1);
-      fishSprite.material.map = fishTex(F.f.id);
-      fishSprite.material.rotation = jumping ? Math.sin(F.t * 18) * .8 + (k - .5) * 1.2 : Math.sin(gameT * 20) * .35;
-      fishSprite.visible = true;
-      if (jumping) lineEnd = fishSprite.position;
+    fightShadow.rotation.y = Math.PI / 2 + F.hd + Math.sin(gameT * 14) * .2;
+    fightShadow.scale.set(len * 1.1, 1, len * 1.1);
+    const jumping = F.act === 'jump' && F.jump < 1.05;
+    if (jumping || F.d < 6) {   // 跳出水面，或拉近到腳邊在水面掙扎
+      const k = jumping ? F.jump / 1.05 : 0, up = jumping ? Math.sin(k * Math.PI) * (1.4 + len * .5) : 0;
+      if (F.f.special || F.f.junk) {
+        fishSprite.position.set(fx, WATER_Y + up + .2, fz); fishSprite.scale.set(.8, .4, 1);
+        fishSprite.material.map = fishTex(F.f.id); fishSprite.material.rotation = Math.sin(gameT * 12) * .4; fishSprite.visible = true;
+        if (jumping) lineEnd = fishSprite.position;
+      } else {
+        const o = showFish3D(F.f, len);
+        fish3d.position.set(fx, WATER_Y + up + (jumping ? len * .1 : len * .06), fz);
+        // 跳水：頭先往上、空中扭身；拉近：側躺在水面甩
+        const pitchF = jumping ? (.5 - k) * 1.8 : Math.sin(gameT * 7) * .2, roll = jumping ? Math.sin(F.t * 12) * .5 : (F.act === 'rest' ? 1.15 : .6) + Math.sin(gameT * 9) * .45;   // 累了會側躺，從上面看得到身體花紋
+        fish3d.rotation.set(roll, Math.PI / 2 + F.hd, pitchF, 'YZX');
+        animFish(o, gameT, jumping ? 2.2 : 1.8);
+        if (jumping) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V5.set(.5, 0, 0)); }
+      }
     }
     // 張力越大，釣線越紅
     const tt = clamp(F.tens + F.spike, 0, 1);
     fishLine.material.color.setRGB(1, 1 - Math.max(0, tt - .45) * 1.6, 1 - tt * 1.4);
   } else fishLine.material.color.setRGB(.95, .95, .95);
-  // 拉上來的魚：從水面飛到眼前、甩尾，然後拿在面前
+  // 引拔：把魚從水裡吊起來，頭朝上掛在線上晃著拉到面前，最後拿在手上
   const held = state === 'land' || (state === 'caught' && catchShow);
   if (held && L) {
-    const front = V3.set(0, .05, -1.6).applyMatrix4(camera.matrixWorld);
-    const k = clamp(L.t / CFG.landFly, 0, 1);
-    const start = V2.set(spot.x * TX, WATER_Y, spot.y * TZ);
-    fishSprite.position.lerpVectors(start, front, k); fishSprite.position.y += Math.sin(k * Math.PI) * 1.6;   // 低低的弧線，飛到眼前
-    const len = L.f.special ? .8 : [.7, .9, 1.2, 1.4][L.sz] || .9;
-    fishSprite.scale.set(len, len / 2, 1);
-    fishSprite.material.map = fishTex(L.f.id);
-    fishSprite.material.rotation = state === 'land' && k < 1 ? Math.sin(L.t * 26) * .7 : Math.sin(gameT * 5) * .08;
-    fishSprite.visible = true;
-    if (state === 'land' && k < 1) { lineEnd = fishSprite.position; sag = 0; }
+    const front = V3.set(0, -.15, -1.5).applyMatrix4(camera.matrixWorld);
+    const k = clamp(L.t / CFG.landFly, 0, 1), e = k * k * (3 - 2 * k), lifting = state === 'land' && k < 1;
+    const start = V4.set(spot.x * TX, WATER_Y, spot.y * TZ);
+    const P0 = V5.lerpVectors(start, front, e);
+    P0.y += Math.sin(k * Math.PI) * 1.2;
+    const sw = Math.sin(L.t * 6) * .35 * (1 - k);   // 掛在線上左右晃
+    P0.x += Math.cos(yaw) * sw; P0.z -= Math.sin(yaw) * sw;
+    if (L.f.special || L.f.junk) {
+      fishSprite.position.copy(P0);
+      const len = .8; fishSprite.scale.set(len, len / 2, 1);
+      fishSprite.material.map = fishTex(L.f.id);
+      fishSprite.material.rotation = lifting ? Math.sin(L.t * 20) * .5 : Math.sin(gameT * 5) * .08;
+      fishSprite.visible = true;
+      if (lifting) { lineEnd = fishSprite.position; sag = 0; }
+    } else {
+      const o = showFish3D(L.f, Math.min(fishLen(L.f, L.size), 1.2));
+      fish3d.position.copy(P0);
+      fish3d.quaternion.copy(camera.quaternion);   // 側面朝向玩家
+      fish3d.rotateZ(lifting ? Math.PI / 2 + Math.sin(L.t * 9) * .35 : Math.sin(gameT * 3) * .06);
+      animFish(o, gameT, lifting ? 2.4 : .6);
+      if (lifting) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V4.set(.5, 0, 0)); sag = 0; }
+    }
   }
   fishLine.visible = !!lineEnd;
   if (lineEnd) {

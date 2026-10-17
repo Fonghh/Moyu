@@ -27,7 +27,7 @@
 - 操作：觸控左半邊搖桿 `joy`、右半邊轉頭 `look`（`yaw`／`pitch`）；電腦 WASD、方向鍵、滑鼠拖曳。拋竿方向就是視線方向。
 - 店面是房子（不能走進去），撞到門 `shopTouch` 就打開商店。
 - 隱藏模式的報表 `drawSheet()`（`cellText()` 產生假資料）；右上角小地圖 `#miniBox`，點擊 `openMap()` 放大。
-- 魚的像素圖 `makeFish()`（56×28，有漸層、鱗片、側線、鰓蓋；也拿來做 3D 裡的魚 `fishSprite`）；店員像素圖用 `SPR`／`PAL`。
+- 魚的像素圖 `makeFish()`（56×28，有漸層、鱗片、側線、鰓蓋；也當立體魚的身體貼圖；奇物、垃圾仍用平面 `fishSprite`）；店員像素圖用 `SPR`／`PAL`。
 - 特殊物品 `SPECIALS`（奇物，手繪像素圖 `rows`／`pal`）；餌料偏好 `LIKES`、`ONLY_BAIT`；裝備 `RODS`、`BAITS`。
 - 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級很吃力，差 2 級直接斷線。
 - 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。
@@ -36,12 +36,14 @@
 - 誘餌 `LURES`（永久，只有 `pred` 掠食魚會咬，線斷 30% 弄丟）；船 `BOATS`（走進水裡自動上船，`canEnter()` 決定能去的水域，一開始送舢舨）。
 - 遠洋 `T.FAR`（地圖最東邊，要漁船）。
 - 天氣 `WEATHERS`／`weatherAt()`，每 3 分鐘依時間換；暴風雨（`severe`）出現變種怪影（魚影 sz 3），釣到 `MUTANTS` 變種怪魚。
-- 搏鬥（擬真手感）：`FIGHT` 參數、`newFight()`、`nextAct()`（魚的動作：run 左右/外衝、charge 游過來、shake 甩頭、jump 跳水、rest 休息）、`stepFight()`（側壓、收線、洩線 drag、鬆線脫鉤、甩頭跳水硬收會斷線、線被拉光）。魚的位置用玩家為中心的角度 `th`＋距離 `d`（`fishWorld()`）。數值改動前先用模擬確認（技巧玩家要能拉上來、一直硬收的常斷線）。
+- 搏鬥（擬真手感）：`FIGHT` 參數、`newFight()`、`nextAct()`（魚的動作：run 左右/外衝、charge 游過來、shake 甩頭、jump 跳水、rest 休息）、`stepFight()`（側壓、收線、洩線 drag、鬆線脫鉤、甩頭跳水硬收會斷線、線被拉光）。魚的位置用玩家為中心的角度 `th`＋距離 `d`（`fishWorld()`）；左右游有慣性 `F.vlat`（慢慢加速、轉向，看線在水面劃過去就知道往哪跑）。數值改動前先用模擬確認（技巧玩家要能拉上來、一直硬收的常斷線）。
 - 料理 `METHODS`（烤、炸、煮湯、生魚片）：餐廳 `restBody()` 代客料理，背包的 `b.dish` 是料理；吃 `eatDish()` 得到加成 `S.buffs`（`hasBuff()`）；料理只能賣給餐廳。
 - 客人委託 `S.quests`：`questFishList()` 只挑目前釣竿、船釣得到的魚（不含變種、奇物）。
 - 拉霸 `slotBody()`／`spinSlot()`／`slotPrize()`，大獎金條（`gold`，`noDex` 不進圖鑑、不會釣到）。
 - 回城 `goHome()`：回到海邊小鎮（`SPAWN`，碼頭入口旁），面向大海。地圖外圍是一片大海。
-- 狀態 `state`：walk → charge → cast → wait → bite → fight → land（魚飛起來的動畫）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
+- 立體魚 `make3DFish()`（`FISH_BODY` 對應像素圖身體範圍的球體＋尾鰭、背鰭、胸鰭）、`animFish()` 身體擺動甩尾、`showFish3D()`／`fishLen()`；跳水、拉到 6m 內、引拔時顯示。
+- 視角：眼睛高度 `CFG.eye`（3m），搏鬥時鏡頭自動往下看向魚。
+- 狀態 `state`：walk → charge → cast → wait → bite → fight → land（引拔：魚頭朝上掛在線上被吊到面前，`CFG.landTime`／`landFly`）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
 - `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
 - 程式註解使用繁體中文。
