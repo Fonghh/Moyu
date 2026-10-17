@@ -1,11 +1,11 @@
 # 上班摸魚（moyu）
 
-偽裝成 Excel 報表的手機網頁小遊戲。給在這個 repo 工作的 Claude 看的規則與說明。
+3D 第一人稱釣魚的手機網頁小遊戲，左上角 X 一按就變成 Excel 報表。給在這個 repo 工作的 Claude 看的規則與說明。
 
 ## 專案
-- 整個遊戲是單一檔案 `index.html`，純 HTML/CSS/JS，沒有建置步驟、沒有套件。
+- 整個遊戲是單一檔案 `index.html`，使用 three.js r128（從 cdnjs 載入），沒有建置步驟。
 - 主要玩家用手機（觸控）玩，也支援電腦鍵盤。修改時兩者都要顧到。
-- 偽裝要像真的：遊戲元素都要看起來像 Excel 的東西（條件式格式、選取框、公式列、狀態列）。
+- 平常是全螢幕 3D；隱藏模式（`#bossView`）要像真的 Excel 報表。
 
 ## 存檔（commit）規則
 - 存檔說明一律用繁體中文，N 接續上一版（看 `git tag` 的最新 vN）。
@@ -19,7 +19,38 @@
 - 不要把任何金鑰、密碼、token 或憑證存進 repo。
 
 ## 程式結構（index.html）
-- `CFG`：所有手感與難度參數集中在這裡。
-- `build()` 依螢幕大小建立表格；`reset()`／`start()`／`step()` 是遊戲流程；`draw()` 更新畫面。
-- `setBoss()`：老闆鍵，切換偽裝模式並暫停。
+- `CFG`：所有手感與難度參數集中在這裡（移動速度、等魚時間、搏鬥張力等）。
+- 地形 `T`／`TILES`（顏色、能不能走、水域種類）；`genMap()` 產生地圖。
+- 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、畫圖參數）；稀有度 `RAR`。
+- 地圖仍是格子（`genMap()`），一格 = 東西 `TX`（5m）× 南北 `TZ`（2m）；邏輯座標用格子（`P.x`、`P.y`、魚影、`spot.x/y`），畫面換算成公尺。
+- 3D：`buildTerrain()` 地形與水面、`buildTrees()` 樹林、`buildShops()` 店面房子；`render3D()` 每幀更新相機、手上的釣竿（`rodRig`／`rodSegs`）、浮標、釣線、魚影 mesh、天氣、船。
+- 卡通畫風：材質用 `toon()`（三段明暗 `TOON_GRAD`），描邊 `addOutline()`；天空 `skyMat`（漸層＋太陽）、雲 `clouds`、遠方的島。
+- 地形：每格高度 `tileH`，`hField()` 平滑內插（海岸線落在格子邊上），`groundH()` 是腳下高度（相機跟著走）；水面是 shader `waterMat`（水深 `depthTex` 上色、岸邊浪花、波光）。
+- 樹、灌木、花、石頭用 `chunked()` 分塊的 InstancedMesh，遠的區塊用 `updateLod()` 關掉描邊和小花。
+- 順暢度：`QUALITY` 畫質等級，`watchFps()` 依實際幀率自動調整解析度、陰影、描邊。
+- 特效：`splashRing()` 水花波紋、`biteGlow` 上鉤閃光、`catchRays`／`stars` 釣到時的放射光和星星。
+- 操作：觸控左半邊搖桿 `joy`、右半邊轉頭 `look`（`yaw`／`pitch`）；電腦 WASD、方向鍵、滑鼠拖曳。拋竿方向就是視線方向。
+- 店面是房子（不能走進去），撞到門 `shopTouch` 就打開商店。
+- 隱藏模式的報表 `drawSheet()`（`cellText()` 產生假資料）；右上角小地圖 `#miniBox`，點擊 `openMap()` 放大。
+- 全部是卡通圖：魚的圖 `makeFish()`（向量畫，版面 56×28、放大 `FK` 倍；花紋 `paintFishBody()`、臉 `paintFishFace()`，3D 貼圖 `fishToonTex()` 共用同一套）；奇物、雜物、章魚、鱷魚用 `emoji` 欄位（3D 裡用平面 `fishSprite`，判斷用 `flatItem()`）；店員 `drawNpc()`；料理 `dishImg()`；回城、背包按鈕用 emoji。
+- 特殊物品 `SPECIALS`（奇物，`emoji` 當圖）；餌料偏好 `LIKES`、`ONLY_BAIT`；裝備 `RODS`、`LINES`（釣線耐久 `hp`）、`REELS`（收線倍率 `sp`、磨損倍率 `wear`）、`BAITS`；存檔 `S.rod`／`S.line`／`S.reel` 是等級。
+- 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級吃力、差 2 級很難拉，差 3 級直接斷線。
+- 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。
+- 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
+- 拋竿：按住蓄力（state `charge`，`castPower()` 0→1→0 擺盪），放開 `doCast()`；落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
+- 誘餌 `LURES`（永久，只有 `pred` 掠食魚會咬，線斷 30% 弄丟）；船 `BOATS`（走進水裡自動上船，`canEnter()` 決定能去的水域，一開始送舢舨）。
+- 遠洋 `T.FAR`（地圖最東邊，要漁船）。
+- 天氣 `WEATHERS`／`weatherAt()`，每 3 分鐘依時間換；暴風雨（`severe`）出現變種怪影（魚影 sz 3），釣到 `MUTANTS` 變種怪魚。
+- 搏鬥（擬真手感）：`FIGHT` 參數、`newFight()`、`nextAct()`（魚的動作：run 左右/外衝、charge 游過來、shake 甩頭、jump 跳水、rest 休息）、`stepFight()`（側壓、收線、洩線 drag、鬆線脫鉤、線被拉光；甩頭跳水硬收的瞬間張力 `F.spike` 和超出洩線的張力 `F.over` 會磨損釣線耐久 `F.hp`，歸零才斷，速度 `FIGHT.wearRate`）。魚的位置用玩家為中心的角度 `th`＋距離 `d`（`fishWorld()`）；左右游有慣性 `F.vlat`（慢慢加速、轉向，看線在水面劃過去就知道往哪跑）。甩頭、跳水剛開始 `FIGHT.react` 秒內收線不會有瞬間張力（給反應時間）。數值改動前先用模擬確認（一般玩家：反應慢、常忘了側壓，也要能拉上適合釣竿的魚；一直硬收的偶爾斷線）。
+- 料理 `METHODS`（烤、炸、煮湯、生魚片）：餐廳 `restBody()` 代客料理，背包的 `b.dish` 是料理；吃 `eatDish()` 得到加成 `S.buffs`（`hasBuff()`）；料理只能賣給餐廳。
+- 客人委託 `S.quests`：`questFishList()` 只挑目前釣竿、船釣得到的魚（不含變種、奇物）。
+- 拉霸 `slotBody()`／`spinSlot()`／`slotPrize()`，大獎金條（`gold`，`noDex` 不進圖鑑、不會釣到）。
+- 回城 `goHome()`：回到海邊小鎮（`SPAWN`，碼頭入口旁），面向大海。地圖外圍是一片大海。
+- 立體魚 `make3DFish()`（`FISH_BODY` 對應魚圖身體範圍的球體＋尾鰭、背鰭、胸鰭）、`animFish()` 身體擺動甩尾、`showFish3D()`／`fishLen()`；跳水、拉到 6m 內、引拔時顯示。
+- 搏鬥畫面：上方魚的體力條 `#fHp`（魚的剪影 `#fIcon`）、釣線耐久條 `#fDur`；水面上的方向指示 `guideRing`／`guideArrow`（綠＝收線、橘＝往箭頭方向壓竿、紅＝甩頭跳水別收）。
+- 水面倒影：`waterMat` 用反射方向算天空漸層和雲（不是真的鏡面反射，手機跑得動）；外海零星白浪。
+- 視角：眼睛高度 `CFG.eye`（3m），搏鬥時鏡頭自動往下看向魚。
+- 狀態 `state`：walk → charge → cast → wait → bite → fight → land（引拔：魚頭朝上掛在線上被吊到面前，`CFG.landTime`／`landFly`）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
+- 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
+- `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
 - 程式註解使用繁體中文。
