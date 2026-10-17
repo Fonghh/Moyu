@@ -83,6 +83,46 @@
     display: flex; align-items: center; justify-content: center;
   }
   #homeBtn canvas { width: 30px; height: 30px; }
+  /* 釣具箱按鈕（在回城上方） */
+  #boxBtn {
+    position: absolute; right: max(38px, calc(env(safe-area-inset-right, 0px) + 22px)); bottom: 256px; width: 48px; height: 48px; border-radius: 10px;
+    background: #fff; border: 2px solid #8a5a2b; box-shadow: 0 3px 0 #8a5a2b; cursor: pointer; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #boxBtn canvas { width: 30px; height: 30px; }
+  #boxBtn.dot::after { content: "!"; position: absolute; right: -6px; top: -6px; width: 18px; height: 18px; border-radius: 9px; background: #2f8cff; color: #fff; font: 800 12px/18px sans-serif; text-align: center; }
+  /* 釣具箱：半透明深藍面板，看得到後面的海 */
+  #dlg.clear { background: rgba(0,0,0,.06); }
+  #dlg.clear .win { background: rgba(16,26,52,.84); color: #eef3ff; border-color: #6f8cc8; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  #dlg.clear .wt { background: rgba(38,58,108,.92); }
+  .tb button { font-family: inherit; color: inherit; cursor: pointer; }
+  .tb-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tb-slot { position: relative; background: radial-gradient(ellipse at 50% 50%, rgba(220,232,255,.26), rgba(255,255,255,.04) 75%); border: 1px solid rgba(160,190,255,.35); border-radius: 8px; padding: 4px 2px; min-width: 0; }
+  .tb-slot.on { border-color: #ffe066; box-shadow: inset 0 0 0 1px #ffe066; background: rgba(255,224,102,.1); }
+  .tb-slot canvas, .tb-cell canvas { width: 100%; height: auto; aspect-ratio: 5 / 3; display: block; }
+  .tb-sn { font-size: 10px; opacity: .7; }
+  .tb-nm { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+  .tb-cell { position: relative; background: radial-gradient(ellipse at 50% 45%, rgba(220,232,255,.32), rgba(0,0,0,.25) 75%); border: 1px solid rgba(160,190,255,.28); border-radius: 6px; padding: 3px; }
+  .tb-cell.sel { border-color: #ffe066; box-shadow: inset 0 0 0 1px #ffe066; }
+  .tb-cell.use::before { content: "使用中"; position: absolute; left: 3px; top: 2px; font-size: 10px; background: #2f9a4a; color: #fff; padding: 0 4px; border-radius: 3px; }
+  .tb-cnt { position: absolute; right: 5px; bottom: 2px; font-size: 11px; font-weight: 700; text-shadow: 0 1px 2px #000; }
+  .tb-new { position: absolute; right: 3px; top: 2px; width: 16px; height: 16px; border-radius: 8px; background: #2f8cff; color: #fff; font: 800 11px/16px sans-serif; text-align: center; font-style: normal; }
+  .tb-card { margin-top: 10px; border-top: 1px solid rgba(160,190,255,.35); padding-top: 8px; font-size: 12px; }
+  .tb-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; }
+  .tb-h b { flex: 1; }
+  .tb-using { font-size: 11px; background: #2f9a4a; color: #fff; padding: 1px 6px; border-radius: 3px; }
+  .tb-eq { background: #ffe066; color: #3a2a00 !important; border: 0; border-radius: 4px; padding: 3px 12px; font-weight: 700; }
+  .tb-stat { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .tb-stat span:first-child { width: 30px; opacity: .8; }
+  .tb-bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .tb-bar i { display: block; height: 100%; background: #7ee081; border-radius: 3px; }
+  .tb-v { width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tb-sub { margin: 8px 0 4px; opacity: .75; font-size: 11px; border-bottom: 1px solid rgba(160,190,255,.25); padding-bottom: 2px; }
+  .tb-fish { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; text-align: center; font-size: 10px; }
+  .tb-f canvas { width: 100%; height: auto; aspect-ratio: 2 / 1; display: block; }
+  .tb-story { margin-top: 8px; line-height: 1.6; opacity: .9; font-style: italic; }
+  table.xl canvas.ticon { width: 40px; height: 24px; margin-right: 4px; }
   #actBtn.charge { background: radial-gradient(circle at 35% 30%, #f8b26a, #ed7d31 70%); border-color: #a8541a; box-shadow: 0 4px 0 #a8541a, 0 6px 12px rgba(0,0,0,.25); }
   /* 背包按鈕（在拉魚按鈕上方） */
   #bagBtn {
@@ -199,7 +239,7 @@
   .card.unk canvas { filter: brightness(0) opacity(.2); }
 
   /* 隱藏模式：只剩普通的 Excel */
-  body.boss #actBtn, body.boss #bagBtn, body.boss #homeBtn, body.boss #miniBox, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
+  body.boss #actBtn, body.boss #bagBtn, body.boss #homeBtn, body.boss #boxBtn, body.boss #miniBox, body.boss #fight, body.boss .note, body.boss #dlg { display: none !important; }
   /* ===== 3D 全螢幕版面 ===== */
   html, body { overscroll-behavior: none; }
   body { display: block; background: #9fd0f5; }
@@ -258,6 +298,7 @@
   </div>
   <div id="danger"></div>
   <div id="miniBox" title="區域分布圖"><div class="mt">區域分布</div><canvas id="mini"></canvas></div>
+  <button id="boxBtn" title="釣具箱"><canvas id="boxIcon" width="12" height="12"></canvas></button>
   <button id="homeBtn" title="回城"><canvas id="homeIcon" width="12" height="12"></canvas></button>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
   <button id="actBtn">下竿</button>
@@ -586,9 +627,10 @@ function genMap() {
   for (let j = PY - 3; j <= PY + 3; j++) setT(ePY + 9, j, T.DOCK);
   // 往南的小徑，過河的地方是木橋
   for (let j = PY; j <= 75; j++) setT(15, j, tileAt(15, j) === T.RIVER ? T.DOCK : T.PATH);
-  // 商店（2×2 格，緊鄰小徑）：海邊的小鎮，北邊釣具行、魚市場，南邊餐廳、遊藝場
+  // 商店（2×2 格，隔著三格寬的商店街）：海邊的小鎮，北邊釣具行、魚市場，南邊餐廳、遊藝場
   const sx = Math.floor(SPAWN.x);   // 小鎮中間那一欄，兩旁各兩間店
-  for (const [i0, j0, t] of [[sx - 2, PY - 2, T.SHOP_T], [sx + 1, PY - 2, T.SHOP_M], [sx - 2, PY + 1, T.SHOP_R], [sx + 1, PY + 1, T.SHOP_G]])
+  for (let i = sx - 3; i <= sx + 3; i++) for (const j of [PY - 1, PY + 1]) setT(i, j, T.PATH);   // 商店街三格寬，不會一離開一家店就撞進對面那家
+  for (const [i0, j0, t] of [[sx - 2, PY - 3, T.SHOP_T], [sx + 1, PY - 3, T.SHOP_M], [sx - 2, PY + 2, T.SHOP_R], [sx + 1, PY + 2, T.SHOP_G]])
     for (let j = j0; j < j0 + 2; j++) for (let i = i0; i < i0 + 2; i++) setT(i, j, t);
 }
 genMap();
@@ -756,7 +798,7 @@ function fishCanvas(id, scale) {
 }
 
 // 回城、背包按鈕的圖示
-for (const [id, e] of [['homeIcon', '🏠'], ['bagIcon', '🎒']]) {
+for (const [id, e] of [['homeIcon', '🏠'], ['bagIcon', '🎒'], ['boxIcon', '🧰']]) {
   const c = $(id), x = c.getContext('2d');
   c.width = c.height = 96;
   x.font = `80px ${ITEM_FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(e, 48, 54);
@@ -902,6 +944,7 @@ window.addEventListener('blur', () => { keys.clear(); release(); });
 
 $('bagBtn').addEventListener('click', openBag);
 $('homeBtn').addEventListener('click', goHome);
+$('boxBtn').addEventListener('click', () => openBox());
 // 回城：回到海邊小鎮，面向大海
 function goHome() {
   if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
@@ -1089,6 +1132,7 @@ function endFight(ok, msg) {
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 function openDlg(title, body) {
   const b = $('dlgBody');
+  $('dlg').classList.remove('clear');
   // 同一個視窗重畫時保留捲動位置（例如連續買東西）
   const keep = $('dlg').classList.contains('on') && $('dlgTitle').textContent === title ? b.scrollTop : 0;
   $('dlgTitle').textContent = title;
@@ -1098,6 +1142,7 @@ function openDlg(title, body) {
 }
 function closeDlg() {
   $('dlg').classList.remove('on');
+  $('boxBtn').classList.toggle('dot', boxHasNew());   // 買了新釣具，釣具箱按鈕亮起來
   if (state === 'caught') { state = 'walk'; catchShow = null; }
 }
 $('dlgX').addEventListener('click', closeDlg);
@@ -1354,12 +1399,12 @@ function tackleBody(d) {
   const t = xlTable(['品名', '等級', '價格', '']);
   for (const r of RODS) {
     const tr = el('tr');
-    tr.appendChild(el('td', null, r.name));
+    const nm = el('td'); nm.appendChild(gearCanvas('rod', r.lv, 'ticon')); nm.append(r.name); tr.appendChild(nm);
     tr.appendChild(el('td', 'num', 'Lv' + r.lv));
     tr.appendChild(el('td', 'num', r.price ? '$' + fmtN(r.price) : '—'));
     const td = el('td');
-    if (r.lv <= S.rod) td.appendChild(el('span', 'own', r.lv === S.rod ? '使用中' : '已擁有'));
-    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(r.price, () => { S.rod = r.lv; }, `好眼光！${r.name}會陪你很久。`); td.appendChild(b); }
+    if (r.lv <= S.own.rod) td.appendChild(el('span', 'own', r.lv === S.rod ? '使用中' : '已擁有'));
+    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(r.price, () => { S.rod = S.own.rod = r.lv; }, `好眼光！${r.name}會陪你很久。`); td.appendChild(b); }
     tr.appendChild(td); t.appendChild(tr);
   }
   d.appendChild(t);
@@ -1372,12 +1417,12 @@ function tackleBody(d) {
     const tb = xlTable(['品名', '性能', '價格', '']);
     for (const it of list) {
       const tr = el('tr');
-      tr.appendChild(el('td', null, it.name));
+      const nm = el('td'); nm.appendChild(gearCanvas(key, it.lv, 'ticon')); nm.append(it.name); tr.appendChild(nm);
       tr.appendChild(el('td', 'desc', info(it)));
       tr.appendChild(el('td', 'num', it.price ? '$' + fmtN(it.price) : '—'));
       const td = el('td');
-      if (it.lv <= S[key]) td.appendChild(el('span', 'own', it.lv === S[key] ? '使用中' : '已擁有'));
-      else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(it.price, () => { S[key] = it.lv; }, say(it)); td.appendChild(b); }
+      if (it.lv <= S.own[key]) td.appendChild(el('span', 'own', it.lv === S[key] ? '使用中' : '已擁有'));
+      else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(it.price, () => { S[key] = S.own[key] = it.lv; }, say(it)); td.appendChild(b); }
       tr.appendChild(td); tb.appendChild(tr);
     }
     d.appendChild(tb);
@@ -1386,7 +1431,7 @@ function tackleBody(d) {
   const t2 = xlTable(['品名', '適合', '價格', '持有', '']);
   for (const b of BAITS) {
     const tr = el('tr');
-    tr.appendChild(el('td', null, b.name));
+    const nm = el('td'); nm.appendChild(gearCanvas('bait', b.id, 'ticon')); nm.append(b.name); tr.appendChild(nm);
     tr.appendChild(el('td', 'desc', b.desc));
     tr.appendChild(el('td', 'num', b.price ? '$' + b.price : '免費'));
     tr.appendChild(el('td', 'num', b.id === 'bread' ? '∞' : String(S.baits[b.id] || 0)));
@@ -1406,7 +1451,7 @@ function tackleBody2(d) {
   const t = xlTable(['品名', '適合', '價格', '']);
   for (const l of LURES) {
     const tr = el('tr');
-    tr.appendChild(el('td', null, l.name));
+    const nm = el('td'); nm.appendChild(gearCanvas('lure', l.id, 'ticon')); nm.append(l.name); tr.appendChild(nm);
     tr.appendChild(el('td', 'desc', l.desc));
     tr.appendChild(el('td', 'num', '$' + fmtN(l.price)));
     const td = el('td');
@@ -1429,6 +1474,217 @@ function tackleBody2(d) {
   }
   d.appendChild(t2);
 }
+
+// ================= 釣具箱：身上的裝備、持有的釣具、說明卡 =================
+// 每樣釣具的小故事
+const GEAR_STORY = {
+  rod: ['阿公留下來的竹竿，輕巧好甩，小魚的好朋友。', '又輕又韌，河邊的釣客人手一支。', '專為海邊礁石設計，彎到快斷也不會斷。', '粗壯的短竿，跟鮪魚拔河就靠它。', '老師傅一年只做三支，據說釣過皇帶魚。'],
+  line: ['便宜又好打結，新手的第一捲線。', '八股編織，拉力是尼龍線的好幾倍。', '在水裡幾乎看不見，魚不會起疑心。', '傳說是用海龍的鬍鬚搓成的，怎麼拉都拉不斷。'],
+  reel: ['轉起來有點卡卡的，但很耐用。', '齒輪比加大，搖一圈收回更多線。', '手工研磨的軸承，洩線順到像絲綢。'],
+  bread: '早餐吃剩的吐司邊，池塘小魚最愛。', worm: '下過雨的菜園裡挖的，河魚一聞就來。', koifood: '公園餵錦鯉的那種，錦鯉看到會張大嘴。',
+  lug: '海邊釣客的萬用餌，近海的魚都愛。', shrimp: '活蹦亂跳的草蝦，石斑、黑鯛抵擋不了。', squid: '深海大魚的最愛，鮪魚、旗魚都為它瘋狂。',
+  glow: '在黑暗的深海裡一閃一閃，據說皇帶魚只吃這個。',
+  spinner: '轉起來閃閃發亮，掠食魚會以為是小魚。', minnow: '做成小魚的樣子，游起來左右擺動，掠食魚忍不住。', jig: '沉得快的金屬片，專門對付深海和遠洋的猛魚，旗魚特別愛。',
+};
+const ROD_COL = ['#c9a25a', '#2b2b33', '#1f5fa8', '#8a2424', '#1d1d24'];
+const LINE_COL = ['#f2f2f2', '#6cc06c', '#bfe6ff', '#ff6a3d'];
+const REEL_COL = ['#9aa3ad', '#3a7bd5', '#d4a017'];
+// 釣具的卡通圖（版面 80×48，放大 3 倍）
+const GEAR_IMG = {};
+function gearImg(kind, id) {
+  const key = kind + id;
+  if (GEAR_IMG[key]) return GEAR_IMG[key];
+  const c = document.createElement('canvas'); c.width = 240; c.height = 144;
+  const x = c.getContext('2d'); x.scale(3, 3); x.lineJoin = x.lineCap = 'round';
+  const ink = '#2a2335', stroke = (w = 1) => { x.strokeStyle = ink; x.lineWidth = w; x.stroke(); };
+  const blob = (cx, cy, rx, ry, col, rot = 0) => { x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2); x.fillStyle = col; x.fill(); stroke(.8); };
+  if (kind === 'rod') {
+    const col = ROD_COL[id - 1];
+    x.beginPath(); x.moveTo(10, 42); x.lineTo(74, 6); x.strokeStyle = ink; x.lineWidth = 3.4; x.stroke();
+    x.strokeStyle = col; x.lineWidth = 2.2; x.stroke();
+    if (id === 1) { x.strokeStyle = '#8a6a2a'; x.lineWidth = .8; for (let k = 1; k < 6; k++) { const t = k / 6; x.beginPath(); x.arc(10 + 64 * t, 42 - 36 * t, 1.6, 0, Math.PI * 2); x.stroke(); } }   // 竹節
+    if (id === 5) { x.strokeStyle = '#ffd34d'; x.lineWidth = .8; for (let k = 1; k < 5; k++) { const t = k / 5; x.beginPath(); x.moveTo(10 + 64 * t - 1.5, 42 - 36 * t - 1.5); x.lineTo(10 + 64 * t + 1.5, 42 - 36 * t + 1.5); x.stroke(); } }
+    x.beginPath(); x.moveTo(8, 43); x.lineTo(24, 34); x.strokeStyle = ink; x.lineWidth = 4.6; x.stroke(); x.strokeStyle = '#d9a066'; x.lineWidth = 3.4; x.stroke();   // 軟木握把
+    for (let k = 0; k < 4; k++) { const t = .35 + k * .17; x.beginPath(); x.arc(10 + 64 * t, 42 - 36 * t + 2.2, 1.2, 0, Math.PI * 2); x.strokeStyle = '#c8c8d0'; x.lineWidth = .7; x.stroke(); }   // 導環
+  } else if (kind === 'line') {
+    const col = LINE_COL[id - 1];
+    blob(40, 24, 20, 20, '#3a3f4a');
+    const g = x.createRadialGradient(36, 20, 2, 40, 24, 17);
+    g.addColorStop(0, shade(col, .3)); g.addColorStop(1, shade(col, -.2));
+    x.beginPath(); x.arc(40, 24, 16.5, 0, Math.PI * 2); x.fillStyle = g; x.fill();
+    x.strokeStyle = 'rgba(0,0,0,.12)'; x.lineWidth = .5; for (let r = 8; r < 16; r += 1.6) { x.beginPath(); x.arc(40, 24, r, 0, Math.PI * 2); x.stroke(); }
+    blob(40, 24, 6.5, 6.5, '#e9edf2'); blob(40, 24, 2.4, 2.4, '#3a3f4a');
+    if (id === 4) { x.fillStyle = 'rgba(255,240,150,.8)'; for (const [a, b] of [[28, 12], [54, 16], [30, 36]]) { x.beginPath(); x.arc(a, b, 1.1, 0, Math.PI * 2); x.fill(); } }
+  } else if (kind === 'reel') {
+    const col = REEL_COL[id - 1];
+    blob(34, 24, 15, 15, col);                                   // 本體
+    blob(34, 24, 9, 9, shade(col, .25)); blob(34, 24, 3, 3, '#3a3f4a');
+    x.beginPath(); x.moveTo(34, 24); x.lineTo(58, 14); stroke(3.2); x.beginPath(); x.moveTo(34, 24); x.lineTo(58, 14); x.strokeStyle = '#c8ccd4'; x.lineWidth = 2; x.stroke();   // 搖臂
+    blob(60, 13, 4.5, 3.4, '#f2f2f2');                            // 握把
+    x.beginPath(); x.rect(26, 38, 16, 5); x.fillStyle = shade(col, -.2); x.fill(); stroke(.8);   // 竿座
+  } else if (kind === 'bait') {
+    if (id === 'bread') {
+      x.beginPath(); x.moveTo(24, 40); x.lineTo(24, 18); x.quadraticCurveTo(22, 8, 40, 8); x.quadraticCurveTo(58, 8, 56, 18); x.lineTo(56, 40); x.closePath();
+      x.fillStyle = '#c8823a'; x.fill(); stroke();
+      x.beginPath(); x.moveTo(27, 38); x.lineTo(27, 19); x.quadraticCurveTo(26, 11, 40, 11); x.quadraticCurveTo(54, 11, 53, 19); x.lineTo(53, 38); x.closePath(); x.fillStyle = '#ffe9b8'; x.fill();
+      x.fillStyle = '#efd49a'; for (const [a, b] of [[34, 20], [45, 26], [37, 31], [47, 17]]) { x.beginPath(); x.arc(a, b, 1, 0, Math.PI * 2); x.fill(); }
+    } else if (id === 'worm' || id === 'lug') {
+      const col = id === 'worm' ? '#f08ca0' : '#c8503c';
+      x.beginPath(); x.moveTo(14, 30); x.bezierCurveTo(24, 10, 34, 42, 44, 24); x.bezierCurveTo(52, 10, 60, 26, 66, 18);
+      x.strokeStyle = ink; x.lineWidth = 7; x.stroke(); x.strokeStyle = col; x.lineWidth = 5.4; x.stroke();
+      x.strokeStyle = shade(col, -.25); x.lineWidth = .6;
+      for (let k = 0; k < 9; k++) { const t = k / 9, px = 16 + t * 48, py = 24 + Math.sin(t * 9) * 6; x.beginPath(); x.moveTo(px, py - 2); x.lineTo(px + 1, py + 2); x.stroke(); }
+      if (id === 'lug') { x.strokeStyle = '#7a2a1a'; x.lineWidth = .6; for (let k = 0; k < 14; k++) { const px = 16 + k * 3.5; x.beginPath(); x.moveTo(px, 26 + Math.sin(k) * 7); x.lineTo(px - 1, 30 + Math.sin(k) * 7); x.stroke(); } }
+      x.fillStyle = ink; x.beginPath(); x.arc(66, 18, .9, 0, Math.PI * 2); x.fill();
+    } else if (id === 'koifood') {
+      for (const [a, b, r, col] of [[30, 28, 5, '#e88a3a'], [40, 22, 5.5, '#c86a2a'], [50, 29, 5, '#f0a050'], [38, 34, 4.5, '#d47a30'], [46, 16, 4, '#e88a3a'], [28, 18, 3.8, '#f0a050']]) blob(a, b, r, r * .9, col);
+    } else if (id === 'shrimp') {
+      x.beginPath(); x.moveTo(20, 18); x.bezierCurveTo(32, 4, 58, 10, 56, 28); x.bezierCurveTo(54, 38, 42, 40, 36, 36);
+      x.strokeStyle = ink; x.lineWidth = 11; x.stroke(); x.strokeStyle = '#ff8a6a'; x.lineWidth = 9.4; x.stroke();
+      x.strokeStyle = '#e0604a'; x.lineWidth = .7; for (let k = 0; k < 5; k++) { x.beginPath(); x.arc(40, 24, 9 + k * .1, -2.4 + k * .6, -2.1 + k * .6); x.stroke(); }
+      x.beginPath(); x.moveTo(36, 36); x.lineTo(28, 42); x.lineTo(36, 42); x.closePath(); x.fillStyle = '#ff8a6a'; x.fill(); stroke(.8);   // 尾巴
+      x.beginPath(); x.moveTo(20, 16); x.quadraticCurveTo(8, 6, 4, 14); x.moveTo(20, 18); x.quadraticCurveTo(10, 16, 6, 24); x.strokeStyle = '#e0604a'; x.lineWidth = .8; x.stroke();   // 觸鬚
+      blob(22, 15, 1.6, 1.6, '#1b1525');
+    } else if (id === 'squid') {
+      for (let k = 0; k < 6; k++) { x.beginPath(); x.moveTo(30 + k * 4, 30); x.quadraticCurveTo(28 + k * 4 + (k % 2 ? 4 : -4), 38, 30 + k * 4, 45); x.strokeStyle = ink; x.lineWidth = 3; x.stroke(); x.strokeStyle = '#ffd0dc'; x.lineWidth = 1.8; x.stroke(); }
+      x.beginPath(); x.moveTo(40, 2); x.quadraticCurveTo(56, 14, 52, 32); x.lineTo(28, 32); x.quadraticCurveTo(24, 14, 40, 2);
+      x.fillStyle = '#ffe2ea'; x.fill(); stroke();
+      x.fillStyle = 'rgba(220,120,150,.5)'; for (const [a, b] of [[36, 16], [44, 20], [40, 26]]) { x.beginPath(); x.arc(a, b, 1.6, 0, Math.PI * 2); x.fill(); }
+      blob(34, 28, 2.4, 2.4, '#fff'); blob(46, 28, 2.4, 2.4, '#fff'); blob(34.5, 28.5, 1.2, 1.2, '#1b1525'); blob(46.5, 28.5, 1.2, 1.2, '#1b1525');
+    } else if (id === 'glow') {
+      const g = x.createRadialGradient(40, 24, 0, 40, 24, 22);
+      g.addColorStop(0, 'rgba(255,255,220,1)'); g.addColorStop(.3, 'rgba(190,255,90,.9)'); g.addColorStop(1, 'rgba(120,255,140,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 80, 48);
+      blob(40, 24, 7, 7, '#d8ff7a');
+      x.strokeStyle = 'rgba(230,255,160,.9)'; x.lineWidth = 1;
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; x.beginPath(); x.moveTo(40 + Math.cos(a) * 10, 24 + Math.sin(a) * 10); x.lineTo(40 + Math.cos(a) * 15, 24 + Math.sin(a) * 15); x.stroke(); }
+    }
+  } else if (kind === 'lure') {
+    const hook = (hx, hy) => { x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx, hy + 5); x.arc(hx + 2, hy + 5, 2, Math.PI, 0, true); x.strokeStyle = '#8a8f99'; x.lineWidth = .8; x.stroke(); };
+    if (id === 'spinner') {
+      x.beginPath(); x.moveTo(10, 24); x.lineTo(68, 24); x.strokeStyle = '#8a8f99'; x.lineWidth = .9; x.stroke();
+      const g = x.createLinearGradient(20, 12, 36, 36); g.addColorStop(0, '#ffffff'); g.addColorStop(.5, '#c8ccd4'); g.addColorStop(1, '#8a8f99');
+      x.beginPath(); x.ellipse(30, 24, 11, 7, -.4, 0, Math.PI * 2); x.fillStyle = g; x.fill(); stroke(.8);   // 亮片
+      x.beginPath(); x.rect(44, 21, 12, 6); x.fillStyle = '#e04040'; x.fill(); stroke(.7);
+      hook(66, 24);
+    } else if (id === 'minnow') {
+      x.beginPath(); x.moveTo(12, 24); x.quadraticCurveTo(30, 8, 60, 20); x.quadraticCurveTo(66, 24, 60, 28); x.quadraticCurveTo(30, 40, 12, 24);
+      const g = x.createLinearGradient(0, 12, 0, 34); g.addColorStop(0, '#2f9a4a'); g.addColorStop(.45, '#bfe86a'); g.addColorStop(.55, '#fff6c8'); g.addColorStop(1, '#f2f2f2');
+      x.fillStyle = g; x.fill(); stroke();
+      x.beginPath(); x.moveTo(60, 26); x.lineTo(70, 32); x.lineTo(62, 30); x.closePath(); x.fillStyle = 'rgba(220,240,255,.8)'; x.fill(); stroke(.6);   // 潛水板
+      blob(54, 21, 2.6, 2.6, '#ffd34d'); blob(54.6, 21, 1.2, 1.2, '#1b1525');
+      x.beginPath(); x.moveTo(12, 24); x.lineTo(6, 18); x.lineTo(6, 30); x.closePath(); x.fillStyle = '#2f9a4a'; x.fill(); stroke(.6);
+      hook(26, 31); hook(44, 31);
+    } else if (id === 'jig') {
+      x.beginPath(); x.moveTo(8, 26); x.quadraticCurveTo(40, 12, 72, 22); x.quadraticCurveTo(40, 34, 8, 26);
+      const g = x.createLinearGradient(0, 14, 0, 32); g.addColorStop(0, '#2a5fd0'); g.addColorStop(.5, '#d8e4ff'); g.addColorStop(1, '#8a93a8');
+      x.fillStyle = g; x.fill(); stroke();
+      x.strokeStyle = 'rgba(255,255,255,.7)'; x.lineWidth = .7; for (let k = 0; k < 6; k++) { x.beginPath(); x.moveTo(18 + k * 8, 20); x.lineTo(22 + k * 8, 28); x.stroke(); }
+      blob(66, 22, 1.8, 1.8, '#fff'); hook(72, 22);
+    }
+  }
+  return (GEAR_IMG[key] = c);
+}
+function gearCanvas(kind, id, cls) {
+  const c = document.createElement('canvas'); c.width = 240; c.height = 144; if (cls) c.className = cls;
+  c.getContext('2d').drawImage(gearImg(kind, id), 0, 0);
+  return c;
+}
+// 每一格裝備欄的內容：持有的東西、正在用哪一個、怎麼換上
+S.own = Object.assign({ rod: S.rod, line: S.line, reel: S.reel }, S.own);
+for (const k of ['rod', 'line', 'reel']) S.own[k] = Math.max(S.own[k], S[k]);
+S.seen = S.seen || {};
+const BOX_SLOTS = [
+  { key: 'rod', name: '釣竿', list: () => RODS.filter(r => r.lv <= S.own.rod).map(r => ({ kind: 'rod', id: r.lv, it: r, use: S.rod === r.lv, equip: () => { S.rod = r.lv; } })) },
+  { key: 'line', name: '釣線', list: () => LINES.filter(l => l.lv <= S.own.line).map(l => ({ kind: 'line', id: l.lv, it: l, use: S.line === l.lv, equip: () => { S.line = l.lv; } })) },
+  { key: 'reel', name: '捲線器', list: () => REELS.filter(r => r.lv <= S.own.reel).map(r => ({ kind: 'reel', id: r.lv, it: r, use: S.reel === r.lv, equip: () => { S.reel = r.lv; } })) },
+  { key: 'bait', name: '餌', list: () => [
+    ...BAITS.filter(b => b.id === 'bread' || S.baits[b.id] > 0).map(b => ({ kind: 'bait', id: b.id, it: b, use: S.bait === b.id, n: b.id === 'bread' ? '∞' : '×' + S.baits[b.id], equip: () => { S.bait = b.id; } })),
+    ...LURES.filter(l => S.lures[l.id]).map(l => ({ kind: 'lure', id: l.id, it: l, use: S.bait === l.id, n: '誘餌', equip: () => { S.bait = l.id; } })),
+  ] },
+];
+const seenKey = g => g.kind + ':' + g.id;
+const boxHasNew = () => BOX_SLOTS.some(s => s.list().some(g => !S.seen[seenKey(g)]));
+// 容易釣到的魚（說明卡用）
+function gearFish(g) {
+  if (g.kind === 'bait') return FISH.filter(f => !f.special && !f.junk && !f.mutant && LIKES[f.id] && LIKES[f.id].includes(g.id));
+  if (g.kind === 'lure') return FISH.filter(f => f.pred && f.water.some(w => g.it.waters.includes(w)));
+  if (g.kind === 'rod') return FISH.filter(f => !f.special && !f.junk && !f.mutant && RAR[f.rar].lv === g.id);   // 換這支竿子才拉得動的魚
+  return [];
+}
+function gearStats(g) {
+  const bar = (label, v, txt) => { const r = el('div', 'tb-stat'); r.appendChild(el('span', null, label)); const b = el('div', 'tb-bar'), i = el('i'); i.style.width = Math.round(v * 100) + '%'; b.appendChild(i); r.appendChild(b); r.appendChild(el('span', 'tb-v', txt)); return r; };
+  if (g.kind === 'rod') return [bar('力量', g.id / RODS.length, 'Lv' + g.id)];
+  if (g.kind === 'line') return [bar('耐久', g.it.hp / LINES[LINES.length - 1].hp, fmtN(g.it.hp))];
+  if (g.kind === 'reel') return [bar('收線', (g.it.sp - .6) / .85, '×' + g.it.sp), ...(g.it.wear < 1 ? [bar('護線', 1 - g.it.wear + .5, '-' + Math.round((1 - g.it.wear) * 100) + '%')] : [])];
+  if (g.kind === 'lure') return [bar('上鉤', g.it.cut / .5, '快 ' + Math.round(g.it.cut * 100) + '%')];
+  return [];
+}
+let boxSlot = 'rod', boxPick = null;
+function openBox(slot) {
+  if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
+  if (slot) { boxSlot = slot; boxPick = null; }
+  const d = el('div', 'tb');
+  // 身上的四件裝備
+  const slots = el('div', 'tb-slots');
+  for (const s of BOX_SLOTS) {
+    const cur = s.list().find(g => g.use) || s.list()[0];
+    const b = el('button', 'tb-slot' + (s.key === boxSlot ? ' on' : ''));
+    b.appendChild(el('div', 'tb-sn', s.name));
+    if (cur) b.appendChild(gearCanvas(cur.kind, cur.id));
+    b.appendChild(el('div', 'tb-nm', cur ? cur.it.name : '沒有'));
+    if (s.list().some(g => !S.seen[seenKey(g)])) b.appendChild(el('i', 'tb-new', '!'));
+    b.onclick = () => openBox(s.key);
+    slots.appendChild(b);
+  }
+  d.appendChild(slots);
+  // 持有的釣具
+  const list = BOX_SLOTS.find(s => s.key === boxSlot).list();
+  const pick = list.find(g => boxPick && seenKey(g) === boxPick) || list.find(g => g.use) || list[0];
+  const grid = el('div', 'tb-grid');
+  for (const g of list) {
+    const cell = el('button', 'tb-cell' + (g === pick ? ' sel' : '') + (g.use ? ' use' : ''));
+    cell.appendChild(gearCanvas(g.kind, g.id));
+    if (g.n) cell.appendChild(el('span', 'tb-cnt', g.n));
+    if (!S.seen[seenKey(g)]) cell.appendChild(el('i', 'tb-new', '!'));
+    // 點一下看說明，再點一下（或按「換上」）就裝上
+    cell.onclick = () => { if (boxPick === seenKey(g) && !g.use) { g.equip(); saveAll(); } boxPick = seenKey(g); S.seen[boxPick] = 1; saveAll(); openBox(); };
+    grid.appendChild(cell);
+  }
+  d.appendChild(grid);
+  // 說明卡
+  if (pick) {
+    S.seen[seenKey(pick)] = 1; saveAll();
+    const card = el('div', 'tb-card');
+    const h = el('div', 'tb-h'); h.appendChild(el('b', null, pick.it.name));
+    if (pick.use) h.appendChild(el('span', 'tb-using', '使用中'));
+    else { const eq = el('button', 'tb-eq', '換上'); eq.onclick = () => { pick.equip(); saveAll(); openBox(); }; h.appendChild(eq); }
+    card.appendChild(h);
+    gearStats(pick).forEach(r => card.appendChild(r));
+    const fl = gearFish(pick);
+    if (fl.length) {
+      card.appendChild(el('div', 'tb-sub', pick.kind === 'rod' ? (pick.id === 1 ? '拉得動的魚' : '換上這支才拉得動') : '容易釣到的魚'));
+      const row = el('div', 'tb-fish');
+      for (const f of fl.slice(0, 8)) {
+        const known = S.dex[f.id], cell = el('div', 'tb-f');
+        const c = fishCanvas(f.id, 1);
+        if (!known) {   // 還沒釣過：只看得到剪影
+          const x = c.getContext('2d'); x.globalCompositeOperation = 'source-in'; x.fillStyle = '#7f93bd'; x.fillRect(0, 0, c.width, c.height);
+        }
+        cell.appendChild(c); cell.appendChild(el('div', null, known ? f.name : '？？？'));
+        row.appendChild(cell);
+      }
+      card.appendChild(row);
+    }
+    const story = Array.isArray(GEAR_STORY[pick.kind]) ? GEAR_STORY[pick.kind][pick.id - 1] : GEAR_STORY[pick.id];
+    if (story) card.appendChild(el('div', 'tb-story', story));
+    d.appendChild(card);
+  }
+  openDlg('釣具箱', d);
+  $('dlg').classList.add('clear');
+  $('boxBtn').classList.toggle('dot', boxHasNew());
+}
+$('boxBtn').classList.toggle('dot', boxHasNew());
 
 // ================= 料理（海港餐廳） =================
 const METHODS = [
