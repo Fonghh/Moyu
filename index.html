@@ -267,6 +267,13 @@
   /* 搏鬥：只有提示文字和捲線器的出線米數，張力看竿子、釣線顏色和畫面邊緣 */
   #fight { background: rgba(0,0,0,.45); border: 0; box-shadow: none; color: #fff; text-align: center; padding: 6px 12px; border-radius: 10px; width: min(88%, 360px); }
   #fight .cue { font-size: 17px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  /* 大魚的誇張特效：畫面中間跳出大字、一閃白光 */
+  #bigcue { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none; font-size: 34px; font-weight: 900; color: #fff;
+    -webkit-text-stroke: 2px #2a2335; text-shadow: 0 4px 0 #2a2335, 0 0 18px rgba(255,200,60,.9); opacity: 0; letter-spacing: 2px; }
+  #bigcue.on { animation: cuePop 1.3s ease-out forwards; }
+  #bigcue.lv5 { color: #ff6b6b; font-size: 40px; text-shadow: 0 4px 0 #2a2335, 0 0 24px rgba(255,60,60,.9); }
+  @keyframes cuePop { 0% { opacity: 0; transform: scale(.3) rotate(-6deg); } 15% { opacity: 1; transform: scale(1.25) rotate(2deg); } 30% { transform: scale(1) rotate(0); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05) translateY(-20px); } }
+  #flashFx { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
   #fight .hpRow, #fight .durRow { display: flex; align-items: center; gap: 8px; }
   #fight .hpRow { margin-bottom: 2px; }
   #fight .durRow { font-size: 11px; margin: 3px 0 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -281,6 +288,70 @@
   #bossView { position: fixed; inset: 0; display: none; flex-direction: column; background: #fff; z-index: 20; }
   body.boss #bossView { display: flex; }
   #sheet { flex: 1; width: 100%; min-height: 0; display: block; }
+
+  /* ===== 遊戲介面統一風格：跟釣具箱一樣的半透明深藍面板、金色重點、格子＋說明卡 ===== */
+  #dlg .wb, #dlg .win { color: #eef3ff; }
+  #dlg .sect { color: #ffe066; border-bottom: 1px solid rgba(160,190,255,.3); letter-spacing: 1px; }
+  #dlg .money { color: rgba(238,243,255,.7); }
+  #dlg .money b { color: #ffe066; }
+  #dlg .bubble { background: rgba(255,255,255,.08); border: 1px solid rgba(160,190,255,.35); border-radius: 10px; color: #eef3ff; }
+  #dlg .bubble b { color: #ffe066; }
+  #dlg .npc canvas { background: radial-gradient(ellipse at 50% 40%, rgba(220,232,255,.35), rgba(0,0,0,.2) 75%); border: 1px solid rgba(255,224,102,.6); border-radius: 10px; }
+  #dlg table.xl td, #dlg table.xl th { border: 0; border-bottom: 1px solid rgba(160,190,255,.2); }
+  #dlg table.xl th { background: none; color: rgba(238,243,255,.6); font-size: 11px; }
+  #dlg table.xl td.desc, #dlg .own, #dlg .empty, #dlg .catch .meta { color: rgba(238,243,255,.62); }
+  #dlg .sbtn { background: #ffe066; color: #3a2a00; border-radius: 4px; font-weight: 700; padding: 3px 10px; }
+  #dlg .sbtn:disabled, #dlg .tb-eq:disabled { background: rgba(255,255,255,.15); color: rgba(255,255,255,.5) !important; cursor: default; }
+  #dlg .okBtn { background: #ffe066; color: #3a2a00; border-radius: 6px; font-weight: 700; }
+  #dlg .okBtn.alt { background: transparent; color: #ffe066; border: 1px solid #ffe066; }
+  #dlg .chip { background: rgba(255,255,255,.06); border: 1px solid rgba(160,190,255,.35); color: #eef3ff; border-radius: 14px; }
+  #dlg .chip.on { border-color: #ffe066; background: rgba(255,224,102,.15); color: #ffe066; }
+  #dlg .tabs2 { border-bottom: 1px solid rgba(160,190,255,.3); margin: 4px 0 8px; }
+  #dlg .tabs2 button { color: rgba(238,243,255,.65); flex: 1; padding: 6px 4px; }
+  #dlg .tabs2 button.on { background: none; border: 0; border-bottom: 2px solid #ffe066; color: #ffe066; margin-bottom: -1px; }
+  #dlg .up { color: #ff8a8a; }
+  #dlg .down { color: #8ac4ff; }
+  #dlg .buffs { color: #ffb36b; }
+  #dlg .catch canvas { background: radial-gradient(ellipse at 50% 50%, rgba(255,240,170,.5), rgba(120,160,255,.06) 70%); border: 1px solid rgba(255,224,102,.45); border-radius: 10px; }
+  #dlg .catch .price { color: #ffe066; font-size: 16px; }
+  #dlg .catch .new { background: #2f8cff; border-radius: 10px; margin: 0 0 6px; font-weight: 700; }
+  #dlg .catch canvas { display: block; margin: 0 auto; }
+  #dlg .catch .tb-story { margin: 10px 4px 0; }
+  #dlg .reel { background: rgba(0,0,0,.3); border: 2px solid #ffe066; border-radius: 10px; }
+  #dlg .rar { border-radius: 3px; }
+  .tb-cell canvas.fishc { aspect-ratio: 2 / 1; }
+  .tb-cell { color: #eef3ff; font-family: inherit; text-align: center; }
+  .tb-lbl { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .tb-price { position: absolute; left: 4px; bottom: 2px; font-size: 11px; font-weight: 700; color: #ffe066; text-shadow: 0 1px 2px #000; }
+  .tb-lbl ~ .tb-cnt, .tb-lbl ~ .tb-price { bottom: 17px; }
+  .tb-own { position: absolute; left: 3px; top: 2px; font-size: 10px; background: rgba(255,255,255,.2); padding: 0 4px; border-radius: 3px; }
+  .tb-hot { position: absolute; right: 3px; top: 2px; font-size: 11px; font-weight: 800; text-shadow: 0 1px 2px #000; }
+  .tb-fact { display: flex; gap: 8px; margin: 3px 0; }
+  .tb-fact span { width: 54px; flex: none; opacity: .7; }
+  .tb-fact b { font-weight: 600; }
+  .tb-card + .tb-grid { margin-top: 10px; }
+  .tb-h .rar { flex: none; }
+  .tb-quest { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(160,190,255,.3); border-radius: 8px; padding: 6px; margin: 6px 0; }
+  .tb-face { font-size: 26px; width: 36px; height: 36px; border-radius: 18px; background: rgba(255,224,102,.15); display: flex; align-items: center; justify-content: center; flex: none; }
+  .tb-qm { flex: 1; min-width: 0; font-size: 12px; }
+  .tb-qm b { color: #ffe066; }
+  .tb-qline { opacity: .85; line-height: 1.4; }
+  .tb-qr { color: #7ee081; font-weight: 700; }
+  .tb-qd { width: 56px; height: 28px; flex: none; }
+  .tb-prev { display: block; width: 168px; height: 84px; margin: 2px auto 4px; }
+  /* 提示訊息、地圖 */
+  .note { background: rgba(16,26,52,.86); border: 1px solid rgba(160,190,255,.45); color: #eef3ff; border-radius: 10px; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+  #miniBox { background: rgba(16,26,52,.78); border: 1px solid rgba(160,190,255,.5); border-radius: 8px; padding: 2px 4px 4px; }
+  #miniBox .mt { color: #ffe066; font-weight: 700; }
+  #mini { border-radius: 4px; }
+  #dlg .bigmap { border: 1px solid rgba(160,190,255,.5); border-radius: 8px; }
+  #dlg .legend i { border: 0; border-radius: 3px; }
+  #dlg .pos { color: #ff8a8a; }
+  /* 畫面上的按鈕、資訊、搏鬥面板也用同一種深藍＋金邊 */
+  #boxBtn, #homeBtn, #bagBtn { background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
+  #info { background: rgba(16,26,52,.72); border: 1px solid rgba(160,190,255,.4); }
+  #fight { background: rgba(16,26,52,.8); border: 1px solid rgba(160,190,255,.45); }
+  #fight .cue { color: #fff; }
 </style>
 </head>
 <body>
@@ -297,7 +368,9 @@
     <div class="meta"><span id="fline"></span>・<span id="flv"></span></div>
   </div>
   <div id="danger"></div>
-  <div id="miniBox" title="區域分布圖"><div class="mt">區域分布</div><canvas id="mini"></canvas></div>
+  <div id="bigcue"></div>
+  <div id="flashFx"></div>
+  <div id="miniBox" title="地圖"><div class="mt">地圖</div><canvas id="mini"></canvas></div>
   <button id="boxBtn" title="釣具箱"><canvas id="boxIcon" width="12" height="12"></canvas></button>
   <button id="homeBtn" title="回城"><canvas id="homeIcon" width="12" height="12"></canvas></button>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
@@ -346,7 +419,7 @@ const CFG = {
   castMin: 2, castMax: 26,     // 拋竿距離（公尺）：最小力道～最大力道
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
   biteWin: 2.4,          // 上鉤後可以拉竿的秒數
-  landTime: 1.9, landFly: 1.4,  // 釣到後的動畫秒數、把魚吊上來的秒數
+  landFly: 1.4,          // 把魚吊上來的秒數（之後依掙扎方式再演 0.5～2.4 秒）
   reelUp: 0.45,          // 按住時收線進度（每秒）
   tensUp: 0.55,          // 按住時張力上升（每秒，乘上魚的力氣）
   tensDown: 0.9,         // 放開時張力下降（每秒）
@@ -848,7 +921,7 @@ let castT = 0, castDur = 0, chargeT = 0, waitT = 0, biteT = 0, F = null, holding
 let catchShow = null;   // 剛釣到的魚，舉在頭上
 let L = null;           // 釣到後的動畫資料
 let boss = false, gameT = 0;
-const parts = [];
+const parts = [], PART_N = 360;
 let bag = [];
 try { bag = JSON.parse(localStorage.getItem('moyu.bag') || '[]').filter(b => FISH_BY[b.id]); } catch (e) {}
 // 金錢、裝備、圖鑑
@@ -1059,13 +1132,16 @@ function press() {
 // 魚影大小對各稀有度的機率倍率：小影多小魚，大影多稀有大魚
 const SZ_MULT = [[2, 1, .2, .1, .05], [1, 1, 1, 1, 1], [.3, 1, 3, 4, 5]];
 const SZ_RATIO = [() => Math.pow(Math.random(), 2.5) * .6, () => Math.pow(Math.random(), 1.8), () => .4 + .6 * Math.pow(Math.random(), .8)];
+// 魚影大小要對上釣到的東西：小魚影是小魚（偶爾撈到雜物、奇物），大魚影只會是大型魚
+const sizeClass = f => { const m = (f.size[0] + f.size[1]) / 2; return m < 30 ? 0 : m < 90 ? 1 : 2; };
+const SIZE_FIT = [1, .15, .01];
 function pickFish(water, sz) {
   const list = FISH.filter(f => f.water.includes(water)), lure = LURE_BY[S.bait];
   const ws = list.map(f => {
     if (f.mutant) return 0;
-    if (f.junk || f.special) return f.w;
+    if (f.junk || f.special) return sz === 0 ? f.w : sz === 1 ? f.w * .2 : 0;
     if (ONLY_BAIT[f.id] && S.bait !== ONLY_BAIT[f.id]) return 0;
-    const base = RAR[f.rar].w * SZ_MULT[sz][f.rar] * (f.rar >= 2 && hasBuff('sashimi') ? 1.5 : 1);   // 生魚片：稀有魚多
+    const base = RAR[f.rar].w * SZ_MULT[sz][f.rar] * SIZE_FIT[Math.abs(sizeClass(f) - sz)] * (f.rar >= 2 && hasBuff('sashimi') ? 1.5 : 1);   // 生魚片：稀有魚多
     // 誘餌只有掠食魚會咬；鐵板特別吸引旗魚
     if (lure) return f.pred && lure.waters.includes(water) ? base * 3 * (lure.id === 'jig' && f.id === 'marlin' ? 2 : 1) : 0;
     return base * (f.bait.includes(S.bait) ? 3 : .4);
@@ -1122,7 +1198,10 @@ function endFight(ok, msg) {
   const isNew = !S.dex[item.id];
   bag.push(item); addDex(item); saveAll();
   // 先播拉竿、魚飛起來甩尾、落到手上的動畫，再跳出結果
-  L = { f: F.f, size: F.size, sz: F.sz, isNew, where: TILES[spot.t].name, item, t: 0 };
+  // 拉上來之後魚怎麼掙扎：在手上亂甩、摔在地上彈跳、差點從手上跳走（隨機）
+  const mode = flatItem(F.f) ? 'wobble' : F.lv >= 4 ? pick(['thrash', 'escape', 'flop']) : pick(['thrash', 'flop', 'escape']);
+  const hold = { wobble: .5, thrash: 1.6, flop: 2.4, escape: 2.1 }[mode];
+  L = { f: F.f, size: F.size, sz: F.sz, lv: F.lv, isNew, where: TILES[spot.t].name, item, t: 0, mode, dur: CFG.landFly + hold, hop: -1 };
   state = 'land';
   splash(spot.x, spot.y, 16);
   F = null;
@@ -1132,7 +1211,7 @@ function endFight(ok, msg) {
 const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
 function openDlg(title, body) {
   const b = $('dlgBody');
-  $('dlg').classList.remove('clear');
+  $('dlg').classList.add('clear');   // 所有視窗都是同一種半透明深藍風格
   // 同一個視窗重畫時保留捲動位置（例如連續買東西）
   const keep = $('dlg').classList.contains('on') && $('dlgTitle').textContent === title ? b.scrollTop : 0;
   $('dlgTitle').textContent = title;
@@ -1155,19 +1234,6 @@ function rarTag(f) {
   return s;
 }
 
-function showCatch(f, size, isNew, where, item) {
-  const d = el('div', 'catch');
-  d.appendChild(fishCanvas(f.id, 4));
-  const n = el('div', 'fn', f.name + ' ');
-  n.appendChild(rarTag(f)); d.appendChild(n);
-  d.appendChild(el('div', 'meta', f.special || f.junk ? where : `${size} cm ・ ${where}`));
-  if (f.desc) d.appendChild(el('div', 'meta', f.desc));
-  d.appendChild(el('div', 'price', `市價約 $${fmtN(priceOf(item))}`));
-  if (isNew && !f.junk) d.appendChild(el('div', 'new', f.special ? '新發現！' : f.mutant ? '新變種！' : '新魚種！'));
-  const b = el('button', 'okBtn', '放進背包');
-  b.onclick = closeDlg; d.appendChild(b);
-  openDlg(f.mutant ? '釣到變種怪魚！' : f.special ? '撈到奇怪的東西！' : f.junk ? '釣到了……' : '釣到了！', d);
-}
 
 function moneyLine() {
   const m = el('div', 'money');
@@ -1177,93 +1243,6 @@ function moneyLine() {
 }
 
 // ================= 背包、圖鑑 =================
-function openBag(tab) {
-  if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
-  tab = tab || 'bag';
-  const dexList = FISH.filter(f => !f.noDex);
-  const d = el('div');
-  d.appendChild(moneyLine());
-  const bl = buffList();
-  if (bl.length) d.appendChild(el('div', 'buffs', '目前加成：' + bl.join('、')));
-  // 選擇這次下竿要用的餌
-  d.appendChild(el('div', 'sect', '使用餌料'));
-  const chips = el('div', 'chips');
-  for (const b of BAITS) {
-    const n = b.id === 'bread' ? null : (S.baits[b.id] || 0);
-    if (n === 0) continue;
-    const c = el('button', 'chip' + (S.bait === b.id ? ' on' : ''), b.name + (n == null ? '' : ' ×' + n));
-    c.onclick = () => { S.bait = b.id; saveAll(); openBag(tab); };
-    chips.appendChild(c);
-  }
-  for (const l of LURES) {
-    if (!S.lures[l.id]) continue;
-    const c = el('button', 'chip' + (S.bait === l.id ? ' on' : ''), l.name + '（誘餌）');
-    c.onclick = () => { S.bait = l.id; saveAll(); openBag(tab); };
-    chips.appendChild(c);
-  }
-  d.appendChild(chips);
-  const tabs = el('div', 'tabs2');
-  for (const [k, name] of [['bag', `漁獲 ${bag.length}`], ['dex', `圖鑑 ${dexList.filter(f => S.dex[f.id]).length}/${dexList.length}`]]) {
-    const b = el('button', tab === k ? 'on' : '', name); b.onclick = () => openBag(k); tabs.appendChild(b);
-  }
-  d.appendChild(tabs);
-  const body = el('div', 'bagGrid');
-  if (tab === 'bag') {
-    const groups = {};
-    for (const b of bag) {
-      if (b.dish) continue;
-      const g = groups[b.id] || (groups[b.id] = { n: 0, max: 0, v: 0 });
-      g.n++; g.max = Math.max(g.max, b.size); g.v += priceOf(b);
-    }
-    const ids = Object.keys(groups).sort((a, b) => {
-      const fa = FISH_BY[a], fb = FISH_BY[b];
-      return (fb.junk ? -1 : fb.rar) - (fa.junk ? -1 : fa.rar) || FISH.indexOf(fa) - FISH.indexOf(fb);
-    });
-    if (!ids.length && !bag.length) { body.className = 'empty'; body.textContent = '還沒有漁獲，去水邊試試吧！'; }
-    for (const id of ids) {
-      const f = FISH_BY[id], g = groups[id];
-      const c = el('div', 'card');
-      c.appendChild(fishCanvas(id, 3));
-      c.appendChild(el('div', 'n', f.name));
-      c.appendChild(rarTag(f));
-      if (!f.special && !f.junk) c.appendChild(el('div', 's', `最大 ${g.max} cm`));
-      c.appendChild(el('div', 's', `估價 $${fmtN(g.v)}`));
-      c.appendChild(el('div', 'c', '×' + g.n));
-      body.appendChild(c);
-    }
-  } else {
-    // 圖鑑：沒釣過的顯示剪影和出沒地點
-    for (const f of dexList) {
-      const known = S.dex[f.id];
-      const c = el('div', 'card' + (known ? '' : ' unk'));
-      c.appendChild(fishCanvas(f.id, 3));
-      c.appendChild(el('div', 'n', known ? f.name : '？？？'));
-      if (known) {
-        c.appendChild(rarTag(f));
-        c.appendChild(el('div', 's', f.special || f.junk ? `撈到 ${known.n} 次` : `最大 ${known.max} cm`));
-      } else c.appendChild(el('div', 's', '出沒：' + f.water.map(w => WATER_NAME[w]).join('、') + (f.mutant ? '・暴風雨' : '')));
-      body.appendChild(c);
-    }
-  }
-  d.appendChild(body);
-  // 料理：可以吃（得到加成），要賣請拿去餐廳
-  const dishes = bag.filter(b => b.dish);
-  if (tab === 'bag' && dishes.length) {
-    d.appendChild(el('div', 'sect', '料理（吃了有加成，也可以拿去餐廳賣）'));
-    const g2 = el('div', 'bagGrid');
-    for (const b of dishes) {
-      const c = el('div', 'card');
-      c.appendChild(dishCanvas(b, 3));
-      c.appendChild(el('div', 'n', dishName(b)));
-      c.appendChild(el('div', 's', METHOD_BY[b.dish].buff));
-      const bt = el('button', 'sbtn', '吃'); bt.onclick = () => { eatDish(b); openBag('bag'); };
-      c.appendChild(bt);
-      g2.appendChild(c);
-    }
-    d.appendChild(g2);
-  }
-  openDlg('背包', d);
-}
 
 // ================= 商店與對話 =================
 const NPC = {
@@ -1335,46 +1314,6 @@ function xlTable(heads) {
 }
 function iconCell(id) { const td = el('td'); td.appendChild(fishCanvas(id, 2)); return td; }
 
-function marketBody(d) {
-  const left = HOT_PERIOD - Date.now() % HOT_PERIOD;
-  d.appendChild(el('div', 'sect', `今日行情（${Math.ceil(left / 60000)} 分鐘後更新）`));
-  const t = xlTable(['', '品名', '行情']);
-  for (const h of hotList()) {
-    const tr = el('tr');
-    tr.appendChild(iconCell(h.id));
-    tr.appendChild(el('td', null, FISH_BY[h.id].name));
-    tr.appendChild(el('td', 'num ' + (h.m >= 1 ? 'up' : 'down'), (h.m >= 1 ? '▲ ×' : '▼ ×') + h.m));
-    t.appendChild(tr);
-  }
-  d.appendChild(t);
-  d.appendChild(el('div', 'sect', '收購（料理請拿去餐廳賣）'));
-  const raw = bag.filter(b => !b.dish);
-  if (!raw.length) { d.appendChild(el('div', 'empty', '背包裡沒有生鮮可以賣，先去釣幾尾再來。')); return; }
-  const items = raw.map(b => ({ b, p: priceOf(b) })).sort((a, b) => b.p - a.p);
-  // 全部賣出放在清單上面，不用捲到底
-  const row = el('div', 'btnrow');
-  const all = el('button', 'okBtn', `全部賣出 $${fmtN(items.reduce((a, b) => a + b.p, 0))}`);
-  all.onclick = () => sellItems(raw.slice());
-  const common = raw.filter(b => { const f = FISH_BY[b.id]; return f.junk || (!f.special && f.rar <= 1); });
-  const cb = el('button', 'okBtn alt', `只賣普通、少見（${common.length}）`);
-  cb.disabled = !common.length;
-  cb.onclick = () => sellItems(common);
-  row.append(all, cb);
-  d.appendChild(row);
-  const t2 = xlTable(['', '品名', '尺寸', '價格', '']);
-  for (const it of items) {
-    const f = FISH_BY[it.b.id], m = hotMult(f.id), tr = el('tr');
-    tr.appendChild(iconCell(f.id));
-    tr.appendChild(el('td', null, f.name));
-    tr.appendChild(el('td', 'num', f.special || f.junk ? '—' : String(it.b.size)));
-    tr.appendChild(el('td', 'num' + (m > 1 ? ' up' : m < 1 ? ' down' : ''), '$' + fmtN(it.p)));
-    const td = el('td'), sb = el('button', 'sbtn', '賣');
-    sb.onclick = () => sellItems([it.b]);
-    td.appendChild(sb); tr.appendChild(td);
-    t2.appendChild(tr);
-  }
-  d.appendChild(t2);
-}
 
 function sellItems(list) {
   if (!list.length) return;
@@ -1394,86 +1333,7 @@ function sellItems(list) {
   openShop('market', line);
 }
 
-function tackleBody(d) {
-  d.appendChild(el('div', 'sect', '釣竿（等級越高，拉得動越強的魚）'));
-  const t = xlTable(['品名', '等級', '價格', '']);
-  for (const r of RODS) {
-    const tr = el('tr');
-    const nm = el('td'); nm.appendChild(gearCanvas('rod', r.lv, 'ticon')); nm.append(r.name); tr.appendChild(nm);
-    tr.appendChild(el('td', 'num', 'Lv' + r.lv));
-    tr.appendChild(el('td', 'num', r.price ? '$' + fmtN(r.price) : '—'));
-    const td = el('td');
-    if (r.lv <= S.own.rod) td.appendChild(el('span', 'own', r.lv === S.rod ? '使用中' : '已擁有'));
-    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(r.price, () => { S.rod = S.own.rod = r.lv; }, `好眼光！${r.name}會陪你很久。`); td.appendChild(b); }
-    tr.appendChild(td); t.appendChild(tr);
-  }
-  d.appendChild(t);
-  // 釣線、捲線器：一樣是等級制，買了就換上
-  for (const [title, list, key, info, say] of [
-    ['釣線（耐久越高，越不怕魚甩頭、跳水）', LINES, 'line', l => '耐久 ' + fmtN(l.hp), l => `${l.name}耐久 ${fmtN(l.hp)}，大魚也不怕！`],
-    ['捲線器（收線更快）', REELS, 'reel', r => r.desc, r => `${r.name}裝好了，收線咻咻咻！`],
-  ]) {
-    d.appendChild(el('div', 'sect', title));
-    const tb = xlTable(['品名', '性能', '價格', '']);
-    for (const it of list) {
-      const tr = el('tr');
-      const nm = el('td'); nm.appendChild(gearCanvas(key, it.lv, 'ticon')); nm.append(it.name); tr.appendChild(nm);
-      tr.appendChild(el('td', 'desc', info(it)));
-      tr.appendChild(el('td', 'num', it.price ? '$' + fmtN(it.price) : '—'));
-      const td = el('td');
-      if (it.lv <= S.own[key]) td.appendChild(el('span', 'own', it.lv === S[key] ? '使用中' : '已擁有'));
-      else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(it.price, () => { S[key] = S.own[key] = it.lv; }, say(it)); td.appendChild(b); }
-      tr.appendChild(td); tb.appendChild(tr);
-    }
-    d.appendChild(tb);
-  }
-  d.appendChild(el('div', 'sect', '餌料（每次下竿用掉一個）'));
-  const t2 = xlTable(['品名', '適合', '價格', '持有', '']);
-  for (const b of BAITS) {
-    const tr = el('tr');
-    const nm = el('td'); nm.appendChild(gearCanvas('bait', b.id, 'ticon')); nm.append(b.name); tr.appendChild(nm);
-    tr.appendChild(el('td', 'desc', b.desc));
-    tr.appendChild(el('td', 'num', b.price ? '$' + b.price : '免費'));
-    tr.appendChild(el('td', 'num', b.id === 'bread' ? '∞' : String(S.baits[b.id] || 0)));
-    const td = el('td', 'nowrap');
-    if (b.price) for (const n of [1, 10]) {
-      const bt = el('button', 'sbtn', '+' + n);
-      bt.onclick = () => buy(b.price * n, () => { S.baits[b.id] = (S.baits[b.id] || 0) + n; S.bait = b.id; }, `${b.name} ×${n}，拿去！已經幫你換上了。`);
-      td.appendChild(bt);
-    }
-    tr.appendChild(td); t2.appendChild(tr);
-  }
-  d.appendChild(t2);
-}
 
-function tackleBody2(d) {
-  d.appendChild(el('div', 'sect', '誘餌（買一次一直用，魚比較快上鉤，但只有掠食魚會咬）'));
-  const t = xlTable(['品名', '適合', '價格', '']);
-  for (const l of LURES) {
-    const tr = el('tr');
-    const nm = el('td'); nm.appendChild(gearCanvas('lure', l.id, 'ticon')); nm.append(l.name); tr.appendChild(nm);
-    tr.appendChild(el('td', 'desc', l.desc));
-    tr.appendChild(el('td', 'num', '$' + fmtN(l.price)));
-    const td = el('td');
-    if (S.lures[l.id]) td.appendChild(el('span', 'own', '已擁有'));
-    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(l.price, () => { S.lures[l.id] = true; S.bait = l.id; }, `${l.name}拿去，已經幫你裝上了。線斷掉的時候可能會弄丟喔！`); td.appendChild(b); }
-    tr.appendChild(td); t.appendChild(tr);
-  }
-  d.appendChild(t);
-  d.appendChild(el('div', 'sect', '船（走進水裡自動上船）'));
-  const t2 = xlTable(['品名', '可到', '價格', '']);
-  for (const bt of BOATS) {
-    const tr = el('tr');
-    tr.appendChild(el('td', null, bt.name));
-    tr.appendChild(el('td', 'desc', bt.desc));
-    tr.appendChild(el('td', 'num', bt.price ? '$' + fmtN(bt.price) : '贈送'));
-    const td = el('td');
-    if (bt.lv <= S.boat) td.appendChild(el('span', 'own', bt.lv === S.boat ? '使用中' : '已擁有'));
-    else { const b = el('button', 'sbtn', '購買'); b.onclick = () => buy(bt.price, () => { S.boat = bt.lv; }, `${bt.name}開得又快又穩，遠洋就靠它了！`); td.appendChild(b); }
-    tr.appendChild(td); t2.appendChild(tr);
-  }
-  d.appendChild(t2);
-}
 
 // ================= 釣具箱：身上的裝備、持有的釣具、說明卡 =================
 // 每樣釣具的小故事
@@ -1583,6 +1443,20 @@ function gearImg(kind, id) {
       blob(66, 22, 1.8, 1.8, '#fff'); hook(72, 22);
     }
   }
+  if (kind === 'boat') {
+    if (id === 1) {   // 舢舨：木船＋兩支槳
+      x.beginPath(); x.moveTo(8, 26); x.lineTo(72, 26); x.lineTo(62, 38); x.lineTo(18, 38); x.closePath(); x.fillStyle = '#a8703a'; x.fill(); stroke();
+      x.strokeStyle = '#7a4a22'; x.lineWidth = .7; for (const y of [30, 34]) { x.beginPath(); x.moveTo(13, y); x.lineTo(67, y); x.stroke(); }
+      for (const sx of [28, 52]) { x.beginPath(); x.moveTo(sx, 20); x.lineTo(sx + (sx < 40 ? -14 : 14), 42); x.strokeStyle = ink; x.lineWidth = 2.6; x.stroke(); x.strokeStyle = '#d9a066'; x.lineWidth = 1.6; x.stroke(); }
+    } else {          // 漁船：白船身、紅線、駕駛艙、旗子
+      x.beginPath(); x.moveTo(4, 28); x.lineTo(76, 24); x.lineTo(66, 40); x.lineTo(12, 40); x.closePath(); x.fillStyle = '#f4f6f8'; x.fill(); stroke();
+      x.fillStyle = '#d9483b'; x.fillRect(9, 32, 62, 2.5);
+      x.beginPath(); x.rect(38, 12, 20, 14); x.fillStyle = '#e9edf2'; x.fill(); stroke(.8);
+      x.fillStyle = '#9fe0ff'; for (const wx of [41, 50]) { x.fillRect(wx, 15, 6, 5); }
+      x.beginPath(); x.moveTo(30, 26); x.lineTo(30, 4); stroke(1); x.beginPath(); x.moveTo(30, 4); x.lineTo(40, 7); x.lineTo(30, 10); x.closePath(); x.fillStyle = '#ffd34d'; x.fill(); stroke(.6);
+    }
+    x.fillStyle = 'rgba(120,190,255,.5)'; x.fillRect(0, 41, 80, 7);   // 水面
+  }
   return (GEAR_IMG[key] = c);
 }
 function gearCanvas(kind, id, cls) {
@@ -1681,10 +1555,372 @@ function openBox(slot) {
     d.appendChild(card);
   }
   openDlg('釣具箱', d);
-  $('dlg').classList.add('clear');
   $('boxBtn').classList.toggle('dot', boxHasNew());
 }
 $('boxBtn').classList.toggle('dot', boxHasNew());
+
+// ================= 介面統一風格：格子＋說明卡＋小故事（跟釣具箱一樣） =================
+const FISH_STORY = {
+  mosq: '池塘邊最常見的小魚，肚子圓滾滾的，小朋友撈魚的第一隻。',
+  tilapia: '什麼水都住得下，生命力超強，台灣人的老朋友。',
+  crucian: '喜歡在水草邊晃來晃去，麵包屑丟下去馬上圍過來。',
+  koi: '公園池塘的大明星，紅白花紋一條一個樣。',
+  goldkoi: '全身金光閃閃，據說釣到的人會發大財。',
+  zacco: '溪裡的小霸王，雄魚發情時身上會出現彩色條紋。',
+  ayu: '吃石頭上的青苔長大，烤起來有西瓜的香味。',
+  catfish: '白天躲在石縫裡，晚上才出來覓食，鬍鬚是牠的雷達。',
+  salmon: '冰河時期留下來的國寶魚，只住在最乾淨的高山溪流。',
+  scad: '成群在海裡游的小魚，鹽烤最對味。',
+  porgy: '聰明又多疑，海邊釣客的頭號目標。',
+  puffer: '一緊張就把自己吹成一顆球，內臟有毒，別亂吃。',
+  grouper: '躲在礁石洞裡的大嘴巴，一咬餌就往洞裡鑽。',
+  mahi: '在海面追著飛魚跑，頭大大的，游起來像一道閃電。',
+  tuna: '海裡的跑車，一上鉤就往深海狂奔，拉到手軟。',
+  marlin: '長長的劍嘴、巨大的背鰭，海釣人一生的夢想。',
+  oarfish: '傳說中的「地震魚」，長得像緞帶，很少浮上來。',
+  sunfish: '又圓又扁、像一顆漂浮的大臉，常常躺在海面曬太陽。',
+  whaleshark: '世界上最大的魚，脾氣卻很溫和，只吃小浮游生物。',
+  coelacanth: '活化石！四億年前就長這樣，科學家以為早就絕種了。',
+  boot: '不知道是誰的靴子，裡面還住了一隻小螃蟹。',
+};
+const RAR_STORY = ['到處都看得到的常客。', '不太常見，釣到算你運氣好。', '稀有魚種，老釣客也不一定見過。', '史詩級的大傢伙，釣到可以炫耀一整年。', '傳說中的魚，真的存在嗎？'];
+const fishStory = f => f.desc || FISH_STORY[f.id] || RAR_STORY[f.rar] || '';
+// 喜歡什麼餌（誘餌只寫一次）
+function fishBaits(f) {
+  const out = (LIKES[f.id] || []).map(id => BAIT_BY[id].name);
+  if (f.pred) out.push('誘餌');
+  return out;
+}
+// 剪影（還沒釣過的魚）
+function fishSil(id, scale) {
+  const c = fishCanvas(id, scale), x = c.getContext('2d');
+  x.globalCompositeOperation = 'source-in'; x.fillStyle = '#7f93bd'; x.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+// 一格：圖片＋名字，可以加數量、價格、標記
+function gridCell(canvas, o = {}) {
+  const c = el(o.btn === false ? 'div' : 'button', 'tb-cell' + (o.sel ? ' sel' : '') + (o.use ? ' use' : ''));
+  if (canvas) { if (o.fish) canvas.classList.add('fishc'); c.appendChild(canvas); }
+  if (o.name != null) c.appendChild(el('div', 'tb-lbl', o.name));
+  if (o.cnt) c.appendChild(el('span', 'tb-cnt', o.cnt));
+  if (o.price) c.appendChild(el('span', 'tb-price', o.price));
+  if (o.isNew) c.appendChild(el('i', 'tb-new', '!'));
+  if (o.tag) c.appendChild(o.tag);
+  if (o.onclick) c.onclick = o.onclick;
+  return c;
+}
+const tbGrid = (cols = 3) => { const g = el('div', 'tb-grid'); g.style.gridTemplateColumns = `repeat(${cols}, 1fr)`; return g; };
+// 魚的說明卡：名字、稀有度、出沒、喜歡的餌、小故事（沒釣過的只看得到出沒地點）
+function fishCard(f, o = {}) {
+  const known = o.known !== false, card = el('div', 'tb-card');
+  const h = el('div', 'tb-h'); h.appendChild(el('b', null, known ? f.name : '？？？'));
+  if (known && !f.noDex) h.appendChild(rarTag(f));
+  if (o.action) h.appendChild(o.action);
+  card.appendChild(h);
+  const facts = [];
+  if (f.water && f.water.length) facts.push(['出沒', f.water.map(w => WATER_NAME[w]).join('、') + (f.mutant ? '・暴風雨' : '')]);
+  if (known && !f.special && !f.junk && !f.mutant) { const bs = fishBaits(f); if (bs.length) facts.push(['愛吃', bs.join('、')]); }
+  if (known && !f.special && !f.junk) facts.push(['力量', 'Lv' + fishLv(f, 0) + (f.mutant ? '' : '～' + Math.min(5, fishLv(f, 0) + 1))]);
+  for (const [k, v] of o.extra || []) facts.push([k, v]);
+  for (const [k, v] of facts) { const r = el('div', 'tb-fact'); r.appendChild(el('span', null, k)); r.appendChild(el('b', null, v)); card.appendChild(r); }
+  card.appendChild(el('div', 'tb-story', known ? fishStory(f) : '還沒釣過，不知道是什麼樣的魚……'));
+  return card;
+}
+
+// ---- 釣到了 ----
+function showCatch(f, size, isNew, where, item) {
+  const d = el('div', 'catch');
+  if (isNew && !f.junk) d.appendChild(el('div', 'new', f.special ? '新發現！' : f.mutant ? '新變種！' : '新魚種！'));
+  d.appendChild(fishCanvas(f.id, 4));
+  const n = el('div', 'fn', f.name + ' ');
+  n.appendChild(rarTag(f)); d.appendChild(n);
+  d.appendChild(el('div', 'meta', f.special || f.junk ? where : `${size} cm ・ ${where}`));
+  d.appendChild(el('div', 'price', `市價約 $${fmtN(priceOf(item))}`));
+  d.appendChild(el('div', 'tb-story', fishStory(f)));
+  const b = el('button', 'okBtn', '放進背包');
+  b.onclick = closeDlg; d.appendChild(b);
+  openDlg(f.mutant ? '釣到變種怪魚！' : f.special ? '撈到奇怪的東西！' : f.junk ? '釣到了……' : '釣到了！', d);
+}
+
+// ---- 背包、圖鑑 ----
+let bagPick = null;
+function openBag(tab) {
+  if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
+  if (typeof tab === 'string' && tab !== openBag.tab) bagPick = null;
+  tab = openBag.tab = typeof tab === 'string' ? tab : openBag.tab || 'bag';
+  const dexList = FISH.filter(f => !f.noDex);
+  const d = el('div');
+  d.appendChild(moneyLine());
+  const bl = buffList();
+  if (bl.length) d.appendChild(el('div', 'buffs', '目前加成：' + bl.join('、')));
+  const tabs = el('div', 'tabs2');
+  for (const [k, name] of [['bag', `漁獲 ${bag.filter(b => !b.dish).length}`], ['dish', `料理 ${bag.filter(b => b.dish).length}`], ['dex', `圖鑑 ${dexList.filter(f => S.dex[f.id]).length}/${dexList.length}`]]) {
+    const b = el('button', tab === k ? 'on' : '', name); b.onclick = () => openBag(k); tabs.appendChild(b);
+  }
+  d.appendChild(tabs);
+  const grid = tbGrid(3);
+  let card = null;
+  if (tab === 'bag') {
+    const groups = {};
+    for (const b of bag) {
+      if (b.dish) continue;
+      const g = groups[b.id] || (groups[b.id] = { n: 0, max: 0, v: 0 });
+      g.n++; g.max = Math.max(g.max, b.size); g.v += priceOf(b);
+    }
+    const ids = Object.keys(groups).sort((a, b) => {
+      const fa = FISH_BY[a], fb = FISH_BY[b];
+      return (fb.junk ? -1 : fb.rar) - (fa.junk ? -1 : fa.rar) || FISH.indexOf(fa) - FISH.indexOf(fb);
+    });
+    if (!ids.length) d.appendChild(el('div', 'empty', '還沒有漁獲，去水邊試試吧！'));
+    const sel = ids.includes(bagPick) ? bagPick : ids[0];
+    for (const id of ids) {
+      const f = FISH_BY[id], g = groups[id];
+      grid.appendChild(gridCell(fishCanvas(id, 2), { fish: true, name: f.name, cnt: '×' + g.n, price: '$' + fmtN(g.v), sel: id === sel, onclick: () => { bagPick = id; openBag(); } }));
+    }
+    if (sel) { const f = FISH_BY[sel], g = groups[sel]; card = fishCard(f, { extra: [...(f.special || f.junk ? [] : [['最大', g.max + ' cm']]), ['估價', `$${fmtN(g.v)}（${g.n} 件）`]] }); }
+  } else if (tab === 'dish') {
+    // 料理：吃了有加成，要賣請拿去餐廳
+    const dishes = bag.filter(b => b.dish);
+    if (!dishes.length) d.appendChild(el('div', 'empty', '還沒有料理，拿魚去海港餐廳請阿德師做吧。'));
+    const sel = dishes.includes(bagPick) ? bagPick : dishes[0];
+    for (const b of dishes) grid.appendChild(gridCell(dishCanvas(b, 2), { fish: true, name: dishName(b), price: '$' + fmtN(priceOf(b)), sel: b === sel, onclick: () => { bagPick = b; openBag(); } }));
+    if (sel) {
+      const eat = el('button', 'tb-eq', '吃'); eat.onclick = () => { eatDish(sel); bagPick = null; openBag('dish'); };
+      card = el('div', 'tb-card');
+      const h = el('div', 'tb-h'); h.appendChild(el('b', null, dishName(sel))); h.appendChild(eat); card.appendChild(h);
+      for (const [k, v] of [['加成', METHOD_BY[sel.dish].buff], ['價值', `$${fmtN(priceOf(sel))}（餐廳收購）`]]) { const r = el('div', 'tb-fact'); r.appendChild(el('span', null, k)); r.appendChild(el('b', null, v)); card.appendChild(r); }
+      card.appendChild(el('div', 'tb-story', DISH_STORY[sel.dish]));
+    }
+  } else {
+    // 圖鑑：沒釣過的是剪影
+    const sel = dexList.find(f => f.id === bagPick) || dexList[0];
+    for (const f of dexList) {
+      const known = S.dex[f.id];
+      grid.appendChild(gridCell(known ? fishCanvas(f.id, 2) : fishSil(f.id, 2), { fish: true, name: known ? f.name : '？？？', sel: f === sel, onclick: () => { bagPick = f.id; openBag(); } }));
+    }
+    const k = S.dex[sel.id];
+    card = fishCard(sel, { known: !!k, extra: k ? [[sel.special || sel.junk ? '撈到' : '最大', sel.special || sel.junk ? k.n + ' 次' : k.max + ' cm（釣過 ' + k.n + ' 次）']] : [] });
+  }
+  if (card) d.appendChild(card);
+  d.appendChild(grid);
+  openDlg('背包', d);
+}
+const DISH_STORY = {
+  grill: '炭火慢慢烤，外皮焦香、裡面多汁。吃完手特別有力，收線更快。',
+  fry: '裹上薄薄的麵衣酥炸，香味飄到海上，魚都被吸引過來了。',
+  soup: '熬了一整個下午的鮮魚湯，喝完心情平靜，拉魚不容易緊張。',
+  sashimi: '最新鮮的部位切成薄片，吃完眼睛特別亮，稀有魚更常出現。',
+};
+
+// ---- 釣具行：分類格子＋說明卡＋購買 ----
+const BOAT_STORY = ['兩支槳的小木船，慢慢划也能到近海。', '有駕駛艙和引擎的白色漁船，深海、遠洋都去得了。'];
+let shopTab = 'rod', shopPick = null;
+function shopItems(tab) {
+  const own = (have, use, equip) => ({ have, use, equip });
+  if (tab === 'rod') return RODS.map(r => ({ kind: 'rod', id: r.lv, it: r, price: r.price, ...own(r.lv <= S.own.rod, S.rod === r.lv, () => { S.rod = r.lv; }), give: () => { S.rod = S.own.rod = r.lv; }, say: `好眼光！${r.name}會陪你很久。` }));
+  if (tab === 'line') return LINES.map(l => ({ kind: 'line', id: l.lv, it: l, price: l.price, ...own(l.lv <= S.own.line, S.line === l.lv, () => { S.line = l.lv; }), give: () => { S.line = S.own.line = l.lv; }, say: `${l.name}耐久 ${fmtN(l.hp)}，大魚也不怕！` }));
+  if (tab === 'reel') return REELS.map(r => ({ kind: 'reel', id: r.lv, it: r, price: r.price, ...own(r.lv <= S.own.reel, S.reel === r.lv, () => { S.reel = r.lv; }), give: () => { S.reel = S.own.reel = r.lv; }, say: `${r.name}裝好了，收線咻咻咻！` }));
+  if (tab === 'bait') return BAITS.map(b => ({ kind: 'bait', id: b.id, it: b, price: b.price, bait: true, n: b.id === 'bread' ? '∞' : '×' + (S.baits[b.id] || 0) }));
+  if (tab === 'lure') return LURES.map(l => ({ kind: 'lure', id: l.id, it: l, price: l.price, ...own(!!S.lures[l.id], S.bait === l.id, () => { S.bait = l.id; }), give: () => { S.lures[l.id] = true; S.bait = l.id; }, say: `${l.name}拿去，已經幫你裝上了。線斷掉的時候可能會弄丟喔！` }));
+  return BOATS.map(b => ({ kind: 'boat', id: b.lv, it: b, price: b.price, ...own(b.lv <= S.boat, S.boat === b.lv, null), give: () => { S.boat = b.lv; }, say: `${b.name}開得又快又穩，遠洋就靠它了！` }));
+}
+function tackleBody(d) {
+  const tabs = el('div', 'tabs2');
+  for (const [k, name] of [['rod', '釣竿'], ['line', '釣線'], ['reel', '捲線器'], ['bait', '餌料'], ['lure', '誘餌'], ['boat', '船']]) {
+    const b = el('button', shopTab === k ? 'on' : '', name); b.onclick = () => { shopTab = k; shopPick = null; openShop('tackle', TACKLE_TIP[k]); }; tabs.appendChild(b);
+  }
+  d.appendChild(tabs);
+  const list = shopItems(shopTab), pick = list.find(g => g.id === shopPick) || list.find(g => g.use) || list.find(g => !g.have && !g.bait) || list[0];
+  const grid = tbGrid(3);
+  for (const g of list) {
+    grid.appendChild(gridCell(gearCanvas(g.kind, g.id), {
+      name: g.it.name, sel: g === pick, use: g.use, cnt: g.bait ? g.n : null,
+      price: g.bait ? (g.price ? '$' + g.price : '免費') : g.have ? '' : '$' + fmtN(g.price),
+      tag: !g.bait && g.have && !g.use ? el('span', 'tb-own', '已擁有') : null,
+      onclick: () => { shopPick = g.id; openShop('tackle', GEAR_STORY_LINE(g)); },
+    }));
+  }
+  // 說明卡＋購買
+  const card = el('div', 'tb-card'), h = el('div', 'tb-h');
+  h.appendChild(el('b', null, pick.it.name));
+  if (pick.bait) {
+    if (pick.price) for (const n of [1, 10]) {
+      const b = el('button', 'tb-eq', `+${n}　$${fmtN(pick.price * n)}`);
+      b.onclick = () => buy(pick.price * n, () => { S.baits[pick.id] = (S.baits[pick.id] || 0) + n; S.bait = pick.id; }, `${pick.it.name} ×${n}，拿去！已經幫你換上了。`);
+      h.appendChild(b);
+    } else h.appendChild(el('span', 'tb-using', '免費・無限'));
+  } else if (pick.use) h.appendChild(el('span', 'tb-using', '使用中'));
+  else if (pick.have) {
+    if (pick.equip) { const b = el('button', 'tb-eq', '換上'); b.onclick = () => { pick.equip(); saveAll(); openShop('tackle', `${pick.it.name}換上了！`); }; h.appendChild(b); }
+    else h.appendChild(el('span', 'tb-using', '已擁有'));
+  } else { const b = el('button', 'tb-eq', `購買　$${fmtN(pick.price)}`); b.onclick = () => buy(pick.price, pick.give, pick.say); h.appendChild(b); }
+  card.appendChild(h);
+  const g = { kind: pick.kind, id: pick.id, it: pick.it };
+  if (pick.kind === 'boat') {
+    const r = el('div', 'tb-stat'); r.appendChild(el('span', null, '速度')); const bar = el('div', 'tb-bar'), i = el('i'); i.style.width = (pick.it.speed / 8 * 100) + '%'; bar.appendChild(i); r.appendChild(bar); r.appendChild(el('span', 'tb-v', pick.it.speed + ' m/s')); card.appendChild(r);
+    const f2 = el('div', 'tb-fact'); f2.appendChild(el('span', null, '可到')); f2.appendChild(el('b', null, pick.it.desc)); card.appendChild(f2);
+  } else {
+    gearStats(g).forEach(r => card.appendChild(r));
+    if (pick.bait) { const f2 = el('div', 'tb-fact'); f2.appendChild(el('span', null, '持有')); f2.appendChild(el('b', null, pick.id === 'bread' ? '無限' : (S.baits[pick.id] || 0) + ' 個（每次下竿用一個）')); card.appendChild(f2); }
+  }
+  const fl = pick.kind === 'boat' ? (pick.id === 2 ? FISH.filter(f => f.water.length === 1 && f.water[0] === 'far') : []) : gearFish(g);
+  if (fl.length) {
+    card.appendChild(el('div', 'tb-sub', pick.kind === 'rod' ? (pick.id === 1 ? '拉得動的魚' : '換上這支才拉得動') : pick.kind === 'boat' ? '開這艘才釣得到' : '容易釣到的魚'));
+    const row = el('div', 'tb-fish');
+    for (const f of fl.slice(0, 8)) {
+      const known = S.dex[f.id], cell = el('div', 'tb-f');
+      cell.appendChild(known ? fishCanvas(f.id, 1) : fishSil(f.id, 1)); cell.appendChild(el('div', null, known ? f.name : '？？？'));
+      row.appendChild(cell);
+    }
+    card.appendChild(row);
+  }
+  const story = pick.kind === 'boat' ? BOAT_STORY[pick.id - 1] : Array.isArray(GEAR_STORY[pick.kind]) ? GEAR_STORY[pick.kind][pick.id - 1] : GEAR_STORY[pick.id];
+  if (story) card.appendChild(el('div', 'tb-story', story));
+  d.appendChild(card);
+  d.appendChild(grid);
+}
+const TACKLE_TIP = { rod: '竿子越好，拉得動越大的魚。', line: '線越耐，越不怕魚甩頭、跳水。', reel: '好的捲線器收線快，拉魚省力。', bait: '餌要選對，魚才會咬！', lure: '誘餌買一次一直用，掠食魚最愛。', boat: '有船才出得了海，遠洋要漁船。' };
+const GEAR_STORY_LINE = g => g.have || g.bait ? pick(['這個好用喔！', '識貨！', '要不要多帶一點？']) : `${g.it.name}，$${fmtN(g.price)}，要不要帶一個？`;
+function tackleBody2() {}
+
+// ---- 魚市場：行情格子、收購格子＋說明卡 ----
+let mktPick = null;
+function marketBody(d) {
+  const left = HOT_PERIOD - Date.now() % HOT_PERIOD;
+  d.appendChild(el('div', 'sect', `今日行情（${Math.ceil(left / 60000)} 分鐘後更新）`));
+  const hg = tbGrid(4);
+  for (const h of hotList()) {
+    const f = FISH_BY[h.id], known = S.dex[f.id] || f.special;
+    hg.appendChild(gridCell(known ? fishCanvas(h.id, 1) : fishSil(h.id, 1), { btn: false, fish: true, name: f.name, tag: el('span', 'tb-hot ' + (h.m >= 1 ? 'up' : 'down'), (h.m >= 1 ? '▲×' : '▼×') + h.m) }));
+  }
+  d.appendChild(hg);
+  d.appendChild(el('div', 'sect', '收購（料理請拿去餐廳賣）'));
+  const raw = bag.filter(b => !b.dish);
+  if (!raw.length) { d.appendChild(el('div', 'empty', '背包裡沒有生鮮可以賣，先去釣幾尾再來。')); return; }
+  const items = raw.map(b => ({ b, p: priceOf(b) })).sort((a, b) => b.p - a.p);
+  const row = el('div', 'btnrow');
+  const all = el('button', 'okBtn', `全部賣出 $${fmtN(items.reduce((a, b) => a + b.p, 0))}`);
+  all.onclick = () => sellItems(raw.slice());
+  const common = raw.filter(b => { const f = FISH_BY[b.id]; return f.junk || (!f.special && f.rar <= 1); });
+  const cb = el('button', 'okBtn alt', `只賣普通、少見（${common.length}）`);
+  cb.disabled = !common.length;
+  cb.onclick = () => sellItems(common);
+  row.append(all, cb);
+  d.appendChild(row);
+  const sel = items.find(it => it.b === mktPick) || items[0];
+  const f = FISH_BY[sel.b.id], sb = el('button', 'tb-eq', `賣出　$${fmtN(sel.p)}`);
+  sb.onclick = () => { mktPick = null; sellItems([sel.b]); };
+  const m = hotMult(f.id);
+  d.appendChild(fishCard(f, { action: sb, extra: [...(f.special || f.junk ? [] : [['尺寸', sel.b.size + ' cm']]), ...(m !== 1 ? [['行情', (m > 1 ? '▲ ×' : '▼ ×') + m + '（今天' + (m > 1 ? '很搶手' : '不太好賣') + '）']] : [])] }));
+  const grid = tbGrid(3);
+  for (const it of items) {
+    const ff = FISH_BY[it.b.id];
+    grid.appendChild(gridCell(fishCanvas(ff.id, 2), { fish: true, name: ff.special || ff.junk ? ff.name : `${ff.name} ${it.b.size}cm`, price: '$' + fmtN(it.p), sel: it === sel, onclick: () => { mktPick = it.b; openShop('market', pick([`${ff.name}啊，${it.p >= 1000 ? '好貨！' : '可以喔。'}`, `這${ff.special ? '個' : '尾'}給你 $${fmtN(it.p)}，要賣嗎？`])); } }));
+  }
+  d.appendChild(grid);
+}
+
+// ---- 海港餐廳：委託卡片、代客料理、收購料理 ----
+const CUSTOMER_FACE = { 上班族小陳: '🧑‍💼', 健身教練阿肌: '💪', 美食部落客: '📸', 日本觀光客: '🧳', 老饕阿伯: '👴', 工程師: '🧑‍💻', 網紅小美: '🤳', 林太太: '👩' };
+let restPick = null;
+function restBody(d) {
+  ensureQuests(); saveAll();
+  d.appendChild(el('div', 'sect', '客人委託（交付料理可得報酬）'));
+  S.quests.forEach((q, k) => {
+    const want = METHOD_BY[q.m].label(FISH_BY[q.fid].name), have = bag.find(b => b.dish === q.m && b.id === q.fid);
+    const c = el('div', 'tb-quest');
+    c.appendChild(el('div', 'tb-face', CUSTOMER_FACE[q.who] || '🙂'));
+    const mid = el('div', 'tb-qm');
+    mid.appendChild(el('b', null, q.who));
+    mid.appendChild(el('div', 'tb-qline', q.line.replace('{d}', `「${want}」`)));
+    mid.appendChild(el('div', 'tb-qr', `報酬 $${fmtN(q.reward)}`));
+    c.appendChild(mid);
+    const dc = dishCanvas({ id: q.fid, dish: q.m }, 1); dc.className = 'tb-qd'; c.appendChild(dc);
+    const bt = el('button', 'tb-eq', have ? '交付' : '還沒有'); bt.disabled = !have;
+    bt.onclick = () => {
+      bag.splice(bag.indexOf(have), 1); S.money += q.reward; S.quests[k] = newQuest(); saveAll();
+      openShop('restaurant', `${q.who}：「太好吃了！」小費加報酬一共 $${fmtN(q.reward)}，收好！`);
+    };
+    c.appendChild(bt);
+    d.appendChild(c);
+  });
+  const rf = el('button', 'okBtn alt', '換一批客人');
+  rf.onclick = () => { S.quests = []; ensureQuests(); saveAll(); openShop('restaurant', '新的客人進來了，看看他們想吃什麼。'); };
+  const rr = el('div', 'btnrow'); rr.appendChild(rf); d.appendChild(rr);
+
+  // 代客料理：選做法、選魚
+  d.appendChild(el('div', 'sect', '代客料理（做好放進背包，可以吃或賣）'));
+  const chips = el('div', 'chips');
+  for (const m of METHODS) {
+    const c = el('button', 'chip' + (cookMethod === m.id ? ' on' : ''), `${m.name}：${m.buff}`);
+    c.onclick = () => { cookMethod = m.id; openShop('restaurant', `${m.name}是吧，交給我！`); };
+    chips.appendChild(c);
+  }
+  d.appendChild(chips);
+  const raw = bag.filter(b => !b.dish && canCook(FISH_BY[b.id]));
+  if (!raw.length) d.appendChild(el('div', 'empty', '背包裡沒有可以料理的魚。'));
+  else {
+    const sel = raw.includes(restPick) ? restPick : raw[0], fee = cookFee(sel);
+    const card = el('div', 'tb-card'), h = el('div', 'tb-h');
+    h.appendChild(el('b', null, METHOD_BY[cookMethod].label(FISH_BY[sel.id].name)));
+    const cb = el('button', 'tb-eq', `料理　$${fee}`);
+    cb.onclick = () => {
+      if (S.money < fee) { openShop('restaurant', '工本費不夠喔，先去賣幾條魚吧。'); return; }
+      S.money -= fee; sel.dish = cookMethod; restPick = null; saveAll();
+      openShop('restaurant', `${dishName(sel)}好了！熱騰騰的，已經放進你的背包。`);
+    };
+    h.appendChild(cb); card.appendChild(h);
+    const prev = dishCanvas({ id: sel.id, dish: cookMethod }, 3); prev.className = 'tb-prev'; card.appendChild(prev);
+    for (const [k, v] of [['加成', METHOD_BY[cookMethod].buff], ['做好價值', '$' + fmtN(priceOf({ id: sel.id, size: sel.size, dish: cookMethod }))]]) { const r = el('div', 'tb-fact'); r.appendChild(el('span', null, k)); r.appendChild(el('b', null, v)); card.appendChild(r); }
+    card.appendChild(el('div', 'tb-story', DISH_STORY[cookMethod]));
+    d.appendChild(card);
+    const grid = tbGrid(3);
+    for (const b of raw) grid.appendChild(gridCell(fishCanvas(b.id, 2), { fish: true, name: `${FISH_BY[b.id].name} ${b.size}cm`, sel: b === sel, onclick: () => { restPick = b; openShop('restaurant', `${FISH_BY[b.id].name}啊，${pick(['新鮮！', '這尾不錯。', '交給我！'])}`); } }));
+    d.appendChild(grid);
+  }
+
+  // 收購料理
+  const dishes = bag.filter(b => b.dish);
+  d.appendChild(el('div', 'sect', '收購料理（比生魚貴）'));
+  if (!dishes.length) { d.appendChild(el('div', 'empty', '還沒有料理。')); return; }
+  const sum = dishes.reduce((a, b) => a + priceOf(b), 0);
+  const all = el('button', 'okBtn', `全部賣出 $${fmtN(sum)}`);
+  all.onclick = () => { dishes.forEach(b => bag.splice(bag.indexOf(b), 1)); S.money += sum; saveAll(); openShop('restaurant', `${dishes.length} 道料理一共 $${fmtN(sum)}，謝啦！`); };
+  const ar = el('div', 'btnrow'); ar.appendChild(all); d.appendChild(ar);
+  const g2 = tbGrid(3);
+  for (const b of dishes) {
+    const p = priceOf(b);
+    g2.appendChild(gridCell(dishCanvas(b, 2), { fish: true, name: dishName(b), price: '$' + fmtN(p), onclick: () => { bag.splice(bag.indexOf(b), 1); S.money += p; saveAll(); openShop('restaurant', `${dishName(b)}收了，$${fmtN(p)}！`); } }));
+  }
+  d.appendChild(g2);
+  d.appendChild(el('div', 'empty', '點一下料理就賣出'));
+}
+
+// ---- 地圖：卡通配色、店名、目前位置 ----
+const MAP_COL = { [T.GRASS]: '#86cf4e', [T.FOREST]: '#3f8f35', [T.SAND]: '#f4dc8e', [T.PATH]: '#e2cfa4', [T.DOCK]: '#c9a26b', [T.POND]: '#4cc3b6', [T.RIVER]: '#3aa8dc', [T.SEA]: '#2a8fd6', [T.DEEP]: '#1a5fae', [T.FAR]: '#0e3b84', [T.SHOP_T]: '#2f7fd0', [T.SHOP_M]: '#3a9a5c', [T.SHOP_R]: '#d9483b', [T.SHOP_G]: '#8a4fd0' };
+function openMap() {
+  if (boss || state === 'fight' || state === 'bite') return;
+  const d = el('div');
+  const w = Math.min(320, window.innerWidth - 72), h = Math.round(w * H * CFG.cellH / (W * CFG.cellW));
+  const c = el('canvas', 'bigmap');
+  c.width = w * 2; c.height = h * 2; c.style.width = w + 'px'; c.style.height = h + 'px';
+  const x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0);
+  drawMap(x, w, h);
+  // 小鎮的標籤（四間店都在這裡）
+  x.font = 'bold 11px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const lx = SPAWN.x * w / W, ly = (SPAWN.y - 5) * h / H;
+  x.lineWidth = 3; x.strokeStyle = 'rgba(16,26,52,.85)'; x.strokeText('小鎮・商店', lx, ly); x.fillStyle = '#ffe066'; x.fillText('小鎮・商店', lx, ly);
+  d.appendChild(c);
+  const lg = el('div', 'legend');
+  for (const t of [T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP, T.FAR]) {
+    const it = el('div'), sw = el('i'); sw.style.background = MAP_COL[t];
+    it.appendChild(sw); it.appendChild(document.createTextNode(TILES[t].name + (TILES[t].walk || TILES[t].water ? '' : '（不能走）')));
+    lg.appendChild(it);
+  }
+  d.appendChild(lg);
+  d.appendChild(el('div', 'pos', '▲ 紅色箭頭是你現在的位置和面向'));
+  openDlg('地圖', d);
+}
 
 // ================= 料理（海港餐廳） =================
 const METHODS = [
@@ -1794,75 +2030,6 @@ function ensureQuests() {
 }
 
 let cookMethod = 'grill';
-function restBody(d) {
-  ensureQuests(); saveAll();
-  // 客人委託
-  d.appendChild(el('div', 'sect', '客人委託（交付料理可得報酬）'));
-  const tq = xlTable(['客人', '想吃', '報酬', '']);
-  S.quests.forEach((q, k) => {
-    const tr = el('tr'), want = METHOD_BY[q.m].label(FISH_BY[q.fid].name);
-    const td0 = el('td', null, q.who); td0.title = q.line.replace('{d}', want); tr.appendChild(td0);
-    tr.appendChild(el('td', null, want));
-    tr.appendChild(el('td', 'num', '$' + fmtN(q.reward)));
-    const td = el('td'), have = bag.find(b => b.dish === q.m && b.id === q.fid);
-    const bt = el('button', 'sbtn', '交付'); bt.disabled = !have;
-    bt.onclick = () => {
-      bag.splice(bag.indexOf(have), 1); S.money += q.reward; S.quests[k] = newQuest(); saveAll();
-      openShop('restaurant', `${q.who}：「太好吃了！」小費加報酬一共 $${fmtN(q.reward)}，收好！`);
-    };
-    td.appendChild(bt); tr.appendChild(td); tq.appendChild(tr);
-  });
-  d.appendChild(tq);
-  const rf = el('button', 'okBtn alt', '換一批客人');
-  rf.onclick = () => { S.quests = []; ensureQuests(); saveAll(); openShop('restaurant', '新的客人進來了，看看他們想吃什麼。'); };
-  const rr = el('div', 'btnrow'); rr.appendChild(rf); d.appendChild(rr);
-
-  // 代客料理
-  d.appendChild(el('div', 'sect', '代客料理（做好放進背包，可以吃或賣）'));
-  const chips = el('div', 'chips');
-  for (const m of METHODS) {
-    const c = el('button', 'chip' + (cookMethod === m.id ? ' on' : ''), `${m.name}：${m.buff}`);
-    c.onclick = () => { cookMethod = m.id; openShop('restaurant', `${m.name}是吧，交給我！`); };
-    chips.appendChild(c);
-  }
-  d.appendChild(chips);
-  const raw = bag.filter(b => !b.dish && canCook(FISH_BY[b.id]));
-  if (!raw.length) d.appendChild(el('div', 'empty', '背包裡沒有可以料理的魚。'));
-  else {
-    const t = xlTable(['', '魚', '尺寸', '']);
-    for (const b of raw) {
-      const tr = el('tr'), f = FISH_BY[b.id];
-      tr.appendChild(iconCell(b.id)); tr.appendChild(el('td', null, f.name)); tr.appendChild(el('td', 'num', String(b.size)));
-      const td = el('td', 'nowrap'), fee = cookFee(b), bt = el('button', 'sbtn', `料理 $${fee}`);
-      bt.onclick = () => {
-        if (S.money < fee) { openShop('restaurant', '工本費不夠喔，先去賣幾條魚吧。'); return; }
-        S.money -= fee; b.dish = cookMethod; saveAll();
-        openShop('restaurant', `${dishName(b)}好了！熱騰騰的，已經放進你的背包。`);
-      };
-      td.appendChild(bt); tr.appendChild(td); t.appendChild(tr);
-    }
-    d.appendChild(t);
-  }
-
-  // 收購料理
-  const dishes = bag.filter(b => b.dish);
-  d.appendChild(el('div', 'sect', '收購料理（比生魚貴）'));
-  if (!dishes.length) { d.appendChild(el('div', 'empty', '還沒有料理。')); return; }
-  const sum = dishes.reduce((a, b) => a + priceOf(b), 0);
-  const all = el('button', 'okBtn', `全部賣出 $${fmtN(sum)}`);
-  all.onclick = () => { dishes.forEach(b => bag.splice(bag.indexOf(b), 1)); S.money += sum; saveAll(); openShop('restaurant', `${dishes.length} 道料理一共 $${fmtN(sum)}，謝啦！`); };
-  const ar = el('div', 'btnrow'); ar.appendChild(all); d.appendChild(ar);
-  const t2 = xlTable(['', '料理', '價格', '']);
-  for (const b of dishes) {
-    const tr = el('tr'), p = priceOf(b);
-    const td0 = el('td'); td0.appendChild(dishCanvas(b, 2)); tr.appendChild(td0);
-    tr.appendChild(el('td', null, dishName(b))); tr.appendChild(el('td', 'num', '$' + fmtN(p)));
-    const td = el('td'), bt = el('button', 'sbtn', '賣');
-    bt.onclick = () => { bag.splice(bag.indexOf(b), 1); S.money += p; saveAll(); openShop('restaurant', `${dishName(b)}收了，$${fmtN(p)}！`); };
-    td.appendChild(bt); tr.appendChild(td); t2.appendChild(tr);
-  }
-  d.appendChild(t2);
-}
 
 // ================= 拉霸（遊藝場） =================
 const SLOT = [{ s: '7', w: 2 }, { s: '💰', w: 3 }, { s: '🎣', w: 3 }, { s: '🦑', w: 4 }, { s: '🐟', w: 5 }, { s: '🍞', w: 7 }];
@@ -1980,7 +2147,7 @@ function nextAct(F) {
   if (F.act === 'run') { F.dir = Math.random() < .3 ? 0 : (Math.random() < .5 ? -1 : 1); F.actT = rand(2.5, 4.5); }
   else if (F.act === 'charge') F.actT = rand(.9, 1.7);
   else if (F.act === 'shake') F.actT = rand(.6, 1);
-  else if (F.act === 'jump') { F.actT = 1.1; F.jump = 0; F.jOut = F.jIn = false; }
+  else if (F.act === 'jump') { F.actT = 1.1; F.jump = 0; F.jOut = F.jIn = F.jSlow = false; }
   else F.actT = rand(1, 2.2);
 }
 // 推進一步。inp = { rod: -1～1 竿子左右, reel: 是否收線 }；env = { rodLv, reelBuff, soupBuff, lineHp 釣線耐久, reelSp 捲線器倍率, wearMul 磨損倍率, inWater(th, d) }
@@ -2031,7 +2198,12 @@ function stepFight(F, inp, dt, env) {
   // 位置（魚只能在水裡，撞到岸就掉頭）
   const nth = clamp(F.th + dth, -1.3, 1.3), nd = Math.max(.8, F.d + dd);
   if (env.inWater(nth, nd)) { F.th = nth; F.d = nd; }
-  else { F.d = Math.max(.8, F.d + Math.min(0, dd)); F.vlat *= -.3; if (F.act === 'run') F.dir = F.dir === 0 ? (Math.random() < .5 ? -1 : 1) : -F.dir; }
+  else {
+    // 撞到岸邊或碼頭：還能往人這邊靠就靠，不然魚累了就直接在岸邊拉上來，還有力氣就掉頭
+    if (env.inWater(F.th, nd)) F.d = nd;
+    else if (dd < 0 && F.stam < .35) return { ok: true };
+    F.vlat *= -.3; if (F.act === 'run') F.dir = F.dir === 0 ? (Math.random() < .5 ? -1 : 1) : -F.dir;
+  }
   // 結果
   // 釣線耐久：張力太大（甩頭跳水硬收、竿子太弱）就會磨損，歸零才斷
   F.hp -= (F.spike + F.over * .3) * FIGHT.wearRate * (env.wearMul || 1) * dt;
@@ -2143,7 +2315,7 @@ function update(dt) {
     updateFight(dt);
   } else if (state === 'land') {
     L.t += dt;
-    if (L.t >= CFG.landTime) {
+    if (L.t >= L.dur) {
       state = 'caught'; catchShow = L.f.id;
       showCatch(L.f, L.size, L.isNew, L.where, L.item);
     }
@@ -2173,7 +2345,11 @@ function updateFight(dt) {
   const r = stepFight(F, { rod: clamp(v.s, -1, 1), reel: holding }, dt, {
     rodLv: S.rod, reelBuff: hasBuff('grill'), soupBuff: hasBuff('soup'),
     lineHp: LINES[S.line - 1].hp, reelSp: REELS[S.reel - 1].sp, wearMul: REELS[S.reel - 1].wear,
-    inWater: (th, d) => { const [x, z] = fishWorld(F, th, d); return !!TILES[tileAt(Math.floor(x / TX), Math.floor(z / TZ))].water; },
+    inWater: (th, d) => {   // 魚有體積：身體四周都要在水裡（不會鑽到岸上、碼頭底下）
+      const [x, z] = fishWorld(F, th, d), r = clamp(fishLen(F.f, F.size) * .45, .3, 1.2);
+      for (const [a, b] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) if (!TILES[tileAt(Math.floor((x + a) / TX), Math.floor((z + b) / TZ))].water) return false;
+      return true;
+    },
   });
   const [fx, fz] = fishWorld(F);
   spot.x = fx / TX; spot.y = fz / TZ;
@@ -2183,19 +2359,30 @@ function updateFight(dt) {
   pitch += (tp - pitch) * Math.min(1, dt * 1.2);
   // 魚衝刺、甩頭時水面有水花
   // 魚跑的時候線入水的地方拖出水痕，跑越快越明顯
-  if ((F.act === 'run' && Math.random() < dt * (5 + Math.abs(F.vlat) * 12)) || (F.act === 'shake' && Math.random() < dt * 16)) splash(spot.x, spot.y, 2);
-  // 跳出水面、落回水裡都有大水花
-  if (F.act === 'jump' && !F.jOut) { F.jOut = true; splash(spot.x, spot.y, 16); }
-  if (F.act === 'jump' && !F.jIn && F.jump > .98) { F.jIn = true; splash(spot.x, spot.y, 22); }
+  const pw = 1 + (F.lv - 1) * .35;   // 魚越強，水花、震動越誇張
+  if ((F.act === 'run' && Math.random() < dt * (5 + Math.abs(F.vlat) * 12)) || (F.act === 'shake' && Math.random() < dt * 16)) splash(spot.x, spot.y, 2, pw);
+  // 跳出水面、落回水裡都有大水花；稀有以上的魚跳起來會慢動作
+  if (F.act === 'jump' && !F.jOut) { F.jOut = true; splash(spot.x, spot.y, 16, pw); }
+  if (F.act === 'jump' && !F.jSlow && F.jump > .3 && F.lv >= 3) {
+    F.jSlow = true; slowMo(.35 + .1 * F.lv); fxFlash(.15 + .08 * F.lv);
+    bigCue(F.lv >= 5 ? '怪物級大跳躍！！' : F.lv >= 4 ? '大魚跳出水面！' : '跳起來了！', F.lv);
+  }
+  if (F.act === 'jump' && !F.jIn && F.jump > .98) { F.jIn = true; splash(spot.x, spot.y, 22, pw); }
+  // 大魚剛開始甩頭、爆衝：畫面跳出大字
+  if (F.age <= dt * 1.01 && F.lv >= 3) {
+    if (F.act === 'shake') { bigCue('猛烈甩頭！', F.lv); splash(spot.x, spot.y, 10, pw); }
+    else if (F.act === 'run' && F.lv >= 4) { bigCue(F.dir ? '橫向爆衝！' : '往外狂奔！', F.lv); splash(spot.x, spot.y, 8, pw); }
+  }
   if (F.spike > .3 && navigator.vibrate) navigator.vibrate(30);   // 有支援的手機會震一下
   if (r) { if (r.ok) endFight(true); else endFight(false, r.msg + (r.msg.startsWith('啪') ? loseLure() : '')); }
 }
 
 // 水花（公尺座標，畫在 3D 世界裡）
-function splash(x, y, n) {
-  for (let k = 0; k < n; k++) parts.push({ x: x * TX, y: WATER_Y + .05, z: y * TZ, vx: rand(-1.2, 1.2), vy: rand(1.5, 3.5), vz: rand(-1.2, 1.2), life: rand(.4, .8) });
+function splash(x, y, n, pw = 1) {   // pw：力道，越強的魚水花越大
+  n = Math.round(n * pw);
+  for (let k = 0; k < n; k++) parts.push({ x: x * TX, y: WATER_Y + .05, z: y * TZ, vx: rand(-1.2, 1.2) * Math.sqrt(pw), vy: rand(1.5, 3.5) * pw, vz: rand(-1.2, 1.2) * Math.sqrt(pw), life: rand(.4, .8) * Math.sqrt(pw) });
   if (n >= 4) splashRing(x * TX, y * TZ, n >= 8);
-  if (parts.length > 200) parts.splice(0, parts.length - 200);
+  if (parts.length > PART_N) parts.splice(0, parts.length - PART_N);
 }
 function updateParts(dt) {
   for (let k = parts.length - 1; k >= 0; k--) {
@@ -2234,7 +2421,7 @@ const mapImg = document.createElement('canvas');
 mapImg.width = W; mapImg.height = H;
 {
   const m = mapImg.getContext('2d');
-  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { m.fillStyle = TILES[tileAt(i, j)].color; m.fillRect(i, j, 1, 1); }
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { m.fillStyle = MAP_COL[tileAt(i, j)]; m.fillRect(i, j, 1, 1); }
 }
 const MINI_H = Math.round(CFG.miniW * H * CFG.cellH / (W * CFG.cellW));
 const mini = $('mini'), mctx = mini.getContext('2d');
@@ -2256,28 +2443,6 @@ function drawMap(c, w, h) {
   c.closePath(); c.fill(); c.stroke();
 }
 
-function openMap() {
-  if (boss || state === 'fight' || state === 'bite') return;
-  const d = document.createElement('div');
-  const w = Math.min(320, window.innerWidth - 72), h = Math.round(w * H * CFG.cellH / (W * CFG.cellW));
-  const c = document.createElement('canvas');
-  c.width = w * 2; c.height = h * 2; c.style.width = w + 'px'; c.style.height = h + 'px'; c.className = 'bigmap';
-  const x = c.getContext('2d'); x.setTransform(2, 0, 0, 2, 0, 0);
-  drawMap(x, w, h);
-  d.appendChild(c);
-  const lg = document.createElement('div'); lg.className = 'legend';
-  for (const t of [T.SHOP_T, T.SHOP_M, T.SHOP_R, T.SHOP_G, T.GRASS, T.FOREST, T.SAND, T.PATH, T.DOCK, T.POND, T.RIVER, T.SEA, T.DEEP, T.FAR]) {
-    const it = document.createElement('div');
-    const sw = document.createElement('i'); sw.style.background = TILES[t].color;
-    it.appendChild(sw); it.appendChild(document.createTextNode(TILES[t].name + (TILES[t].walk || TILES[t].water || TILES[t].shop ? '' : '（不能走）')));
-    lg.appendChild(it);
-  }
-  d.appendChild(lg);
-  const pos = document.createElement('div'); pos.className = 'pos';
-  pos.textContent = '● 目前位置：' + addr(Math.floor(P.x), Math.floor(P.y));
-  d.appendChild(pos);
-  openDlg('區域分布圖', d);
-}
 $('miniBox').addEventListener('click', openMap);
 
 // ================= 3D 世界（卡通風格）=================
@@ -2893,7 +3058,7 @@ function fishToonTex(f) {
   return (FISH_TOON[f.id] = t);
 }
 const partGeo = new THREE.BufferGeometry();
-partGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(200 * 3), 3));
+partGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PART_N * 3), 3));
 const partPts = new THREE.Points(partGeo, new THREE.PointsMaterial({ map: dotTex, size: .24, transparent: true, depthWrite: false }));
 partPts.frustumCulled = false; partPts.renderOrder = 4; scene.add(partPts);
 const fightShadow = new THREE.Mesh(fishShadowGeo, new THREE.MeshBasicMaterial({ color: 0x000a14, transparent: true, opacity: .55, depthWrite: false }));
@@ -3027,7 +3192,7 @@ buildTerrain(); buildTrees(); buildShops();
 depthTex.needsUpdate = true; tintTex.needsUpdate = true;
 
 // ================= 每一幀的 3D 畫面 =================
-const CF = new THREE.Vector3(), CR = new THREE.Vector3(), CU = new THREE.Vector3();
+const CF = new THREE.Vector3(), CR = new THREE.Vector3(), CU = new THREE.Vector3(), FLOOR = new THREE.Vector3(), Q1 = new THREE.Quaternion(), Q2 = new THREE.Quaternion();
 const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3(), V4 = new THREE.Vector3(), V5 = new THREE.Vector3(), skyCol = new THREE.Color();
 let flash = 0;
 function bobberPos(out) {
@@ -3045,7 +3210,7 @@ function render3D(dt) {
   // 相機：走路晃動、船上隨浪起伏、搏鬥時抖動
   const walkBob = P.moving && !boat ? Math.sin(P.walkT * 9) * .05 : 0;
   const wave = boat ? Math.sin(gameT * 1.6) * .08 : 0;
-  const shake = state === 'fight' && F ? .004 + F.tens * .01 + F.spike * .05 : 0;
+  const shake = state === 'fight' && F ? (.004 + F.tens * .01 + F.spike * .05) * (1 + (F.lv - 1) * .3) : 0;
   camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : camGround + CFG.eye) + walkBob + wave, P.y * TZ);
   camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : 0, 'YXZ');
   camera.updateMatrixWorld();
@@ -3103,7 +3268,7 @@ function render3D(dt) {
     const fx = spot.x * TX, fz = spot.y * TZ, A = F.a0 + F.th;
     lineEnd = V2.set(fx, WATER_Y - .05, fz); sag = 0;
     // 魚頭朝游的方向，轉身要一點時間
-    const heading = Math.abs(F.vlat) > .3 ? A - Math.sign(F.vlat) * Math.PI / 2 : F.act === 'charge' ? A + Math.PI : A;
+    const heading = Math.abs(F.vlat) > .3 ? A - Math.sign(F.vlat) * Math.PI / 2 : F.act === 'run' ? A : A + Math.PI;   // 被線拉著時頭朝人，往外衝才頭朝外
     F.hd = F.hd == null ? heading : F.hd + Math.atan2(Math.sin(heading - F.hd), Math.cos(heading - F.hd)) * Math.min(1, dt * 3);
     const len = fishLen(F.f, F.size);
     fightShadow.visible = true; fightShadow.position.set(fx, WATER_Y - .25, fz);
@@ -3111,7 +3276,7 @@ function render3D(dt) {
     fightShadow.scale.set(len * 1.1, 1, len * 1.1);
     const jumping = F.act === 'jump' && F.jump < 1.05;
     if (jumping || F.d < 6) {   // 跳出水面，或拉近到腳邊在水面掙扎
-      const k = jumping ? F.jump / 1.05 : 0, up = jumping ? Math.sin(k * Math.PI) * (2.2 + len * .9) : 0;
+      const k = jumping ? F.jump / 1.05 : 0, up = jumping ? Math.sin(k * Math.PI) * (2.2 + len * .9) * (1 + (F.lv - 1) * .12) : 0;
       if (flatItem(F.f)) {
         const sl = Math.max(1, fishLen(F.f, F.size) * 1.3);   // emoji 圖的魚身只佔一半寬
         fishSprite.position.set(fx, WATER_Y + up + sl * .2, fz); fishSprite.scale.set(sl, sl / 2, 1);
@@ -3157,9 +3322,15 @@ function render3D(dt) {
   catchRays.visible = stars.visible = false;
   if (held && L) {
     const front = V3.set(0, -.15, -1.5).applyMatrix4(camera.matrixWorld);
+    const flop = L.mode === 'flop' && state === 'land';
+    if (flop) {   // 摔在腳前的地上（碼頭、沙灘、船板）
+      camera.getWorldDirection(CF); const hl = Math.hypot(CF.x, CF.z) || 1;
+      FLOOR.set(camera.position.x + CF.x / hl * 1.9, 0, camera.position.z + CF.z / hl * 1.9);
+      FLOOR.y = (onBoat() ? WATER_Y + .3 : groundH(FLOOR.x, FLOOR.z)) + .1;
+    }
     const k = clamp(L.t / CFG.landFly, 0, 1), e = k * k * (3 - 2 * k), lifting = state === 'land' && k < 1;
     const start = V4.set(spot.x * TX, WATER_Y, spot.y * TZ);
-    const P0 = V5.lerpVectors(start, front, e);
+    const P0 = V5.lerpVectors(start, flop ? FLOOR : front, e);
     P0.y += Math.sin(k * Math.PI) * 1.2;
     const sw = Math.sin(L.t * 6) * .35 * (1 - k);   // 掛在線上左右晃
     P0.x += Math.cos(yaw) * sw; P0.z -= Math.sin(yaw) * sw;
@@ -3171,11 +3342,48 @@ function render3D(dt) {
       fishSprite.visible = true;
       if (lifting) { lineEnd = fishSprite.position; sag = 0; }
     } else {
-      const o = showFish3D(L.f, Math.min(fishLen(L.f, L.size), 1.2));
+      const len3 = Math.min(fishLen(L.f, L.size), 1.2), o = showFish3D(L.f, len3);
       fish3d.position.copy(P0);
       fish3d.quaternion.copy(camera.quaternion);   // 側面朝向玩家
-      fish3d.rotateZ(lifting ? Math.PI / 2 + Math.sin(L.t * 9) * .35 : Math.sin(gameT * 3) * .06);
-      animFish(o, gameT, lifting ? 2.4 : .6);
+      const u = L.t - CFG.landFly, pw = 1 + ((L.lv || 1) - 1) * .15;   // 拉上來後的秒數；越強的魚越會掙扎
+      let amp = .6;
+      if (lifting) { fish3d.rotateZ(Math.PI / 2 + Math.sin(L.t * 9) * .35); amp = 2.4; }
+      else if (state === 'land' && L.mode === 'flop') {
+        // 摔在地上：彈跳三下，每跳一下翻個面，最後被撿起來
+        const pick0 = L.dur - CFG.landFly - .45, hopT = Math.min(u, pick0), i = Math.floor(hopT / .55), ph = hopT / .55 - i;
+        if (i !== L.hop && i < 4) { L.hop = i; for (let k = 0; k < 8; k++) parts.push({ x: FLOOR.x, y: FLOOR.y, z: FLOOR.z, vx: rand(-1, 1), vy: rand(.8, 2), vz: rand(-1, 1), life: rand(.3, .5) }); }
+        const hh = .5 * pw * Math.pow(.6, i), side = i % 2 ? 1 : -1, flip = side * Math.PI / 2 * (1 - 2 * Math.pow(Math.sin(ph * Math.PI), 2) * .9);
+        fish3d.position.copy(FLOOR); fish3d.position.y += Math.abs(Math.sin(ph * Math.PI)) * hh;
+        fish3d.rotation.set(flip, yaw + Math.PI / 2 + Math.sin(u * 3) * .4, Math.sin(u * 16) * .35, 'YXZ');
+        amp = 2.6 * pw;
+        if (u > pick0) {   // 撿起來，慢慢移到手上
+          const t2 = clamp((u - pick0) / .45, 0, 1);
+          Q1.copy(fish3d.quaternion); Q2.copy(camera.quaternion);
+          fish3d.position.lerpVectors(FLOOR, front, t2 * t2 * (3 - 2 * t2));
+          fish3d.quaternion.copy(Q1.slerp(Q2, t2));
+        }
+      } else if (state === 'land' && L.mode === 'escape') {
+        // 差點跳走：先在手上抖，突然往上彈起轉一圈，再被接住
+        if (u > .45 && u < 1.35) {
+          const t2 = (u - .45) / .9;
+          if (!L.esc) { L.esc = true; bigCue('差點跳走！', 3); }
+          fish3d.position.addScaledVector(CU.setFromMatrixColumn(camera.matrixWorld, 1), Math.sin(t2 * Math.PI) * .9 * pw);
+          fish3d.position.addScaledVector(CR.setFromMatrixColumn(camera.matrixWorld, 0), Math.sin(t2 * Math.PI) * .25);
+          fish3d.rotateZ(t2 * Math.PI * 2); amp = 3;
+        } else { fish3d.rotateZ(Math.sin(u * 13) * (u < .45 ? .4 : .5 * Math.max(0, 1 - (u - 1.35) * 1.5))); amp = 2; }
+      } else if (state === 'land') {
+        // 在手上亂甩：扭身、往上蹦、尾巴拍
+        const dec = Math.max(.25, 1 - u / 1.8);
+        fish3d.position.y += Math.abs(Math.sin(u * 9)) * .1 * dec * pw;
+        fish3d.rotateZ(Math.sin(u * 11) * .45 * dec * pw); fish3d.rotateX(Math.sin(u * 7) * .6 * dec);
+        amp = 2.4 * dec * pw;
+      } else {
+        // 拿在手上看結果：偶爾突然甩一下
+        const burst = Math.pow(Math.max(0, Math.sin(gameT * 1.7)), 8);
+        fish3d.rotateZ(Math.sin(gameT * 3) * .06 + burst * Math.sin(gameT * 22) * .3);
+        amp = .6 + burst * 2.2;
+      }
+      animFish(o, gameT, amp);
       if (lifting) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V4.set(.5, 0, 0)); sag = 0; }
     }
     // 拿到手上：背後放射光、旁邊星星閃閃
@@ -3213,11 +3421,12 @@ function render3D(dt) {
   syncShadows(); updateLod();
   // 水花
   const pa = partGeo.attributes.position;
-  for (let k = 0; k < 200; k++) {
+  for (let k = 0; k < PART_N; k++) {
     const p = parts[k];
     if (p) pa.setXYZ(k, p.x, p.y, p.z); else pa.setXYZ(k, 0, -999, 0);
   }
   pa.needsUpdate = true;
+  partPts.material.size = .24 * (state === 'fight' && F ? 1 + (F.lv - 1) * .2 : 1);
   for (const r of splashRings) {   // 落水的波紋圈
     if (r.t > 1) { r.m.visible = false; continue; }
     r.t += dt * (r.big ? .9 : 1.3);
@@ -3328,11 +3537,25 @@ function drawSheet() {
   $('formula').textContent = cellText(2, 1);
 }
 
+// 慢動作、白光、大字（大魚搏鬥用）
+let slowT = 0;
+function slowMo(t) { slowT = Math.max(slowT, t); }
+function fxFlash(a) {
+  const e = $('flashFx'); e.style.transition = 'none'; e.style.opacity = a;
+  void e.offsetWidth; e.style.transition = 'opacity .6s ease-out'; e.style.opacity = 0;
+}
+function bigCue(text, lv) {
+  const e = $('bigcue'); e.textContent = text; e.className = '';
+  void e.offsetWidth; e.className = 'on' + (lv >= 5 ? ' lv5' : '');
+  if (navigator.vibrate) navigator.vibrate(lv >= 5 ? [60, 40, 90] : 50);
+}
+
 // ================= 主迴圈 =================
 applyQuality();
 let lastT = performance.now();
 function frame(now) {
-  const raw = (now - lastT) / 1000, dt = Math.min(0.05, raw); lastT = now;
+  const raw = (now - lastT) / 1000; lastT = now;
+  const dt = Math.min(0.05, raw) * (slowT > 0 ? .3 : 1); slowT -= Math.min(raw, .1);   // 慢動作時時間變慢
   if (!boss) {
     watchFps(raw);
     if (!$('dlg').classList.contains('on')) update(dt);
