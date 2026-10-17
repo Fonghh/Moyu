@@ -24,10 +24,15 @@
 - 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、像素圖參數）；稀有度 `RAR`。
 - 地圖仍是格子（`genMap()`），一格 = 東西 `TX`（5m）× 南北 `TZ`（2m）；邏輯座標用格子（`P.x`、`P.y`、魚影、`spot.x/y`），畫面換算成公尺。
 - 3D：`buildTerrain()` 地形與水面、`buildTrees()` 樹林、`buildShops()` 店面房子；`render3D()` 每幀更新相機、手上的釣竿（`rodRig`／`rodSegs`）、浮標、釣線、魚影 mesh、天氣、船。
+- 卡通畫風：材質用 `toon()`（三段明暗 `TOON_GRAD`），描邊 `addOutline()`；天空 `skyMat`（漸層＋太陽）、雲 `clouds`、遠方的島。
+- 地形：每格高度 `tileH`，`hField()` 平滑內插（海岸線落在格子邊上），`groundH()` 是腳下高度（相機跟著走）；水面是 shader `waterMat`（水深 `depthTex` 上色、岸邊浪花、波光）。
+- 樹、灌木、花、石頭用 `chunked()` 分塊的 InstancedMesh，遠的區塊用 `updateLod()` 關掉描邊和小花。
+- 順暢度：`QUALITY` 畫質等級，`watchFps()` 依實際幀率自動調整解析度、陰影、描邊。
+- 特效：`splashRing()` 水花波紋、`biteGlow` 上鉤閃光、`catchRays`／`stars` 釣到時的放射光和星星。
 - 操作：觸控左半邊搖桿 `joy`、右半邊轉頭 `look`（`yaw`／`pitch`）；電腦 WASD、方向鍵、滑鼠拖曳。拋竿方向就是視線方向。
 - 店面是房子（不能走進去），撞到門 `shopTouch` 就打開商店。
 - 隱藏模式的報表 `drawSheet()`（`cellText()` 產生假資料）；右上角小地圖 `#miniBox`，點擊 `openMap()` 放大。
-- 魚的像素圖 `makeFish()`（56×28，有漸層、鱗片、側線、鰓蓋；也當立體魚的身體貼圖；奇物、垃圾仍用平面 `fishSprite`）；店員像素圖用 `SPR`／`PAL`。
+- 魚的像素圖 `makeFish()`（56×28，背包、圖鑑等介面用）；3D 立體魚用卡通貼圖 `fishToonTex()`（同樣版面、平滑漸層、大眼睛）；奇物、垃圾仍用平面 `fishSprite`；店員像素圖用 `SPR`／`PAL`。
 - 特殊物品 `SPECIALS`（奇物，手繪像素圖 `rows`／`pal`）；餌料偏好 `LIKES`、`ONLY_BAIT`；裝備 `RODS`、`BAITS`。
 - 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級很吃力，差 2 級直接斷線。
 - 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度）。

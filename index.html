@@ -1724,17 +1724,22 @@ function checkWeather() {
   else { if (old.severe) clearMutantShadows(); toast(`天氣轉為${weather.name}` + (weather.rain ? '，魚比較容易上鉤' : '')); }
 }
 
+const mv = { f: 0, s: 0 };   // 平滑過的移動輸入
 function update(dt) {
   gameT += dt;
   if (state !== 'fight') {
     if (keys.has('arrowleft')) yaw += 1.8 * dt;
     if (keys.has('arrowright')) yaw -= 1.8 * dt;
   }
-  const v = moveInput();
-  const moving = Math.abs(v.f) + Math.abs(v.s) > 0.01;
+  const vi = moveInput();
+  const moving = Math.abs(vi.f) + Math.abs(vi.s) > 0.01;
+  // 起步、停下有一點加速度，走起來比較滑順
+  const ka = Math.min(1, dt * (moving ? 9 : 14)), walk = state === 'walk';
+  mv.f += ((walk ? vi.f : 0) - mv.f) * ka; mv.s += ((walk ? vi.s : 0) - mv.s) * ka;
+  const v = mv;
 
   if (state === 'walk') {
-    if (moving) {
+    if (moving || Math.abs(mv.f) + Math.abs(mv.s) > .03) {
       hideHint();
       // 在船上用船速，暴風雨時船開比較慢（公尺／秒）
       const sp = (onBoat() ? BOATS[S.boat - 1].speed * (weather.severe ? .7 : 1) : CFG.speed) * dt;
@@ -1826,7 +1831,7 @@ function updateFight(dt) {
   spot.x = fx / TX; spot.y = fz / TZ;
   // 鏡頭慢慢跟著魚轉，魚一直在視線前方
   let da = F.a0 + F.th - yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); yaw += da * Math.min(1, dt * 1.6);
-  const tp = -Math.atan2((onBoat() ? 2.4 : CFG.eye - WATER_Y), F.d) * .9;   // 也往下看向魚
+  const tp = -Math.atan2(camera.position.y - WATER_Y, F.d) * .9;   // 也往下看向魚
   pitch += (tp - pitch) * Math.min(1, dt * 1.2);
   // 魚衝刺、甩頭時水面有水花
   // 魚跑的時候線入水的地方拖出水痕，跑越快越明顯
@@ -1839,6 +1844,7 @@ function updateFight(dt) {
 // 水花（公尺座標，畫在 3D 世界裡）
 function splash(x, y, n) {
   for (let k = 0; k < n; k++) parts.push({ x: x * TX, y: WATER_Y + .05, z: y * TZ, vx: rand(-1.2, 1.2), vy: rand(1.5, 3.5), vz: rand(-1.2, 1.2), life: rand(.4, .8) });
+  if (n >= 4) splashRing(x * TX, y * TZ, n >= 8);
   if (parts.length > 200) parts.splice(0, parts.length - 200);
 }
 function updateParts(dt) {
@@ -1924,28 +1930,33 @@ function openMap() {
 }
 $('miniBox').addEventListener('click', openMap);
 
-// ================= 3D 世界 =================
+// ================= 3D 世界（卡通風格）=================
 // 一格：東西 TX 公尺、南北 TZ 公尺；格座標 (x, y) → 世界座標 (x*TX, 高度, y*TZ)
-const BED_Y = { pond: -1, river: -1.3, sea: -2.2, deep: -4, far: -5 };
-const WATER_COL = { pond: '#5aa6c8', river: '#4b8fc0', sea: '#2f6fb0', deep: '#1d4f86', far: '#0e2f62' };
-const GROUND_COL = { [T.GRASS]: '#5f8f3a', [T.FOREST]: '#46682b', [T.SAND]: '#d8c27e', [T.PATH]: '#a59f92', [T.DOCK]: '#8a5e33' };
-const SKY = {
-  sun: { sky: 0x9fd0f5, light: .8, far: 170 }, cloud: { sky: 0xb4c0cc, light: .8, far: 140 },
-  rain: { sky: 0x8a99a8, light: .7, far: 110 }, storm: { sky: 0x3b4553, light: .45, far: 75 },
+// 畫面是平滑的地形（海岸線、沙灘、小山丘），走路、釣魚的判斷還是用格子
+const BED_Y = { pond: -1.2, river: -1.5, sea: -2.4, deep: -4, far: -5.5 };
+const WATER_COL = { pond: '#2fb3a6', river: '#2aa0cf', sea: '#1d8ad3', deep: '#145fae', far: '#0b3b84' };
+const GROUND_COL = { [T.GRASS]: '#86cf4e', [T.FOREST]: '#5fb03d', [T.SAND]: '#f4dc8e', [T.PATH]: '#e2cfa4', [T.DOCK]: '#c9a26b' };
+const SKY = {   // top 天頂、hor 地平線、light 亮度、far 霧的距離
+  sun: { top: 0x3d8de3, hor: 0xc4e6ff, light: 1, far: 220 }, cloud: { top: 0x7d98b6, hor: 0xd5dee7, light: .82, far: 170 },
+  rain: { top: 0x5a6979, hor: 0xa2afbb, light: .68, far: 120 }, storm: { top: 0x1d2533, hor: 0x4b5668, light: .45, far: 80 },
 };
+const MW = W * TX, MH = H * TZ;
+const SUN_DIR = new THREE.Vector3(.5, .62, .6).normalize();   // 太陽在東南方，面海時看得到海面反光
 
-const renderer = new THREE.WebGLRenderer({ canvas: cvEl, antialias: true });
-renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+const renderer = new THREE.WebGLRenderer({ canvas: cvEl, antialias: true, powerPreference: 'high-performance' });
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(SKY.sun.sky);
-scene.fog = new THREE.Fog(SKY.sun.sky, 30, SKY.sun.far);
-const camera = new THREE.PerspectiveCamera(70, 1, .05, 400);
+scene.background = new THREE.Color(SKY.sun.hor);
+scene.fog = new THREE.Fog(SKY.sun.hor, 45, SKY.sun.far);
+const camera = new THREE.PerspectiveCamera(70, 1, .05, 700);
 scene.add(camera);
-const hemi = new THREE.HemisphereLight(0xe8f4ff, 0x4a5a38, .8);
+const hemi = new THREE.HemisphereLight(0xe6f3ff, 0x8a9a6a, .85);
 scene.add(hemi);
-const sunLight = new THREE.DirectionalLight(0xfff2dc, .7);
-sunLight.position.set(-60, 100, 40);
-scene.add(sunLight);
+const sunLight = new THREE.DirectionalLight(0xfff1d6, .95);
+sunLight.castShadow = true;
+Object.assign(sunLight.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 180 });
+sunLight.shadow.bias = -.0005; sunLight.shadow.normalBias = .04;
+scene.add(sunLight, sunLight.target);
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
@@ -1954,85 +1965,369 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 
-// ---- 地形：陸地、水底、岸邊的牆合成一個網格；水面另一個半透明網格 ----
-function buildTerrain() {
-  const lp = [], lc = [], ln = [], wp = [], wc = [];
-  const c = new THREE.Color();
-  const quad = (P_, C_, N_, x0, z0, x1, z1, y) => {
-    for (const [x, z] of [[x0, z0], [x0, z1], [x1, z0], [x1, z0], [x0, z1], [x1, z1]]) {
-      P_.push(x, y, z); C_.push(c.r, c.g, c.b); if (N_) N_.push(0, 1, 0);
+// ---- 畫質：依手機效能自動調整解析度、陰影、描邊，維持順暢 ----
+const QUALITY = [{ pr: 2, sh: 2048, ol: 1 }, { pr: 1.5, sh: 1024, ol: 1 }, { pr: 1.2, sh: 1024, ol: 1 }, { pr: 1, sh: 0, ol: 0 }];
+let qLv = 1, qSum = 0, qN = 0, qGood = 0;
+const qBad = new Set();   // 跑不順過的等級，不再升回去
+const outlined = [];      // 描邊 mesh，最低畫質時關掉
+function applyQuality() {
+  const q = QUALITY[qLv];
+  renderer.setPixelRatio(Math.min(q.pr, window.devicePixelRatio || 1));
+  sunLight.castShadow = q.sh > 0;
+  outlined.forEach(o => { if (!o.isInstancedMesh) o.visible = !!q.ol; });   // 樹木區塊的描邊由 updateLod() 管
+  if (q.sh && sunLight.shadow.mapSize.x !== q.sh) {
+    sunLight.shadow.mapSize.set(q.sh, q.sh);
+    if (sunLight.shadow.map) { sunLight.shadow.map.dispose(); sunLight.shadow.map = null; }
+  }
+  resize();
+}
+function watchFps(rawDt) {
+  if (rawDt > .25) return;   // 切到背景再回來的那一幀不算
+  qSum += rawDt; qN++;
+  if (qSum < 2) return;
+  const avg = qSum / qN; qSum = qN = 0;
+  if (avg > 1 / 45 && qLv < QUALITY.length - 1) { qBad.add(qLv); qLv++; qGood = 0; applyQuality(); }
+  else if (avg < 1 / 56 && qLv > 0 && !qBad.has(qLv - 1) && ++qGood >= 4) { qLv--; qGood = 0; applyQuality(); }
+}
+
+// ---- 卡通材質：三段明暗＋深色描邊 ----
+const TOON_GRAD = new THREE.DataTexture(new Uint8Array([155, 215, 255]), 3, 1, THREE.LuminanceFormat);
+TOON_GRAD.minFilter = TOON_GRAD.magFilter = THREE.NearestFilter; TOON_GRAD.needsUpdate = true;
+const toon = (color, o) => new THREE.MeshToonMaterial(Object.assign({ color, gradientMap: TOON_GRAD }, o));
+const OUTLINE_MAT = {};
+function outlineMat(w) {   // 沿法線往外推一點、只畫背面，就是一圈描邊
+  if (OUTLINE_MAT[w]) return OUTLINE_MAT[w];
+  return (OUTLINE_MAT[w] = new THREE.ShaderMaterial({
+    uniforms: Object.assign({ w: { value: w }, col: { value: new THREE.Color(0x2a2335) } }, THREE.UniformsLib.fog),
+    vertexShader: `uniform float w;
+      #include <fog_pars_vertex>
+      void main() {
+        vec4 p = vec4(position + normal * w, 1.);
+        #ifdef USE_INSTANCING
+        p = instanceMatrix * p;
+        #endif
+        vec4 mvPosition = modelViewMatrix * p;
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: `uniform vec3 col;
+      #include <fog_pars_fragment>
+      void main() { gl_FragColor = vec4(col, 1.);
+        #include <fog_fragment>
+      }`,
+    side: THREE.BackSide, fog: true,
+  }));
+}
+function addOutline(m, w = .03) {
+  const o = m.isInstancedMesh ? new THREE.InstancedMesh(m.geometry, outlineMat(w), m.count) : new THREE.Mesh(m.geometry, outlineMat(w));
+  if (m.isInstancedMesh) o.instanceMatrix = m.instanceMatrix;
+  m.add(o);
+  outlined.push(o);
+  return o;
+}
+
+// ---- 天空：漸層天空、太陽、雲、遠方的島 ----
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: { top: { value: new THREE.Color(SKY.sun.top) }, hor: { value: new THREE.Color(SKY.sun.hor) }, sun: { value: SUN_DIR }, sunK: { value: 1 } },
+  vertexShader: 'varying vec3 vd; void main() { vd = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+  fragmentShader: `uniform vec3 top, hor, sun; uniform float sunK; varying vec3 vd;
+    void main() {
+      vec3 d = normalize(vd);
+      vec3 c = mix(hor, top, pow(max(d.y, 0.), .55));
+      float s = max(dot(d, sun), 0.);
+      c += vec3(1., .93, .75) * (smoothstep(.9988, .9993, s) * .9 + pow(s, 14.) * .3) * sunK;
+      gl_FragColor = vec4(c, 1.);
+    }`,
+  side: THREE.BackSide, depthWrite: false, fog: false,
+});
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(600, 24, 12), skyMat);
+skyDome.renderOrder = -10; skyDome.frustumCulled = false; scene.add(skyDome);
+const clouds = new THREE.Group(); clouds.position.set(MW / 2, 0, MH / 2); scene.add(clouds);
+const cloudMat = toon(0xffffff, { emissive: 0x8a96aa, fog: false });
+{
+  const puffs = [];
+  for (let k = 0; k < 18; k++) {
+    const a = k / 18 * Math.PI * 2 + rand(-.15, .15), r = rand(190, 330), y = rand(55, 95), s = rand(9, 16);
+    const cx = Math.cos(a) * r, cz = Math.sin(a) * r, n = 4 + (k % 3);
+    for (let p = 0; p < n; p++) {
+      const off = (p - (n - 1) / 2) * s * .9;
+      puffs.push([cx - Math.sin(a) * off, y + rand(-1, 3) - Math.abs(off) * .15, cz + Math.cos(a) * off, s * rand(.7, 1.15) * (1 - Math.abs(off) / (n * s) * .6)]);
     }
-  };
-  const wall = (xa, za, xb, zb, yt, yb, nx, nz) => {
-    for (const [x, y, z] of [[xa, yt, za], [xa, yb, za], [xb, yt, zb], [xb, yt, zb], [xa, yb, za], [xb, yb, zb]]) {
-      lp.push(x, y, z); lc.push(c.r, c.g, c.b); ln.push(nx, 0, nz);
-    }
-  };
+  }
+  const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 9), cloudMat, puffs.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
+  puffs.forEach(([x, y, z, r], k) => im.setMatrixAt(k, m.compose(p.set(x, y, z), q, s.set(r, r * .62, r))));
+  im.frustumCulled = false; clouds.add(im);
+}
+const isleMat = [new THREE.MeshBasicMaterial({ color: 0x6f9fae, fog: false }), new THREE.MeshBasicMaterial({ color: 0x95bccb, fog: false })];
+{
+  const g = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  for (let k = 0; k < 22; k++) {
+    const far = k % 2, a = k / 22 * Math.PI * 2 + rand(-.1, .1), r = far ? rand(470, 540) : rand(360, 420);
+    const m = new THREE.Mesh(g, isleMat[far]);
+    m.position.set(MW / 2 + Math.cos(a) * r, -3, MH / 2 + Math.sin(a) * r);
+    m.scale.set(rand(35, 80), rand(18, 50) * (far ? 1.4 : 1), rand(30, 60)); m.rotation.y = rand(0, 3);
+    scene.add(m);
+  }
+}
+
+// ---- 地形：每格一個高度，平滑內插成連續的地面 ----
+// 靠岸的水和陸地對稱在水面上下，海岸線剛好落在格子邊上；越往內陸越高、越往外海越深
+const tAt = (i, j) => map[clamp(j, 0, H - 1) * W + clamp(i, 0, W - 1)];
+const isWet = t => !!TILES[t].water || t === T.DOCK;   // 碼頭底下是水
+const tileH = new Float32Array(W * H), tileTint = new Uint8Array(W * H * 4);
+{
+  const tint = new THREE.Color();
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-    const t = tileAt(i, j), tl = TILES[t], x0 = i * TX, x1 = x0 + TX, z0 = j * TZ, z1 = z0 + TZ;
-    const shade = ((hash(i, j) % 100) / 100 - .5) * .07;
-    if (tl.water) {
-      c.set(WATER_COL[tl.water]); quad(wp, wc, null, x0, z0, x1, z1, WATER_Y);
-      c.set('#6f6a4a').offsetHSL(0, 0, shade - (tl.water === 'deep' || tl.water === 'far' ? .15 : 0));
-      quad(lp, lc, ln, x0, z0, x1, z1, BED_Y[tl.water]);
-      continue;
+    const t = tAt(i, j), wet = isWet(t);
+    let dm = 16, near = null;   // 到最近一格「另一種」（水↔陸）的距離（公尺）
+    for (let b = -7; b <= 7; b++) for (let a = -3; a <= 3; a++) {
+      const nt = tAt(i + a, j + b);
+      if (isWet(nt) === wet) continue;
+      const d = Math.hypot(a * TX, b * TZ);
+      if (d < dm) { dm = d; near = nt; }
     }
-    const h = t === T.DOCK ? .25 : 0;
-    c.set(GROUND_COL[t] || GROUND_COL[T.PATH]).offsetHSL(0, 0, shade);
-    quad(lp, lc, ln, x0, z0, x1, z1, h);
-    // 跟水相鄰的邊補一面牆，岸邊才不會透空
-    c.set(t === T.DOCK ? '#6b4423' : '#7a6a48');
-    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nt = TILES[tileAt(i + di, j + dj)];
-      if (!nt.water) continue;
-      const yb = BED_Y[nt.water];
-      if (di === 1) wall(x1, z0, x1, z1, h, yb, 1, 0);
-      if (di === -1) wall(x0, z0, x0, z1, h, yb, -1, 0);
-      if (dj === 1) wall(x0, z1, x1, z1, h, yb, 0, 1);
-      if (dj === -1) wall(x0, z0, x1, z0, h, yb, 0, -1);
+    const k = j * W + i;
+    if (wet) {
+      const w = TILES[t].water || 'sea', bed = BED_Y[w];
+      tileH[k] = WATER_Y - .45 + (bed - WATER_Y + .45) * clamp((dm - 2) / 12, 0, 1);
+      tint.set(WATER_COL[w]);
+    } else {
+      const inland = clamp((dm - 4) / 14, 0, 1);
+      tileH[k] = WATER_Y + .45 + inland * (.7 + (t === T.FOREST ? .6 : 0) + (vnoise(i * .45, j * .22) - .5) * 1.2);
+      tint.set(WATER_COL[near && TILES[near].water || 'sea']);   // 陸地格用旁邊水域的顏色，岸邊才不會混到怪顏色
     }
+    tileTint.set([tint.r * 255, tint.g * 255, tint.b * 255, 255], k * 4);
   }
-  const lg = new THREE.BufferGeometry();
-  lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
-  lg.setAttribute('color', new THREE.Float32BufferAttribute(lc, 3));
-  lg.setAttribute('normal', new THREE.Float32BufferAttribute(ln, 3));
-  scene.add(new THREE.Mesh(lg, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
-  const wg = new THREE.BufferGeometry();
-  wg.setAttribute('position', new THREE.Float32BufferAttribute(wp, 3));
-  wg.setAttribute('color', new THREE.Float32BufferAttribute(wc, 3));
-  wg.computeVertexNormals();
-  const water = new THREE.Mesh(wg, new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: .82, shininess: 90, specular: 0x7799bb, depthWrite: false, side: THREE.DoubleSide }));
-  water.renderOrder = 2;
+}
+// Catmull-Rom 內插：平滑、沒有一格一格的台階
+function crW(t, o) {
+  const t2 = t * t, t3 = t2 * t;
+  o[0] = (-t3 + 2 * t2 - t) / 2; o[1] = (3 * t3 - 5 * t2 + 2) / 2; o[2] = (-3 * t3 + 4 * t2 + t) / 2; o[3] = (t3 - t2) / 2;
+}
+const CW_U = [0, 0, 0, 0], CW_V = [0, 0, 0, 0];
+function hField(x, z) {
+  const u = x / TX - .5, v = z / TZ - .5, i = Math.floor(u), j = Math.floor(v);
+  crW(u - i, CW_U); crW(v - j, CW_V);
+  let h = 0;
+  for (let b = 0; b < 4; b++) {
+    const row = clamp(j - 1 + b, 0, H - 1) * W;
+    let r = 0;
+    for (let a = 0; a < 4; a++) r += tileH[row + clamp(i - 1 + a, 0, W - 1)] * CW_U[a];
+    h += r * CW_V[b];
+  }
+  return h;
+}
+// 腳下的地面高度（相機、樹、房子用）
+function groundH(x, z) {
+  return tAt(Math.floor(x / TX), Math.floor(z / TZ)) === T.DOCK ? .25 : Math.max(hField(x, z), WATER_Y);
+}
+const GSX = 1.25, GSZ = 1, GW = Math.round(MW / GSX) + 1, GH = Math.round(MH / GSZ) + 1;
+const depthData = new Uint8Array(GW * GH);   // 水深（給水面上色、畫浪花）
+function buildTerrain() {
+  const pos = new Float32Array(GW * GH * 3), col = new Float32Array(GW * GH * 3), c = new THREE.Color(), c2 = new THREE.Color();
+  const sandWet = new THREE.Color('#d9c98e'), bedDeep = new THREE.Color('#1f5a70'), beach = new THREE.Color('#f6e2a0');
+  for (let gz = 0; gz < GH; gz++) for (let gx = 0; gx < GW; gx++) {
+    const x = gx * GSX, z = gz * GSZ, h = hField(x, z), k = gz * GW + gx;
+    pos.set([x, h, z], k * 3);
+    depthData[k] = clamp((WATER_Y - h) / 4, 0, 1) * 255;
+    const nz = (hash(gx, gz) % 100) / 100 - .5;
+    if (h < WATER_Y - .05) c.copy(sandWet).lerp(bedDeep, clamp((WATER_Y - h) / 3.2, 0, 1));
+    else if (h < WATER_Y + .25) c.copy(beach);
+    else {
+      // 地面顏色：四周格子的顏色混在一起
+      const u = x / TX - .5, v = z / TZ - .5, i = Math.floor(u), j = Math.floor(v), fu = u - i, fv = v - j;
+      c.setRGB(0, 0, 0);
+      for (const [a, b, w] of [[0, 0, (1 - fu) * (1 - fv)], [1, 0, fu * (1 - fv)], [0, 1, (1 - fu) * fv], [1, 1, fu * fv]]) {
+        const t = tAt(i + a, j + b);
+        c2.set(GROUND_COL[t] || (isWet(t) ? GROUND_COL[T.SAND] : GROUND_COL[T.PATH]));
+        c.r += c2.r * w; c.g += c2.g * w; c.b += c2.b * w;
+      }
+      if (h < WATER_Y + .45) c.lerp(beach, 1 - (h - WATER_Y - .25) / .2);   // 沙灘慢慢變草地
+    }
+    c.offsetHSL(0, 0, nz * .05);
+    col.set([c.r, c.g, c.b], k * 3);
+  }
+  const idx = [];
+  for (let gz = 0; gz < GH - 1; gz++) for (let gx = 0; gx < GW - 1; gx++) {
+    const a = gz * GW + gx, b = a + 1, d = a + GW, e = d + 1;
+    idx.push(a, d, b, b, d, e);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const land = new THREE.Mesh(g, toon(0xffffff, { vertexColors: true }));
+  land.receiveShadow = true; scene.add(land);
+  // 地圖外面的海底
+  const fg = new THREE.PlaneGeometry(5000, 5000); fg.rotateX(-Math.PI / 2);
+  const floor = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: 0x0c2c5a }));
+  floor.position.set(MW / 2, BED_Y.far - .3, MH / 2); scene.add(floor);
+  // 碼頭：木板＋柱子
+  const decks = [], posts = new Map();
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (tAt(i, j) === T.DOCK) {
+    decks.push([(i + .5) * TX, (j + .5) * TZ]);
+    for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) posts.set((i + a) + ',' + (j + b), [(i + a) * TX + (a ? -.25 : .25), (j + b) * TZ + (b ? -.2 : .2)]);
+  }
+  const pc = document.createElement('canvas'); pc.width = 128; pc.height = 64;
+  const px = pc.getContext('2d');
+  for (let k = 0; k < 8; k++) { px.fillStyle = k % 2 ? '#c99a62' : '#d6aa70'; px.fillRect(k * 16, 0, 16, 64); px.fillStyle = '#7a5530'; px.fillRect(k * 16, 0, 2, 64); }
+  const plankTex = new THREE.CanvasTexture(pc);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(1, 1, 1);
+  const deck = new THREE.InstancedMesh(new THREE.BoxGeometry(TX, .16, TZ), toon(0xffffff, { map: plankTex }), decks.length);
+  decks.forEach(([x, z], k) => deck.setMatrixAt(k, m4.compose(p.set(x, .17, z), q, s)));
+  deck.castShadow = deck.receiveShadow = true; deck.frustumCulled = false; scene.add(deck);
+  const pl = [...posts.values()];
+  const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .15, 3, 8), toon(0x7a5530), pl.length);
+  pl.forEach(([x, z], k) => post.setMatrixAt(k, m4.compose(p.set(x, -1.3, z), q, s)));
+  post.frustumCulled = false; scene.add(post); addOutline(post, .03).frustumCulled = false;
+}
+
+// ---- 水面：依水深上色、岸邊白色浪花、會動的波光與太陽反光 ----
+const depthTex = new THREE.DataTexture(depthData, GW, GH, THREE.LuminanceFormat);
+depthTex.magFilter = depthTex.minFilter = THREE.LinearFilter;
+const tintTex = new THREE.DataTexture(tileTint, W, H, THREE.RGBAFormat);
+tintTex.magFilter = tintTex.minFilter = THREE.LinearFilter;
+const waterMat = new THREE.ShaderMaterial({
+  uniforms: Object.assign({
+    t: { value: 0 }, light: { value: 1 }, dMap: { value: depthTex }, cMap: { value: tintTex },
+    mapSz: { value: new THREE.Vector2(MW, MH) }, cellSz: { value: new THREE.Vector2(TX, TZ) }, skyC: { value: new THREE.Color(SKY.sun.hor) }, sunD: { value: SUN_DIR },
+  }, THREE.UniformsLib.fog),
+  vertexShader: `varying vec3 wp;
+    #include <fog_pars_vertex>
+    void main() {
+      vec4 w = modelMatrix * vec4(position, 1.); wp = w.xyz;
+      vec4 mvPosition = viewMatrix * w;
+      gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+    }`,
+  fragmentShader: `uniform float t, light; uniform sampler2D dMap, cMap; uniform vec2 mapSz, cellSz; uniform vec3 skyC, sunD;
+    varying vec3 wp;
+    #include <fog_pars_fragment>
+    float wv(vec2 p) { return sin(p.x * .55 + t * 1.2) * .5 + sin(p.y * .8 - t * 1.5 + p.x * .3) * .35 + sin((p.x + p.y) * 1.7 + t * 2.1) * .15; }
+    void main() {
+      vec2 uv = wp.xz / mapSz;
+      bool inMap = uv.x > 0. && uv.y > 0. && uv.x < 1. && uv.y < 1.;
+      float d = inMap ? texture2D(dMap, uv).r : 1.;
+      vec2 tuv = (wp.xz / cellSz) / vec2(${W}., ${H}.);
+      vec3 tint = inMap ? texture2D(cMap, tuv).rgb : vec3(.043, .23, .52);
+      // 波浪的法線
+      vec2 p = wp.xz; float h0 = wv(p);
+      vec3 n = normalize(vec3((h0 - wv(p + vec2(.2, 0.))) * 1.1, 1., (h0 - wv(p + vec2(0., .2))) * 1.1));
+      vec3 v = normalize(cameraPosition - wp);
+      float fr = pow(1. - max(dot(n, v), 0.), 4.);
+      vec3 shallow = mix(tint, vec3(.42, .92, .86), .55);
+      vec3 col = mix(shallow, tint, smoothstep(0., .45, d));
+      col = mix(col, skyC, fr * .55);
+      // 卡通的太陽反光、細碎波光
+      float sp = pow(max(dot(reflect(-sunD, n), v), 0.), 90.);
+      col += smoothstep(.3, .42, sp) * .85 * light;
+      float gl = sin(p.x * 2.3 + t * 1.6 + sin(p.y * 1.1 + t * .7) * 2.5) * sin(p.y * 3.1 - t * 1.3 + sin(p.x * .8 - t * .5) * 2.5);
+      col += smoothstep(.975, .995, gl * (.85 + .15 * h0)) * .22 * (1. - d * .5);
+      col *= light;
+      // 岸邊白色浪花：貼著岸一圈，外面一條條往岸邊推
+      float edge = 1. - smoothstep(.015, .05, d);
+      float band = smoothstep(.55, .85, sin(d * 70. - t * 2.4 + wv(p * 1.7) * 1.5)) * (1. - smoothstep(.04, .13, d));
+      float foam = clamp(edge + band * .8, 0., 1.);
+      float a = mix(.5, .93, smoothstep(0., .35, d));
+      gl_FragColor = vec4(mix(col, vec3(1.), foam * .9), max(a, foam * .9));
+      #include <fog_fragment>
+    }`,
+  transparent: true, depthWrite: false, fog: true,
+});
+{
+  const g = new THREE.PlaneGeometry(5000, 5000); g.rotateX(-Math.PI / 2);
+  const water = new THREE.Mesh(g, waterMat);
+  water.position.set(MW / 2, WATER_Y, MH / 2); water.renderOrder = 2; water.frustumCulled = false;
   scene.add(water);
-  // 地圖外圍是一片大海（小島的感覺）
-  const ocean = new THREE.MeshPhongMaterial({ color: WATER_COL.far, shininess: 60, specular: 0x334466 });
-  const MW = W * TX, MH = H * TZ, E = 600;
-  for (const [x0, z0, x1, z1] of [[-E, -E, 0, MH + E], [MW, -E, MW + E, MH + E], [0, -E, MW, 0], [0, MH, MW, MH + E]]) {
-    const g = new THREE.PlaneGeometry(x1 - x0, z1 - z0); g.rotateX(-Math.PI / 2);
-    const m = new THREE.Mesh(g, ocean); m.position.set((x0 + x1) / 2, WATER_Y - .02, (z0 + z1) / 2); scene.add(m);
-  }
 }
 
-// ---- 樹林：每格一兩棵樹（InstancedMesh，手機也跑得動）----
+// ---- 樹、灌木、花、石頭（InstancedMesh，手機也跑得動）----
+// 依位置分塊的 InstancedMesh：看不到的區塊整塊略過不畫（陰影也是），手機才跑得動
+// items 每項前兩個值是世界座標 x、z；place(im, item, n) 用世界座標放第 n 項
+const LOD = [];   // 遠的區塊不畫描邊、小花
+function updateLod() {
+  const cx = camera.position.x, cz = camera.position.z, ol = QUALITY[qLv].ol;
+  for (const l of LOD) l.o.visible = (!l.ol || ol) && Math.hypot(l.x - cx, l.z - cz) < l.d;
+}
+function chunked(geo, mat, items, per, place, opt = {}) {
+  const S = 48, groups = new Map(), m = new THREE.Matrix4(), out = [];
+  for (const it of items) {
+    const k = Math.floor(it[0] / S) + ',' + Math.floor(it[1] / S);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(it);
+  }
+  for (const [k, list] of groups) {
+    const [cx, cz] = k.split(',').map(v => (+v + .5) * S);
+    const g = new THREE.BufferGeometry(); g.setIndex(geo.index);
+    for (const a in geo.attributes) g.setAttribute(a, geo.attributes[a]);
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, opt.y || 2, 0), S * .72 + (opt.r || 4));
+    const im = new THREE.InstancedMesh(g, mat, list.length * per);
+    list.forEach((it, n) => place(im, it, n));
+    for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, m); m.elements[12] -= cx; m.elements[14] -= cz; im.setMatrixAt(i, m); }
+    im.position.set(cx, 0, cz);
+    im.castShadow = !!opt.cast; im.receiveShadow = !!opt.recv;
+    scene.add(im);
+    if (opt.ol) LOD.push({ o: addOutline(im, opt.ol), x: cx, z: cz, d: 70, ol: 1 });
+    if (opt.lod) LOD.push({ o: im, x: cx, z: cz, d: opt.lod });
+    out.push(im);
+  }
+  return out;
+}
 function buildTrees() {
-  const spots = [];
-  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) if (tileAt(i, j) === T.FOREST) {
-    const h = hash(i, j), n = 1 + h % 2;
-    for (let k = 0; k < n; k++) spots.push([(i + .15 + ((h >> (4 + k * 3)) % 70) / 100) * TX, (j + .5) * TZ, .8 + ((h >> 9) % 50) / 100, (h >> 12) % 100]);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), c = new THREE.Color(), e = new THREE.Euler();
+  const trees = [], bushes = [], flowers = [], rocks = [];
+  const dockNear = (i, j) => { for (let b = -3; b <= 3; b++) for (let a = -1; a <= 1; a++) if (tAt(i + a, j + b) === T.DOCK) return true; return false; };
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+    const t = tAt(i, j), h = hash(i, j), r1 = (h % 1000) / 1000, r2 = ((h >> 10) % 1000) / 1000, r3 = ((h >> 20) % 1000) / 1000;
+    const x = (i + .15 + r1 * .7) * TX, z = (j + .2 + r2 * .6) * TZ;
+    if (t === T.FOREST) {
+      trees.push([x, z, .8 + r3 * .55, r1]);
+      if (r3 > .45) trees.push([(i + .15 + r2 * .7) * TX, (j + .5) * TZ, .7 + r1 * .4, r2]);
+    } else if (t === T.GRASS) {
+      if (r3 < .14) bushes.push([x, z, .5 + r1 * .5, r2]);
+      if (r1 < .5) flowers.push([(i + r2) * TX, (j + r3) * TZ, h % 4]);
+      if (r2 < .03) rocks.push([x, z, .4 + r3 * .5, r1, 0]);
+    } else if (isWet(t) && t !== T.DOCK) {
+      // 靠岸的淺水偶爾有礁石（碼頭附近不放，免得擋住釣魚）
+      const sh = tileH[j * W + i];
+      if (sh > WATER_Y - 1 && r3 < .05 && !dockNear(i, j) && Math.hypot(x - SPAWN.x * TX, z - SPAWN.y * TZ) > 25) rocks.push([x, z, .45 + r1 * .5, r2, 1]);
+    }
   }
-  const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.15, .22, 1.4, 6), new THREE.MeshLambertMaterial({ color: 0x6b4a2b }), spots.length);
-  const crown = new THREE.InstancedMesh(new THREE.ConeGeometry(1.2, 3, 7), new THREE.MeshLambertMaterial({ color: 0xffffff }), spots.length);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), c = new THREE.Color();
-  spots.forEach(([x, z, sc, hv], k) => {
-    s.set(sc, sc, sc);
-    m.compose(p.set(x, .7 * sc, z), q, s); trunk.setMatrixAt(k, m);
-    m.compose(p.set(x, (1.4 + 1.5) * sc, z), q, s); crown.setMatrixAt(k, m);
-    crown.setColorAt(k, c.setHSL(.27 + hv / 2000, .45, .25 + hv / 900));
-  });
-  scene.add(trunk, crown);
+  // 樹：樹幹＋三團圓圓的樹冠
+  const crownGeo = new THREE.SphereGeometry(1, 8, 5), crownMat = toon(0xffffff);
+  chunked(new THREE.CylinderGeometry(.16, .26, 1.8, 6), toon(0x8a5a32), trees, 1, (im, [x, z, sc], n) => {
+    im.setMatrixAt(n, m.compose(p.set(x, hField(x, z) + .9 * sc, z), q, s.set(sc, sc, sc)));
+  }, { cast: 1, ol: .03 });
+  const blobs = [[0, 2.5, 0, 1.25], [.55, 2.05, .3, .9], [-.45, 2.15, -.35, .95]];
+  chunked(crownGeo, crownMat, trees, 3, (im, [x, z, sc, hv], n) => {
+    const y = hField(x, z);
+    blobs.forEach(([bx, by, bz, br], b) => {
+      im.setMatrixAt(n * 3 + b, m.compose(p.set(x + bx * sc, y + by * sc, z + bz * sc), q, s.set(br * sc, br * sc * .9, br * sc)));
+      im.setColorAt(n * 3 + b, c.setHSL(.27 + hv * .06, .55, .36 + hv * .08 + b * .03));
+    });
+  }, { cast: 1, ol: .045, y: 3 });
+  // 灌木
+  chunked(crownGeo, crownMat, bushes, 1, (im, [x, z, sc, hv], n) => {
+    im.setMatrixAt(n, m.compose(p.set(x, hField(x, z) + sc * .35, z), q, s.set(sc * 1.2, sc * .8, sc)));
+    im.setColorAt(n, c.setHSL(.29 + hv * .05, .55, .38 + hv * .08));
+  }, { cast: 1, ol: .04, lod: 130 });
+  // 小花
+  const FLOWER = [0xffffff, 0xffe14d, 0xff8fb3, 0xb58cff];
+  chunked(new THREE.SphereGeometry(.09, 5, 3), toon(0xffffff, { emissive: 0x222222 }), flowers, 1, (im, [x, z, ci], n) => {
+    im.setMatrixAt(n, m.compose(p.set(x, hField(x, z) + .08, z), q, s.set(1, .7, 1)));
+    im.setColorAt(n, c.setHex(FLOWER[ci]));
+  }, { lod: 75 });
+  // 石頭：稜角分明的低面數造型，水裡的一半泡在水中
+  chunked(new THREE.DodecahedronGeometry(1, 0), toon(0xffffff), rocks, 1, (im, [x, z, sc, hv, wet], n) => {
+    q.setFromEuler(e.set(hv * 3, hv * 7, hv * 2));
+    im.setMatrixAt(n, m.compose(p.set(x, (wet ? WATER_Y - sc * .2 : hField(x, z) + sc * .2), z), q, s.set(sc * 1.3, sc * .8, sc)));
+    im.setColorAt(n, c.setHSL(.08, .14, .5 + hv * .12));
+    q.identity();
+  }, { cast: 1, recv: 1, ol: .05 });
 }
 
-// ---- 四間店：有招牌的小房子，門口朝向小徑 ----
+// ---- 四間店：卡通小房子，斜屋頂、條紋遮雨棚、窗戶、招牌 ----
 function signTexture(text, bg) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
   const x = c.getContext('2d');
@@ -2043,6 +2338,16 @@ function signTexture(text, bg) {
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
   return t;
 }
+function stripeTexture(a, b) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 8;
+  const x = c.getContext('2d');
+  for (let k = 0; k < 8; k++) { x.fillStyle = k % 2 ? b : a; x.fillRect(k * 8, 0, 8, 8); }
+  return new THREE.CanvasTexture(c);
+}
+const SHOP_LOOK = {   // 牆、屋頂、遮雨棚
+  tackle: ['#fff1dc', '#2f7fd0', '#2f7fd0'], market: ['#eef3ff', '#3a9a5c', '#3a9a5c'],
+  restaurant: ['#fff4e8', '#d9483b', '#d9483b'], slot: ['#fff6cc', '#8a4fd0', '#e8a31d'],
+};
 function buildShops() {
   const box = {};
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
@@ -2051,18 +2356,34 @@ function buildShops() {
     b.i0 = Math.min(b.i0, i); b.i1 = Math.max(b.i1, i); b.j0 = Math.min(b.j0, j); b.j1 = Math.max(b.j1, j);
   }
   for (const t in box) {
-    const b = box[t], tl = TILES[t];
+    const b = box[t], tl = TILES[t], look = SHOP_LOOK[tl.shop] || ['#fff1dc', '#c0503a', '#c0503a'];
     const w = (b.i1 - b.i0 + 1) * TX, d = (b.j1 - b.j0 + 1) * TZ, cx = b.i0 * TX + w / 2, cz = b.j0 * TZ + d / 2;
     const front = (b.j0 + b.j1) / 2 < SPAWN.y ? 1 : -1;   // 北邊的店門朝南、南邊的店門朝北
-    const g = new THREE.Group(); g.position.set(cx, 0, cz);
-    const walls = new THREE.Mesh(new THREE.BoxGeometry(w - .3, 3.2, d - .2), new THREE.MeshLambertMaterial({ color: tl.color }));
-    walls.position.y = 1.6; g.add(walls);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(w + .4, .35, d + .8), new THREE.MeshLambertMaterial({ color: 0x8e3b2e }));
-    roof.position.y = 3.35; g.add(roof);
-    const door = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.2), new THREE.MeshLambertMaterial({ color: 0x5b3a1e }));
-    door.position.set(0, 1.1, front * (d / 2 - .09)); if (front < 0) door.rotation.y = Math.PI; g.add(door);
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * .7, w * .7 / 4), new THREE.MeshBasicMaterial({ map: signTexture(tl.name, '#fff8e6') }));
-    sign.position.set(0, 2.65, front * (d / 2 - .07)); if (front < 0) sign.rotation.y = Math.PI; g.add(sign);
+    const g = new THREE.Group(); g.position.set(cx, groundH(cx, cz) - .3, cz);
+    if (front < 0) g.rotation.y = Math.PI;
+    const ww = w - .4, wd = d - 1, wh = 4.6;
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(ww, wh, wd), toon(look[0]));
+    walls.position.y = wh / 2; g.add(walls); addOutline(walls, .04);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(ww + .15, .45, wd + .15), toon(0x9c8f80));
+    base.position.y = .22; g.add(base);
+    // 斜屋頂（三角柱）
+    const rs = new THREE.Shape(); rs.moveTo(-wd / 2 - .5, 0); rs.lineTo(0, 1.6); rs.lineTo(wd / 2 + .5, 0); rs.lineTo(-wd / 2 - .5, 0);
+    const rg = new THREE.ExtrudeGeometry(rs, { depth: ww + .7, bevelEnabled: false }); rg.translate(0, 0, -(ww + .7) / 2);
+    const roof = new THREE.Mesh(rg, toon(look[1])); roof.rotation.y = Math.PI / 2; roof.position.y = wh; g.add(roof); addOutline(roof, .05);
+    const chim = new THREE.Mesh(new THREE.BoxGeometry(.5, 1.3, .5), toon(0xb5664a)); chim.position.set(ww * .3, wh + 1.1, -wd * .15); g.add(chim);
+    // 門、窗、遮雨棚、招牌（都在正面）
+    const fz = wd / 2;
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, .12), toon(0x7a4a26)); door.position.set(0, 1.6, fz); g.add(door);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(.07, 6, 4), toon(0xffd34d)); knob.position.set(.45, 1.5, fz + .08); g.add(knob);
+    for (const sx of [-1, 1]) {
+      const win = new THREE.Mesh(new THREE.BoxGeometry(1, .9, .1), toon(0x9fe0ff, { emissive: 0x2a5a70 })); win.position.set(sx * ww * .3, 2, fz); g.add(win);
+      const fr = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.1, .06), toon(0xffffff)); fr.position.set(sx * ww * .3, 2, fz - .02); g.add(fr);
+    }
+    const aw = new THREE.Mesh(new THREE.BoxGeometry(ww * .82, .08, .75), toon(0xffffff, { map: stripeTexture(look[2], '#ffffff') }));
+    aw.position.set(0, 3.25, fz + .32); aw.rotation.x = .32; g.add(aw); addOutline(aw, .03);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(w * .62, w * .62 / 4), new THREE.MeshBasicMaterial({ map: signTexture(tl.name, '#fff8e6') }));
+    sign.position.set(0, 3.95, fz + .08); g.add(sign);
+    g.traverse(o => { if (o.isMesh && o.material.isMeshToonMaterial) o.castShadow = true; });
     scene.add(g);
   }
 }
@@ -2074,8 +2395,8 @@ fishShape.lineTo(-.5, -.22); fishShape.lineTo(-.25, -.1); fishShape.quadraticCur
 const fishShadowGeo = new THREE.ShapeGeometry(fishShape); fishShadowGeo.rotateX(-Math.PI / 2);
 const SHADOW_LEN = [.7, 1.3, 2.1, 3.8];   // 小／中／大／變種怪影的長度（公尺）
 const shadowMat = {
-  normal: new THREE.MeshBasicMaterial({ color: 0x001a33, transparent: true, opacity: .5, depthWrite: false }),
-  dark: new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .62, depthWrite: false }),
+  normal: new THREE.MeshBasicMaterial({ color: 0x00213d, transparent: true, opacity: .42, depthWrite: false }),
+  dark: new THREE.MeshBasicMaterial({ color: 0x000814, transparent: true, opacity: .5, depthWrite: false }),
   mutant: new THREE.MeshBasicMaterial({ color: 0x6a0018, transparent: true, opacity: .65, depthWrite: false }),
 };
 const shadowMeshes = new Set();
@@ -2086,14 +2407,14 @@ function syncShadows() {
   for (const s of shadows) {
     if (!s.mesh) {
       s.mesh = new THREE.Mesh(fishShadowGeo, s.sz === 3 ? shadowMat.mutant : s.w === 'deep' || s.w === 'far' ? shadowMat.dark : shadowMat.normal);
-      s.mesh.renderOrder = 1; scene.add(s.mesh); shadowMeshes.add(s.mesh);
+      s.mesh.renderOrder = 3; scene.add(s.mesh); shadowMeshes.add(s.mesh);
     }
     const m = s.mesh, x = s.x * TX, z = s.y * TZ;
     m.userData.f = frameNo;
     m.visible = Math.hypot(x - cx, z - cz) < 90;
     if (!m.visible) continue;
     const L_ = SHADOW_LEN[s.sz];
-    m.position.set(x, WATER_Y - .3, z);
+    m.position.set(x, WATER_Y - .15, z);
     m.rotation.y = -s.a + Math.sin(gameT * 7 + s.x * 3) * .12;   // 擺尾
     m.scale.set(L_, 1, L_);
   }
@@ -2104,16 +2425,16 @@ function syncShadows() {
 const rodRig = new THREE.Group();
 rodRig.position.set(.3, -.36, -.5);
 camera.add(rodRig);
-const skinMat = new THREE.MeshLambertMaterial({ color: 0xf1c27d });
+const skinMat = toon(0xf7c58e);
 const hand = new THREE.Mesh(new THREE.BoxGeometry(.09, .11, .12), skinMat); rodRig.add(hand);
-const handle = new THREE.Mesh(new THREE.CylinderGeometry(.018, .024, .34, 8), new THREE.MeshLambertMaterial({ color: 0xc8a26b }));
+const handle = new THREE.Mesh(new THREE.CylinderGeometry(.018, .024, .34, 8), toon(0xd9a066));
 handle.position.y = .05; rodRig.add(handle);
-const reel = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .04, 10), new THREE.MeshLambertMaterial({ color: 0x333333 }));
+const reel = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .04, 10), toon(0xa9b4c0));
 reel.rotation.z = Math.PI / 2; reel.position.set(.05, .1, 0); rodRig.add(reel);
 const rodSegs = [];
 {
   let parent = rodRig;
-  const rodMat = new THREE.MeshLambertMaterial({ color: 0x2b2b2b });
+  const rodMat = toon(0x24344f);
   for (let k = 0; k < 4; k++) {
     const g = new THREE.Group(); g.position.y = k === 0 ? .22 : .4; parent.add(g);
     const m = new THREE.Mesh(new THREE.CylinderGeometry(.005 + .002 * (3 - k), .007 + .002 * (3 - k), .4, 5), rodMat);
@@ -2125,10 +2446,10 @@ const rodSegs = [];
 // ---- 浮標、釣線、波紋、瞄準圈、水花、拉上來的魚 ----
 const bobber = new THREE.Group();
 {
-  const top = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xe03030 }));
-  const bot = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xffffff }));
-  const stick = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .25, 4), new THREE.MeshLambertMaterial({ color: 0xe03030 }));
-  stick.position.y = .2; bobber.add(top, bot, stick);
+  const top = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), toon(0xff3b3b));
+  const bot = new THREE.Mesh(new THREE.SphereGeometry(.13, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), toon(0xffffff));
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .25, 4), toon(0xff3b3b));
+  stick.position.y = .2; bobber.add(top, bot, stick); addOutline(top, .012); addOutline(bot, .012);
 }
 bobber.visible = false; scene.add(bobber);
 const LINE_N = 16;
@@ -2141,12 +2462,130 @@ const ripple = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xff
 ripple.visible = false; ripple.renderOrder = 3; scene.add(ripple);
 const aimRing = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: .9, depthWrite: false }));
 aimRing.visible = false; aimRing.renderOrder = 3; scene.add(aimRing);
+// ---- 特效用的貼圖：圓點水花、光暈、放射光、星星 ----
+function fxTex(draw, n = 64) {
+  const c = document.createElement('canvas'); c.width = c.height = n;
+  draw(c.getContext('2d'), n);
+  return new THREE.CanvasTexture(c);
+}
+const dotTex = fxTex((x, n) => {
+  const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.55, 'rgba(235,250,255,.95)'); g.addColorStop(1, 'rgba(200,235,255,0)');
+  x.fillStyle = g; x.fillRect(0, 0, n, n);
+});
+const glowTex = fxTex((x, n) => {
+  const g = x.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+  g.addColorStop(0, 'rgba(255,255,230,1)'); g.addColorStop(.3, 'rgba(255,230,120,.6)'); g.addColorStop(1, 'rgba(255,200,80,0)');
+  x.fillStyle = g; x.fillRect(0, 0, n, n);
+});
+const raysTex = fxTex((x, n) => {
+  const c = n / 2;
+  x.translate(c, c);
+  for (let k = 0; k < 14; k++) {
+    x.rotate(Math.PI * 2 / 14);
+    const g = x.createLinearGradient(0, 0, c, 0);
+    g.addColorStop(0, 'rgba(255,245,180,.9)'); g.addColorStop(1, 'rgba(255,220,120,0)');
+    x.fillStyle = g; x.beginPath(); x.moveTo(0, 0); x.lineTo(c, -c * .13); x.lineTo(c, c * .13); x.fill();
+  }
+  const g = x.createRadialGradient(0, 0, 0, 0, 0, c * .5);
+  g.addColorStop(0, 'rgba(255,255,240,.9)'); g.addColorStop(1, 'rgba(255,240,180,0)');
+  x.fillStyle = g; x.fillRect(-c, -c, n, n);
+}, 256);
+const starTex = fxTex((x, n) => {
+  x.translate(n / 2, n / 2); x.fillStyle = '#fff6b0'; x.beginPath();
+  for (let k = 0; k < 8; k++) { const r = k % 2 ? n * .1 : n * .48, a = k / 8 * Math.PI * 2; x.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+  x.fill();
+});
+const fxSprite = (tex, add = true) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : THREE.NormalBlending }));
+  s.visible = false; s.renderOrder = 5; scene.add(s); return s;
+};
+const biteGlow = fxSprite(glowTex);   // 魚上鉤：浮標閃光
+const catchRays = fxSprite(raysTex);  // 釣到：魚背後的放射光
+const STAR_N = 18;
+const starGeo = new THREE.BufferGeometry();
+starGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(STAR_N * 3), 3));
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ map: starTex, size: .12, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+stars.frustumCulled = false; stars.visible = false; stars.renderOrder = 6; scene.add(stars);
+// 水花落水的波紋圈
+const splashRings = [];
+for (let k = 0; k < 10; k++) {
+  const r = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+  r.visible = false; r.renderOrder = 3; scene.add(r); splashRings.push({ m: r, t: 9 });
+}
+let ringNext = 0;
+function splashRing(x, z, big) {
+  const r = splashRings[ringNext++ % splashRings.length];
+  r.t = 0; r.big = big; r.m.position.set(x, WATER_Y + .03, z); r.m.visible = true;
+}
+
+// ---- 卡通魚的花紋貼圖：跟像素圖同樣的版面，但畫成平滑的漸層、大眼睛 ----
+const FISH_TOON = {};
+function vivid(hex, ds = .25, dl = .04) {   // 顏色更鮮豔一點
+  const c = new THREE.Color(hex), h = {}; c.getHSL(h);
+  return '#' + c.setHSL(h.h, Math.min(1, h.s * (1 + ds) + .05), Math.min(.92, h.l + dl)).getHexString();
+}
+function fishToonTex(f) {
+  if (FISH_TOON[f.id]) return FISH_TOON[f.id];
+  const K = 8, c = document.createElement('canvas'); c.width = FW * K; c.height = FH * K;
+  const x = c.getContext('2d'); x.scale(K, K);
+  const B = FISH_BODY[f.shape] || FISH_BODY.normal, cx = B.cx, rx = B.rx, ry = B.ry, cy = 14;
+  const body = vivid(f.body), belly = vivid(f.belly, .1, .06);
+  // 背深腹淺
+  const g = x.createLinearGradient(0, cy - ry, 0, cy + ry);
+  g.addColorStop(0, shade(body, -.32)); g.addColorStop(.3, body); g.addColorStop(.58, body); g.addColorStop(.72, belly); g.addColorStop(1, belly);
+  x.fillStyle = g; x.fillRect(0, 0, FW, FH);
+  x.save(); x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.clip();
+  if (f.stripe) {   // 直條紋
+    x.fillStyle = vivid(f.stripe); x.globalAlpha = .85;
+    for (let sx = cx - rx + 3; sx < cx + rx * .45; sx += 5.5) { x.beginPath(); x.ellipse(sx, cy - ry * .25, 1.3, ry * .75, 0, 0, Math.PI * 2); x.fill(); }
+    x.globalAlpha = 1;
+  }
+  if (f.spots) {    // 斑點
+    x.fillStyle = vivid(f.spots);
+    for (let k = 0; k < 26; k++) {
+      const h = hash(k, f.id.length * 31 + 7), px = cx - rx * .85 + (h % 1000) / 1000 * rx * 1.4, py = cy - ry * .8 + ((h >> 10) % 1000) / 1000 * ry * 1.1;
+      x.beginPath(); x.arc(px, py, .55 + (h >> 20) % 3 * .2, 0, Math.PI * 2); x.fill();
+    }
+  }
+  if (f.patch) {    // 錦鯉的色塊
+    x.fillStyle = vivid(f.patch);
+    for (let py = 0; py < FH; py += .5) for (let px = 0; px < FW; px += .5) if (vnoise(px / 5.2, py / 5.2) > .52) x.fillRect(px, py, .55, .55);
+  }
+  // 魚鱗：淡淡的弧線
+  x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = .25;
+  for (let py = cy - ry; py < cy + ry * .3; py += 1.6) for (let px = cx - rx; px < cx + rx * .4; px += 1.6) {
+    x.beginPath(); x.arc(px + ((py / 1.6) % 2) * .8, py, .8, -1.2, 1.2); x.stroke();
+  }
+  // 背上的亮光、側線、鰓蓋
+  const hl = x.createLinearGradient(0, cy - ry, 0, cy - ry * .4);
+  hl.addColorStop(0, 'rgba(255,255,255,0)'); hl.addColorStop(.5, 'rgba(255,255,255,.28)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = hl; x.fillRect(cx - rx, cy - ry, rx * 2, ry * .6);
+  x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = .35;
+  x.beginPath(); x.moveTo(cx - rx * .85, cy + ry * .05); x.quadraticCurveTo(cx, cy - ry * .15, cx + rx * .45, cy - ry * .05); x.stroke();
+  x.strokeStyle = shade(body, -.45); x.lineWidth = .5;
+  x.beginPath(); x.arc(cx + rx * .32, cy, ry * .78, -1.1, 1.1); x.stroke();
+  x.restore();
+  // 大眼睛：白眼球、黑瞳孔、兩個反光點
+  const ex = cx + rx * (f.shape === 'round' ? .5 : .62), ey = cy - ry * .28, er = Math.max(1.5, Math.min(2.6, ry * .34));
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex, ey, er, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#2a2335'; x.lineWidth = .35; x.stroke();
+  x.fillStyle = '#1b1525'; x.beginPath(); x.arc(ex + er * .15, ey + er * .05, er * .62, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex - er * .1, ey - er * .25, er * .24, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(ex + er * .38, ey + er * .28, er * .1, 0, Math.PI * 2); x.fill();
+  // 嘴
+  x.strokeStyle = shade(body, -.6); x.lineWidth = .45;
+  x.beginPath(); x.arc(cx + rx - 2.2, cy + ry * .18, 1.1, .2, 1.5); x.stroke();
+  if (f.teeth) { x.fillStyle = '#fff'; for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(cx + rx - 3 + k * .7, cy + ry * .22); x.lineTo(cx + rx - 2.65 + k * .7, cy + ry * .45); x.lineTo(cx + rx - 2.3 + k * .7, cy + ry * .22); x.fill(); } }
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+  return (FISH_TOON[f.id] = t);
+}
 const partGeo = new THREE.BufferGeometry();
 partGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(200 * 3), 3));
-const partPts = new THREE.Points(partGeo, new THREE.PointsMaterial({ color: 0xffffff, size: .14, transparent: true, opacity: .9 }));
-partPts.frustumCulled = false; scene.add(partPts);
+const partPts = new THREE.Points(partGeo, new THREE.PointsMaterial({ map: dotTex, size: .24, transparent: true, depthWrite: false }));
+partPts.frustumCulled = false; partPts.renderOrder = 4; scene.add(partPts);
 const fightShadow = new THREE.Mesh(fishShadowGeo, new THREE.MeshBasicMaterial({ color: 0x000a14, transparent: true, opacity: .55, depthWrite: false }));
-fightShadow.renderOrder = 1; fightShadow.visible = false; scene.add(fightShadow);
+fightShadow.renderOrder = 3; fightShadow.visible = false; scene.add(fightShadow);
 const FISH_TEX = {};
 function fishTex(id) {
   if (!FISH_TEX[id]) { const t = new THREE.CanvasTexture(FISH_IMG[id]); t.magFilter = t.minFilter = THREE.NearestFilter; FISH_TEX[id] = t; }
@@ -2164,7 +2603,7 @@ const FISH3D = {};
 function finMesh(pts, color) {
   const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]);
   for (let k = 1; k < pts.length; k++) sh.lineTo(pts[k][0], pts[k][1]);
-  return new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide, transparent: true, opacity: .92 }));
+  return new THREE.Mesh(new THREE.ShapeGeometry(sh), toon(vivid(color), { side: THREE.DoubleSide }));
 }
 function make3DFish(f) {
   if (FISH3D[f.id]) return FISH3D[f.id];
@@ -2177,13 +2616,13 @@ function make3DFish(f) {
     uv.setXY(i, (B.cx + x * B.rx) / FW, 1 - (14 - y * B.ry) / FH);
   }
   geo.scale(.5, B.h / 2, B.w / 2);
-  const body = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: fishTex(f.id) }));
-  g.add(body);
+  const body = new THREE.Mesh(geo, toon(0xffffff, { map: fishToonTex(f) }));
+  g.add(body); addOutline(body, .016);
   const fin = f.fin || '#888888';
   // 尾巴（分叉）掛在尾柄上，會左右甩
   const tail = new THREE.Group(); tail.position.x = -.47; g.add(tail);
   const th = f.shape === 'eel' ? .08 : f.shape === 'round' ? .28 : B.h * .62;
-  tail.add(finMesh([[0, 0], [-.26, th], [-.18, 0], [-.26, -th]], fin));
+  tail.add(finMesh([[0, 0], [-.1, th * .5], [-.27, th * 1.05], [-.21, th * .35], [-.17, 0], [-.21, -th * .35], [-.27, -th * 1.05], [-.1, -th * .5]], fin));
   // 背鰭、臀鰭、胸鰭
   if (f.shape === 'long') g.add(finMesh([[-.25, B.h * .4], [-.05, B.h * 1.25], [.18, B.h * .4]], fin));
   else if (f.shape === 'eel') g.add(finMesh([[-.48, B.h * .45], [-.48, B.h * .8], [.42, B.h * .8], [.44, B.h * 2.2], [.47, B.h * .45]], fin));
@@ -2197,7 +2636,7 @@ function make3DFish(f) {
     p.position.set(.2, -B.h * .12, sz * B.w * .45); p.rotation.x = sz * -.6; g.add(p); pecs.push(p);
   }
   if (f.shape === 'long') {   // 旗魚的長嘴
-    const bill = new THREE.Mesh(new THREE.ConeGeometry(.02, .4, 6), new THREE.MeshLambertMaterial({ color: 0x2b2b2b }));
+    const bill = new THREE.Mesh(new THREE.ConeGeometry(.02, .4, 6), toon(0x2b2b3b));
     bill.rotation.z = -Math.PI / 2; bill.position.x = .68; g.add(bill);
   }
   return (FISH3D[f.id] = { g, body, base: Float32Array.from(geo.attributes.position.array), tail, pecs });
@@ -2233,7 +2672,7 @@ const boats = [new THREE.Group(), new THREE.Group()];
 {
   // 一艘船：船底＋左右船舷＋船頭船尾，看下去像坐在船裡
   const mk = (w, len, h, floorCol, sideCol, rim) => {
-    const g = new THREE.Group(), fm = new THREE.MeshLambertMaterial({ color: floorCol }), sm = new THREE.MeshLambertMaterial({ color: sideCol });
+    const g = new THREE.Group(), fm = toon(floorCol), sm = toon(sideCol);
     const add = (bw, bh, bd, x, y, z, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), m); b.position.set(x, y, z); g.add(b); return b; };
     add(w, .08, len, 0, -.12, 0, fm);
     add(.08, h, len, -w / 2, -.12 + h / 2, 0, sm); add(.08, h, len, w / 2, -.12 + h / 2, 0, sm);
@@ -2241,17 +2680,17 @@ const boats = [new THREE.Group(), new THREE.Group()];
     const bow = add(w * .72, h, .08, 0, -.12 + h / 2, -len / 2 - .25, sm);
     for (const sx of [-1, 1]) { const p = add(.08, h, .62, sx * w * .43, -.12 + h / 2, -len / 2 - .12, sm); p.rotation.y = sx * .45; }
     if (rim) {   // 船舷上緣的紅邊
-      const rm = new THREE.MeshLambertMaterial({ color: rim });
+      const rm = toon(rim);
       add(.12, .07, len, -w / 2, -.12 + h, 0, rm); add(.12, .07, len, w / 2, -.12 + h, 0, rm); add(w, .07, .12, 0, -.12 + h, len / 2, rm);
     }
     return g;
   };
   boats[0] = mk(1.2, 2.6, .38, 0x7a4f26, 0x9a6a3a);
   const fb = mk(2, 4.4, .38, 0xd9d9d9, 0xf2f2f2, 0xc00000);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.3, 1.3), new THREE.MeshLambertMaterial({ color: 0xdfe8f0 }));
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.3, 1.3), toon(0xf4f8fc));
   cabin.position.set(0, .55, 1.4); fb.add(cabin);
   boats[1] = fb;
-  boats.forEach(b => { b.visible = false; scene.add(b); });
+  boats.forEach(b => { b.visible = false; b.traverse(o => { if (o.isMesh) o.castShadow = true; }); scene.add(b); });
 }
 
 // ---- 雨 ----
@@ -2265,8 +2704,10 @@ const rainDrop = new Float32Array(RAIN_N * 3);   // 每滴雨相對相機的 x�
 for (let k = 0; k < RAIN_N; k++) { rainDrop[k * 3] = rand(-25, 25); rainDrop[k * 3 + 1] = rand(-3, 14); rainDrop[k * 3 + 2] = rand(-25, 25); }
 
 buildTerrain(); buildTrees(); buildShops();
+depthTex.needsUpdate = true; tintTex.needsUpdate = true;
 
 // ================= 每一幀的 3D 畫面 =================
+const CF = new THREE.Vector3(), CR = new THREE.Vector3(), CU = new THREE.Vector3();
 const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3(), V4 = new THREE.Vector3(), V5 = new THREE.Vector3(), skyCol = new THREE.Color();
 let flash = 0;
 function bobberPos(out) {
@@ -2275,13 +2716,17 @@ function bobberPos(out) {
   if (state === 'bite') out.y -= .1 + Math.abs(Math.sin(gameT * 30)) * .06;
   return out;
 }
+let camGround = null, lastYaw = yaw, rodSway = 0;
 function render3D(dt) {
   const boat = onBoat();
+  // 腳下地面高度（慢慢跟上，走上坡下坡不會抖）
+  const gh = groundH(P.x * TX, P.y * TZ);
+  camGround = camGround == null ? gh : camGround + (gh - camGround) * Math.min(1, dt * 8);
   // 相機：走路晃動、船上隨浪起伏、搏鬥時抖動
   const walkBob = P.moving && !boat ? Math.sin(P.walkT * 9) * .05 : 0;
   const wave = boat ? Math.sin(gameT * 1.6) * .08 : 0;
   const shake = state === 'fight' && F ? .004 + F.tens * .01 + F.spike * .05 : 0;
-  camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : CFG.eye) + walkBob + wave, P.y * TZ);
+  camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : camGround + CFG.eye) + walkBob + wave, P.y * TZ);
   camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : 0, 'YXZ');
   camera.updateMatrixWorld();
 
@@ -2304,6 +2749,10 @@ function render3D(dt) {
   // 竿子左右壓
   const lean = state === 'fight' && F ? -F.rod * .5 : 0;
   rodRig.rotation.z += (lean - rodRig.rotation.z) * Math.min(1, dt * 10);
+  // 轉頭時竿子稍微慢半拍，有重量感
+  let dy = yaw - lastYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); lastYaw = yaw;
+  rodSway += (clamp(dy / Math.max(dt, .001) * .035, -.1, .1) - rodSway) * Math.min(1, dt * 8);
+  rodRig.position.x = .3 + rodSway; rodRig.rotation.y = rodSway * 1.5;
   rodRig.updateMatrixWorld(true);
   const tip = rodTip.getWorldPosition(V1);
 
@@ -2324,6 +2773,9 @@ function render3D(dt) {
       ripple.scale.setScalar(.2 + r * 1.3); ripple.material.opacity = .7 * (1 - r);
     }
   }
+  // 魚上鉤：浮標一閃一閃的光
+  biteGlow.visible = state === 'bite' && !!showBob;
+  if (biteGlow.visible) { biteGlow.position.copy(bobber.position); biteGlow.position.y += .25; biteGlow.scale.setScalar(1.4 + Math.abs(Math.sin(gameT * 12)) * 1.4); }
 
   // 搏鬥：線拉進水裡、水下的魚影；跳出水面或拉近時看得到立體的魚
   fishSprite.visible = false; fightShadow.visible = false; fish3d.visible = false;
@@ -2360,6 +2812,7 @@ function render3D(dt) {
   } else fishLine.material.color.setRGB(.95, .95, .95);
   // 引拔：把魚從水裡吊起來，頭朝上掛在線上晃著拉到面前，最後拿在手上
   const held = state === 'land' || (state === 'caught' && catchShow);
+  catchRays.visible = stars.visible = false;
   if (held && L) {
     const front = V3.set(0, -.15, -1.5).applyMatrix4(camera.matrixWorld);
     const k = clamp(L.t / CFG.landFly, 0, 1), e = k * k * (3 - 2 * k), lifting = state === 'land' && k < 1;
@@ -2383,6 +2836,20 @@ function render3D(dt) {
       animFish(o, gameT, lifting ? 2.4 : .6);
       if (lifting) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V4.set(.5, 0, 0)); sag = 0; }
     }
+    // 拿到手上：背後放射光、旁邊星星閃閃
+    if (!lifting) {
+      const sz = Math.min(fishLen(L.f, L.size), 1.2) * 1.5 + .7;
+      camera.getWorldDirection(CF); CR.setFromMatrixColumn(camera.matrixWorld, 0); CU.setFromMatrixColumn(camera.matrixWorld, 1);
+      catchRays.visible = stars.visible = true;
+      catchRays.position.copy(P0).addScaledVector(CF, .6);
+      catchRays.scale.setScalar(sz); catchRays.material.rotation = gameT * .5;
+      const sa = starGeo.attributes.position;
+      for (let n = 0; n < STAR_N; n++) {
+        const a = n / STAR_N * Math.PI * 2 + gameT * .7, r = sz * (.32 + .1 * Math.sin(gameT * 3 + n * 2.3));
+        sa.setXYZ(n, P0.x + (CR.x * Math.cos(a) + CU.x * Math.sin(a)) * r, P0.y + (CR.y * Math.cos(a) + CU.y * Math.sin(a)) * r, P0.z + (CR.z * Math.cos(a) + CU.z * Math.sin(a)) * r);
+      }
+      sa.needsUpdate = true; stars.material.size = .09 + Math.abs(Math.sin(gameT * 5)) * .06;
+    }
   }
   fishLine.visible = !!lineEnd;
   if (lineEnd) {
@@ -2401,7 +2868,7 @@ function render3D(dt) {
     if (a) { aimRing.visible = true; aimRing.position.set(a.x * TX, WATER_Y + .03, a.y * TZ); aimRing.scale.setScalar(.6 + Math.sin(gameT * 8) * .08); }
   }
 
-  syncShadows();
+  syncShadows(); updateLod();
   // 水花
   const pa = partGeo.attributes.position;
   for (let k = 0; k < 200; k++) {
@@ -2409,15 +2876,31 @@ function render3D(dt) {
     if (p) pa.setXYZ(k, p.x, p.y, p.z); else pa.setXYZ(k, 0, -999, 0);
   }
   pa.needsUpdate = true;
+  for (const r of splashRings) {   // 落水的波紋圈
+    if (r.t > 1) { r.m.visible = false; continue; }
+    r.t += dt * (r.big ? .9 : 1.3);
+    r.m.scale.setScalar(.25 + r.t * (r.big ? 2.6 : 1.5)); r.m.material.opacity = .75 * Math.max(0, 1 - r.t);
+  }
 
   // 天氣：天空顏色、霧、雨、閃電
-  const sk = SKY[weather.id];
-  skyCol.setHex(sk.sky);
-  scene.background.lerp(skyCol, Math.min(1, dt * 2)); scene.fog.color.copy(scene.background);
-  scene.fog.far += (sk.far - scene.fog.far) * Math.min(1, dt * 2);
+  const sk = SKY[weather.id], kk = Math.min(1, dt * 2), su = skyMat.uniforms;
+  su.top.value.lerp(skyCol.setHex(sk.top), kk); su.hor.value.lerp(skyCol.setHex(sk.hor), kk);
+  su.sunK.value += ((weather.id === 'sun' ? 1 : weather.id === 'cloud' ? .3 : 0) - su.sunK.value) * kk;
+  scene.fog.color.copy(su.hor.value); scene.background.copy(su.hor.value);
+  scene.fog.far += (sk.far - scene.fog.far) * kk;
   if (weather.severe && Math.random() < dt / 5) flash = .35;
   flash = Math.max(0, flash - dt * 1.5);
-  hemi.intensity = sk.light + flash * 3; sunLight.intensity = sk.light * .75;
+  hemi.intensity = sk.light * .85 + flash * 3; sunLight.intensity = sk.light * .8;
+  skyDome.position.copy(camera.position);
+  waterMat.uniforms.t.value = gameT; waterMat.uniforms.light.value = sk.light + flash; waterMat.uniforms.skyC.value.copy(su.hor.value);
+  cloudMat.color.setScalar(.5 + sk.light * .5); cloudMat.emissive.setScalar(.2 + sk.light * .35);
+  clouds.rotation.y = gameT * .004;
+  isleMat[0].color.setHex(0x4f8a63).lerp(su.hor.value, .45); isleMat[1].color.setHex(0x5d8fa0).lerp(su.hor.value, .65);
+  // 陰影只算玩家前方一塊，跟著走
+  camera.getWorldDirection(CF);
+  sunLight.target.position.set(camera.position.x + CF.x * 14, 0, camera.position.z + CF.z * 14);
+  sunLight.position.copy(sunLight.target.position).addScaledVector(SUN_DIR, 90);
+  sunLight.target.updateMatrixWorld();
   rain.visible = !!weather.rain;
   if (rain.visible) {
     const n = Math.min(RAIN_N, weather.rain * 2.5), wind = weather.severe ? 5 : 1, len = weather.severe ? .9 : .6;
@@ -2499,11 +2982,12 @@ function drawSheet() {
 }
 
 // ================= 主迴圈 =================
-resize();
+applyQuality();
 let lastT = performance.now();
 function frame(now) {
-  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  const raw = (now - lastT) / 1000, dt = Math.min(0.05, raw); lastT = now;
   if (!boss) {
+    watchFps(raw);
     if (!$('dlg').classList.contains('on')) update(dt);
     render3D(dt);
     updateHud();
