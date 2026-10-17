@@ -82,7 +82,7 @@
     background: #fff; border: 2px solid #8a5a2b; box-shadow: 0 3px 0 #8a5a2b; cursor: pointer; padding: 0;
     display: flex; align-items: center; justify-content: center;
   }
-  #homeBtn canvas { width: 30px; height: 30px; image-rendering: pixelated; }
+  #homeBtn canvas { width: 30px; height: 30px; }
   #actBtn.charge { background: radial-gradient(circle at 35% 30%, #f8b26a, #ed7d31 70%); border-color: #a8541a; box-shadow: 0 4px 0 #a8541a, 0 6px 12px rgba(0,0,0,.25); }
   /* 背包按鈕（在拉魚按鈕上方） */
   #bagBtn {
@@ -90,7 +90,7 @@
     background: #fff8e8; border: 2px solid #8a5a2b; box-shadow: 0 3px 0 #8a5a2b; cursor: pointer;
     display: flex; align-items: center; justify-content: center; padding: 0;
   }
-  #bagBtn canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+  #bagBtn canvas { width: 36px; height: 36px; }
   #bagCount {
     position: absolute; right: -6px; top: -6px; min-width: 20px; height: 20px; border-radius: 10px;
     background: #c00000; color: #fff; font-size: 11px; font-weight: 700; line-height: 20px; padding: 0 5px;
@@ -143,7 +143,7 @@
   .wt button { background: none; border: 0; color: #fff; font-size: 18px; width: 30px; cursor: pointer; }
   .wb { padding: 12px; overflow-y: auto; }
   .catch { text-align: center; }
-  .catch canvas { width: 224px; height: 112px; image-rendering: pixelated; background: repeating-linear-gradient(0deg, #f7fbff 0 8px, #eef5fc 8px 16px); border: 1px solid #ddd; }
+  .catch canvas { width: 224px; height: 112px; background: repeating-linear-gradient(0deg, #f7fbff 0 8px, #eef5fc 8px 16px); border: 1px solid #ddd; }
   .catch .fn { font-size: 20px; font-weight: 700; margin-top: 8px; }
   .catch .meta { color: #555; margin-top: 4px; }
   .catch .new { display: inline-block; margin-top: 6px; background: #c00000; color: #fff; padding: 1px 8px; font-size: 12px; }
@@ -151,7 +151,7 @@
   .okBtn { display: block; margin: 14px auto 0; background: #217346; color: #fff; border: 0; padding: 8px 22px; font-size: 14px; cursor: pointer; font-family: inherit; }
   .bagGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
   .card { border: 1px solid #d4d4d4; padding: 6px 4px; text-align: center; font-size: 12px; position: relative; }
-  .card canvas { width: 84px; height: 42px; image-rendering: pixelated; }
+  .card canvas { width: 84px; height: 42px; }
   .card .n { font-weight: 600; }
   .card .c { position: absolute; right: 4px; top: 2px; font-weight: 700; color: #217346; }
   .card .s { color: #777; }
@@ -163,7 +163,7 @@
   .lvrow.warn { color: #c00000; font-weight: 600; }
   /* 商店：店員對話 */
   .npc { display: flex; gap: 10px; align-items: flex-start; }
-  .npc canvas { width: 48px; height: 64px; image-rendering: pixelated; flex: none; background: #f3f3f3; border: 1px solid #ddd; }
+  .npc canvas { width: 48px; height: 64px; flex: none; background: #f3f3f3; border: 1px solid #ddd; }
   .bubble { flex: 1; min-width: 0; background: #ffffe1; border: 1px solid #a0a0a0; padding: 6px 8px; font-size: 13px; line-height: 1.5; }
   .money { margin: 10px 0 2px; font-size: 12px; color: #555; }
   .money b { color: #217346; font-size: 14px; }
@@ -174,7 +174,7 @@
   table.xl td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   table.xl td.desc { color: #777; font-size: 11px; }
   table.xl td.nowrap { white-space: nowrap; }
-  table.xl canvas { width: 42px; height: 21px; image-rendering: pixelated; vertical-align: middle; }
+  table.xl canvas { width: 42px; height: 21px; vertical-align: middle; }
   .sbtn { background: #217346; color: #fff; border: 0; padding: 3px 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
   .sbtn + .sbtn { margin-left: 3px; }
   .own { color: #777; font-size: 11px; }
@@ -295,7 +295,7 @@ const CFG = {
   chargeTime: 1.6,       // 蓄力從 0 到滿的秒數（之後會往回掉，來回擺盪）
   castMin: 2, castMax: 26,     // 拋竿距離（公尺）：最小力道～最大力道
   waitMin: 1.8, waitMax: 5.5,   // 等魚上鉤秒數
-  biteWin: 1.3,          // 上鉤後可以拉竿的秒數
+  biteWin: 2.4,          // 上鉤後可以拉竿的秒數
   landTime: 1.9, landFly: 1.4,  // 釣到後的動畫秒數、把魚吊上來的秒數
   reelUp: 0.45,          // 按住時收線進度（每秒）
   tensUp: 0.55,          // 按住時張力上升（每秒，乘上魚的力氣）
@@ -360,41 +360,21 @@ const FISH = [
   { id: 'marlin', name: '旗魚', water: ['deep'], rar: 3, size: [150, 350], price: 5000, shape: 'long', body: '#2a5a9a', belly: '#d0dcea', fin: '#1f3f78', stripe: '#6fa0d8' },
   { id: 'oarfish', name: '皇帶魚', water: ['deep'], rar: 4, size: [300, 800], price: 20000, shape: 'eel', body: '#d8dde6', belly: '#eef1f5', fin: '#e03030', spots: '#8090a8' },
   // 雜物
-  { id: 'boot', name: '破靴子', water: ['pond', 'river', 'sea', 'deep'], rar: 0, junk: true, w: 4, size: [24, 30], price: 1, shape: 'boot' },
+  { id: 'boot', name: '破靴子', water: ['pond', 'river', 'sea', 'deep'], rar: 0, junk: true, w: 4, size: [24, 30], price: 1, emoji: '👢' },
 ];
 // 千奇百怪的特殊物品（奇物）：跟餌料無關，很少見但很值錢
 const SPECIALS = [
-  { id: 'boba', name: '喝一半的珍奶', water: ['pond', 'river'], w: 3, price: 50, desc: '珍珠還在，冰塊已經化了。',
-    rows: ['.....s....', '.....s....', '.cccccccc.', '.kttttttk.', '.kttttttk.', '..kttttk..', '..kpptpk..', '..kppppk..', '...kkkk...'],
-    pal: { s: '#e04040', c: '#dddddd', k: '#8a6a50', t: '#d9b48c', p: '#3a2a1a' } },
-  { id: 'airpods', name: 'AirPods 充電盒', water: ['river', 'sea'], w: 1.5, price: 3000, desc: '「尋找」顯示它在河底。主人放棄了。',
-    rows: ['..kkkkkk..', '.kwwwwwwk.', '.kwwwwwwk.', '.kggggggk.', '.kwwwwwwk.', '.kwwwlwwk.', '.kwwwwwwk.', '..kkkkkk..'],
-    pal: { k: '#888888', w: '#fafafa', g: '#cccccc', l: '#33cc33' } },
-  { id: 'ball', name: '2026 世界盃足球', water: ['sea'], w: 1.5, price: 2600, desc: '美加墨世界盃的比賽用球，怎麼漂到這裡來的？',
-    rows: ['...kkkk...', '.kkwwwwkk.', '.kwwkkwwk.', 'kwwkkkkwwk', 'kwwwkkwwwk', 'kkwwwwwwkk', 'kwkwwwwkwk', '.kkwwwwkk.', '.kwwkkwwk.', '...kkkk...'],
-    pal: { k: '#222222', w: '#ffffff' } },
-  { id: 'card', name: '寶可夢閃卡', water: ['pond'], w: 1.2, price: 5000, desc: '護貝過，完全沒泡壞，收藏家搶著要。',
-    rows: ['kkkkkkkkk', 'kyyyyyyyk', 'kybbbbbyk', 'kybYYYbyk', 'kybYkYbyk', 'kybbbbbyk', 'kyyyyyyyk', 'kywwwwwyk', 'kyyyyyyyk', 'kywwwwwyk', 'kyyyyyyyk', 'kkkkkkkkk'],
-    pal: { k: '#555555', y: '#f2c94c', b: '#9bd2f5', Y: '#ffd400', w: '#ffffff' } },
-  { id: 'labubu', name: 'Labubu 公仔', water: ['pond', 'river'], w: 1, price: 8000, desc: '露出招牌的九顆牙在對你笑。',
-    rows: ['..k......k..', '.kbk....kbk.', '.kbbkkkkbbk.', '.kbffffffbk.', '.kbfkffkfbk.', '.kbffffffbk.', '.kbfwwwwfbk.', '..kbffffbk..', '..kbbbbbbk..', '..kbk..kbk..', '..kk....kk..'],
-    pal: { k: '#3a2a1a', b: '#c99a6b', f: '#f4dcc0', w: '#ffffff' } },
-  { id: 'switch2', name: 'Switch 2', water: ['river', 'pond'], w: 0.8, price: 12000, desc: '左右手把都還在，誰捨得丟的啦。',
-    rows: ['.bbkkkkkkkkrr.', 'bbbksssssskrrr', 'bwbksssssskrwr', 'bbbksssssskrrr', 'bbbksssssskrrr', 'bbbkkkkkkkkrrr', '.bb........rr.'],
-    pal: { b: '#00b4e6', r: '#ff4554', k: '#222222', s: '#39434f', w: '#ffffff' } },
-  { id: 'iphone', name: 'iPhone 18 Pro', water: ['sea', 'deep'], w: 0.6, price: 45000, desc: '今年最新款，泡在海裡居然還能開機。',
-    rows: ['..kkkkkkkk..', '.kooooooook.', '.kmmmmmoook.', '.kmcmcmoook.', '.kmmmmmoook.', '.kmcmmmoook.', '.kmmmmmoook.', '.kooooooook.', '.koooaooook.', '.kooaaaoook.', '.koooaooook.', '.kooooooook.', '.kooooooook.', '..kkkkkkkk..'],
-    pal: { k: '#222222', o: '#e8792a', m: '#d4651c', c: '#111111', a: '#fff3e0' } },
-  { id: 'rtx', name: 'RTX 5090 顯示卡', water: ['deep'], w: 0.4, price: 60000, desc: '水冷做到這種程度，連輝達都沒想到。',
-    rows: ['kkkkkkkkkkkkkk', 'kgggkgggkgggkk', 'kgfgkgfgkgfgkk', 'kgggkgggkgggkk', 'kkkkkkkkkkkkkk', '.yyyyyyyy.....'],
-    pal: { k: '#2b2b2b', g: '#555555', f: '#9a9a9a', y: '#d4a017' } },
-  { id: 'btc', name: '實體比特幣', water: ['deep'], w: 0.25, price: 88000, desc: '沉在深海的冷錢包，這下真的「冷」了。',
-    rows: ['....kkkk....', '..kkyyyykk..', '.kyyyyyyyyk.', '.kyyBBByyyk.', 'kyyyBByByyyk', 'kyyyBBBByyyk', 'kyyyBByyByyk', 'kyyyBBBByyyk', '.kyyBByyyyk.', '.kyyyyyyyyk.', '..kkyyyykk..', '....kkkk....'],
-    pal: { k: '#8a5a00', y: '#f7b500', B: '#fff2b0' } },
+  { id: 'boba', name: '喝一半的珍奶', water: ['pond', 'river'], w: 3, price: 50, desc: '珍珠還在，冰塊已經化了。', emoji: '🧋' },
+  { id: 'airpods', name: 'AirPods 充電盒', water: ['river', 'sea'], w: 1.5, price: 3000, desc: '「尋找」顯示它在河底。主人放棄了。', emoji: '🎧' },
+  { id: 'ball', name: '2026 世界盃足球', water: ['sea'], w: 1.5, price: 2600, desc: '美加墨世界盃的比賽用球，怎麼漂到這裡來的？', emoji: '⚽' },
+  { id: 'card', name: '寶可夢閃卡', water: ['pond'], w: 1.2, price: 5000, desc: '護貝過，完全沒泡壞，收藏家搶著要。', emoji: '🃏' },
+  { id: 'labubu', name: 'Labubu 公仔', water: ['pond', 'river'], w: 1, price: 8000, desc: '露出招牌的九顆牙在對你笑。', emoji: '🧸' },
+  { id: 'switch2', name: 'Switch 2', water: ['river', 'pond'], w: 0.8, price: 12000, desc: '左右手把都還在，誰捨得丟的啦。', emoji: '🎮' },
+  { id: 'iphone', name: 'iPhone 18 Pro', water: ['sea', 'deep'], w: 0.6, price: 45000, desc: '今年最新款，泡在海裡居然還能開機。', emoji: '📱' },
+  { id: 'rtx', name: 'RTX 5090 顯示卡', water: ['deep'], w: 0.4, price: 60000, desc: '水冷做到這種程度，連輝達都沒想到。', emoji: '🖥️' },
+  { id: 'btc', name: '實體比特幣', water: ['deep'], w: 0.25, price: 88000, desc: '沉在深海的冷錢包，這下真的「冷」了。', emoji: '🪙' },
 ];
-SPECIALS.push({ id: 'gold', name: '金條', water: [], w: 0, price: 20000, noDex: true, desc: '遊藝場的大獎，魚市場高價收購。',
-  rows: ['...kkkkkkkkkk...', '..kYYYYYYYYYyk..', '.kyYYYYYYYYyyk..', 'kyyyyyyyyyyyyyyk', 'kddddddddddddddk', 'kkkkkkkkkkkkkkkk'],
-  pal: { k: '#7a5200', Y: '#fff2a8', y: '#f2c200', d: '#c99a00' } });
+SPECIALS.push({ id: 'gold', name: '金條', water: [], w: 0, price: 20000, noDex: true, desc: '遊藝場的大獎，魚市場高價收購。' });
 SPECIALS.forEach(s => { s.special = true; s.rar = 5; s.size = [0, 0]; FISH.push(s); });
 
 // 每種魚喜歡的餌料（用對了機率 ×3，不對 ×0.4）
@@ -418,19 +398,14 @@ Object.assign(LIKES, { sunfish: ['squid'], whaleshark: ['shrimp'], coelacanth: [
 
 // 變種怪魚：只在暴風雨時出現，要釣暗紅色的巨大魚影
 const MUTANTS = [
-  { id: 'octopus', name: '八爪章魚', water: ['sea', 'deep', 'far'], lv: 4, w: 3, size: [150, 400], price: 15000, desc: '八隻觸手同時抓著釣線，眼睛還會發光。',
-    rows: ['....kkkkkk....', '...kppppppk...', '..kppppppppk..', '..kpwkppwkpk..', '..kppppppppk..', '..kpppPPpppk..', '...kppppppk...', '..kpkpkpkpkk..', '.kpkkpkkpkkpk.', '.kp.kp..kp.kp.', 'kpk.kpk.kpk.kp', 'kp..kp...kp.kp', '.k...k....k..k'],
-    pal: { k: '#3a0a2a', p: '#b03a8a', P: '#d070b0', w: '#ffee55' } },
+  { id: 'octopus', name: '八爪章魚', water: ['sea', 'deep', 'far'], lv: 4, w: 3, size: [150, 400], price: 15000, desc: '八隻觸手同時抓著釣線，眼睛還會發光。', emoji: '🐙' },
   { id: 'piranha', name: '食人魚', water: ['river', 'pond'], lv: 3, w: 4, size: [20, 45], price: 3000, desc: '牙齒比你的釣鉤還利，小心手指。',
     shape: 'normal', body: '#5a6070', belly: '#e04030', fin: '#3a404a', teeth: true },
   { id: 'glowkoi', name: '輻射錦鯉', water: ['pond'], lv: 4, w: 2, size: [50, 120], price: 8000, desc: '在暴風雨裡發出詭異的綠光。',
     shape: 'normal', body: '#b8ff8a', belly: '#e8ffd0', fin: '#40d040', patch: '#20b030' },
-  { id: 'croc', name: '史前巨鱷', water: ['river'], lv: 5, w: 1.5, size: [600, 1100], price: 50000, desc: '學名帝鱷，據說一億年前就在這條河裡了。',
-    rows: ['......k.k.k.k.k.k.........', '.....kgkgkgkgkgkgkkkkkk...', 'kkk.kgggggggggggggggggwkk.', 'kggkgggggggggggggggggggggk', 'kkgggggggggggggggggggtgtgk', '..kllllllllllllllllllllllk', '...kgk..kgk.....kgk..kgk..', '...kk...kk......kk...kk...'],
-    pal: { k: '#1a2a10', g: '#4a6a2a', l: '#a8b878', w: '#ff3030', t: '#ffffff' } },
+  { id: 'croc', name: '史前巨鱷', water: ['river'], lv: 5, w: 1.5, size: [600, 1100], price: 50000, desc: '學名帝鱷，據說一億年前就在這條河裡了。', emoji: '🐊' },
   { id: 'angler', name: '燈籠鮟鱇王', water: ['deep', 'far'], lv: 5, w: 1.5, size: [200, 500], price: 25000, desc: '頭上的燈籠會把人催眠，別盯著看。',
-    rows: ['...........yy...', '..........kyyk..', '.........k......', '....kkkkkk......', '..kkdddddddk....', '.kddddddddwdk...', 'kkdddddddddddk..', 'k.kddddddtttttk.', 'kkdddddddtdtdtk.', '.kddddddddddk...', '..kkdddddddk....', '....kkkkkkk.....'],
-    pal: { k: '#0a0a14', d: '#3a2a4a', w: '#ffffff', t: '#e8e8d0', y: '#aaff44' } },
+    shape: 'round', body: '#3a2a4a', belly: '#6a5a7a', fin: '#2a1a3a', teeth: true, lantern: true },
 ];
 MUTANTS.forEach(m => { m.mutant = true; m.rar = 6; FISH.push(m); });
 
@@ -597,157 +572,210 @@ function genMap() {
 }
 genMap();
 
-// ================= 像素圖 =================
-function strSprite(rows, pal) {
-  const c = document.createElement('canvas');
-  c.width = rows[0].length; c.height = rows.length;
-  const x = c.getContext('2d');
-  rows.forEach((r, j) => [...r].forEach((ch, i) => { if (pal[ch]) { x.fillStyle = pal[ch]; x.fillRect(i, j, 1, 1); } }));
-  return c;
-}
-
-// 用參數畫出每種魚的像素圖（56×28）：背深腹淺、鱗片、側線、鰓蓋、有反光的眼睛、魚鰭的鰭條
-const FW = 56, FH = 28;
+// ================= 卡通圖 =================
+// 魚的圖用向量畫（版面 56×28，實際放大 FK 倍）；奇物用 emoji；店員、圖示、料理也都是卡通風
+const FW = 56, FH = 28, FK = 8;
 // 顏色變亮（k>0）或變暗（k<0）
 function shade(hex, k) {
   const n = parseInt(hex.slice(1), 16), t = k < 0 ? 0 : 255, a = Math.abs(k);
   const ch = v => Math.round(v + (t - v) * a);
   return '#' + ((1 << 24) | (ch(n >> 16) << 16) | (ch(n >> 8 & 255) << 8) | ch(n & 255)).toString(16).slice(1);
 }
-const BOOT_ROWS = [
-  '..........kkkkkk............',
-  '..........kbbbbk............',
-  '..........kbBBbk............',
-  '..........kbbbbk............',
-  '..........kbBBbk............',
-  '..........kbbbbk............',
-  '..........kbbbbbkkkk........',
-  '..........kbbbbbbbbbk.......',
-  '.........kbbbbbbbbbbbk......',
-  '.........kbbbbbbbbbbbk......',
-  '.........kkkkkkkkkkkkk......',
-  '.........kgggggggggggk......',
-  '..........kkkkkkkkkkk.......',
-];
+// 顏色更鮮豔一點（卡通感）
+function vivid(hex, ds = .25, dl = .04) {
+  const c = new THREE.Color(hex), h = {}; c.getHSL(h);
+  return '#' + c.setHSL(h.h, Math.min(1, h.s * (1 + ds) + .05), Math.min(.92, h.l + dl)).getHexString();
+}
+const FISH_SHAPE = {   // 身體橢圓：中心 cx、半長 rx、半高 ry（版面座標）
+  normal: { cx: 30, rx: 16, ry: 7.2 }, slim: { cx: 30, rx: 18, ry: 4.8 }, round: { cx: 30, rx: 12, ry: 10 },
+  long: { cx: 24, rx: 16, ry: 6 }, eel: { cx: 30, rx: 25, ry: 3.6 },
+};
+// 身體的花紋：背深腹淺、條紋、斑點、色塊、魚鱗、亮光、側線、鰓蓋（full：整張填滿，給 3D 貼圖用）
+function paintFishBody(x, f, full) {
+  const { cx, rx, ry } = FISH_SHAPE[f.shape] || FISH_SHAPE.normal, cy = 14;
+  const body = vivid(f.body), belly = vivid(f.belly, .1, .06);
+  const g = x.createLinearGradient(0, cy - ry, 0, cy + ry);
+  g.addColorStop(0, shade(body, -.32)); g.addColorStop(.3, body); g.addColorStop(.58, body); g.addColorStop(.72, belly); g.addColorStop(1, belly);
+  x.save();
+  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  if (full) { x.fillStyle = g; x.fillRect(0, 0, FW, FH); } else { x.fillStyle = g; x.fill(); }
+  x.clip();
+  if (f.stripe) {
+    x.fillStyle = vivid(f.stripe); x.globalAlpha = .85;
+    for (let sx = cx - rx + 3; sx < cx + rx * .45; sx += 5.5) { x.beginPath(); x.ellipse(sx, cy - ry * .25, 1.3, ry * .75, 0, 0, Math.PI * 2); x.fill(); }
+    x.globalAlpha = 1;
+  }
+  if (f.spots) {
+    x.fillStyle = vivid(f.spots);
+    for (let k = 0; k < 26; k++) {
+      const h = hash(k, f.id.length * 31 + 7), px = cx - rx * .85 + (h % 1000) / 1000 * rx * 1.4, py = cy - ry * .8 + ((h >> 10) % 1000) / 1000 * ry * 1.1;
+      x.beginPath(); x.arc(px, py, .55 + (h >> 20) % 3 * .2, 0, Math.PI * 2); x.fill();
+    }
+  }
+  if (f.patch) {
+    x.fillStyle = vivid(f.patch);
+    for (let py = 0; py < FH; py += .5) for (let px = 0; px < FW; px += .5) if (vnoise(px / 5.2, py / 5.2) > .52) x.fillRect(px, py, .55, .55);
+  }
+  x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = .25;
+  for (let py = cy - ry; py < cy + ry * .3; py += 1.6) for (let px = cx - rx; px < cx + rx * .4; px += 1.6) {
+    x.beginPath(); x.arc(px + ((py / 1.6) % 2) * .8, py, .8, -1.2, 1.2); x.stroke();
+  }
+  const hl = x.createLinearGradient(0, cy - ry, 0, cy - ry * .4);
+  hl.addColorStop(0, 'rgba(255,255,255,0)'); hl.addColorStop(.5, 'rgba(255,255,255,.28)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = hl; x.fillRect(cx - rx, cy - ry, rx * 2, ry * .6);
+  x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = .35;
+  x.beginPath(); x.moveTo(cx - rx * .85, cy + ry * .05); x.quadraticCurveTo(cx, cy - ry * .15, cx + rx * .45, cy - ry * .05); x.stroke();
+  x.strokeStyle = shade(body, -.45); x.lineWidth = .5;
+  x.beginPath(); x.arc(cx + rx * .32, cy, ry * .78, -1.1, 1.1); x.stroke();
+  x.restore();
+}
+// 大眼睛、嘴巴、牙齒
+function paintFishFace(x, f) {
+  const { cx, rx, ry } = FISH_SHAPE[f.shape] || FISH_SHAPE.normal, cy = 14, body = vivid(f.body);
+  const ex = cx + rx * (f.shape === 'round' ? .5 : .62), ey = cy - ry * .28, er = Math.max(1.5, Math.min(2.6, ry * .34));
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex, ey, er, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#2a2335'; x.lineWidth = .35; x.stroke();
+  x.fillStyle = '#1b1525'; x.beginPath(); x.arc(ex + er * .15, ey + er * .05, er * .62, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex - er * .1, ey - er * .25, er * .24, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(ex + er * .38, ey + er * .28, er * .1, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = shade(body, -.6); x.lineWidth = .45;
+  x.beginPath(); x.arc(cx + rx - 2.2, cy + ry * .18, 1.1, .2, 1.5); x.stroke();
+  if (f.teeth) {
+    x.fillStyle = '#fff';
+    for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(cx + rx - 3 + k * .7, cy + ry * .22); x.lineTo(cx + rx - 2.65 + k * .7, cy + ry * .45); x.lineTo(cx + rx - 2.3 + k * .7, cy + ry * .22); x.fill(); }
+  }
+}
+// 一片魚鰭：填色＋深色邊＋淡淡的鰭條
+function finPath(x, f, draw) {
+  const fin = vivid(f.fin);
+  x.beginPath(); draw();
+  x.fillStyle = fin; x.fill();
+  x.strokeStyle = shade(fin, -.5); x.lineWidth = .45; x.stroke();
+}
+const ITEM_FONT = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 function makeFish(f) {
-  const c = document.createElement('canvas'); c.width = FW; c.height = FH;
-  const x2 = c.getContext('2d'); x2.imageSmoothingEnabled = false;
-  if (f.rows || f.shape === 'boot') {   // 手繪的物品：放大兩倍置中
-    const sp = f.rows ? strSprite(f.rows, f.pal) : strSprite(BOOT_ROWS, { k: '#2a1a10', b: '#6b4a2a', B: '#4e341c', g: '#3a3a3a' });
-    x2.drawImage(sp, Math.floor((FW - sp.width * 2) / 2), Math.floor((FH - sp.height * 2) / 2), sp.width * 2, sp.height * 2);
+  const c = document.createElement('canvas'); c.width = FW * FK; c.height = FH * FK;
+  const x = c.getContext('2d'); x.scale(FK, FK); x.lineJoin = x.lineCap = 'round';
+  if (f.emoji) {   // 奇物、雜物：卡通 emoji 加一點陰影
+    x.font = `22px ${ITEM_FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.shadowColor = 'rgba(0,0,0,.25)'; x.shadowBlur = 1.5; x.shadowOffsetY = 1;
+    x.fillText(f.emoji, FW / 2, FH / 2 + 1);
     return c;
   }
-  const g = Array.from({ length: FH }, () => new Array(FW).fill(null));
-  const set = (x, y, col) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < FW && y < FH) g[y][x] = col; };
-  const P = {
-    normal: { cx: 30, rx: 16, ry: 7.2 }, slim: { cx: 30, rx: 18, ry: 4.8 }, round: { cx: 30, rx: 12, ry: 10 },
-    long: { cx: 24, rx: 16, ry: 6 }, eel: { cx: 30, rx: 25, ry: 3.6 },
-  }[f.shape];
-  const { cx, rx, ry } = P, cy = 14;
-  const back = shade(f.body, -.25), belly2 = shade(f.belly, -.1), sheen = shade(f.body, .18);
-  // 魚鰭（先畫，身體蓋在上面）：每兩排一條深色鰭條
-  const fin = (x, y, k) => set(x, y, k % 2 ? shade(f.fin, -.18) : f.fin);
-  const tx = Math.round(cx - rx) + 2;
-  const tl = f.shape === 'eel' ? 5 : f.shape === 'round' ? 7 : 10;
-  for (let i = 0; i < tl; i++) {
-    const spread = 1 + i * (f.shape === 'eel' ? .5 : .95);
-    for (let y = -Math.round(spread); y <= Math.round(spread); y++) {
-      if (f.shape !== 'eel' && i > tl * .55 && Math.abs(y) < spread * (i / tl) * .55) continue;   // 魚尾分叉
-      fin(tx - i, cy - .5 + y, y);
+  if (f.id === 'gold') {   // 金條
+    const g = x.createLinearGradient(0, 8, 0, 21);
+    g.addColorStop(0, '#fff6b8'); g.addColorStop(.45, '#ffd23f'); g.addColorStop(1, '#c98f00');
+    x.beginPath(); x.moveTo(17, 9); x.lineTo(39, 9); x.lineTo(44, 20); x.lineTo(12, 20); x.closePath();
+    x.fillStyle = g; x.fill(); x.strokeStyle = '#8a5a00'; x.lineWidth = .7; x.stroke();
+    x.fillStyle = 'rgba(255,255,255,.7)'; x.fillRect(18.5, 10.3, 12, 1.2);
+    x.fillStyle = '#9a6a00'; x.font = 'bold 4px sans-serif'; x.textAlign = 'center'; x.fillText('999.9', 28, 17.5);
+    return c;
+  }
+  const { cx, rx, ry } = FISH_SHAPE[f.shape] || FISH_SHAPE.normal, cy = 14, top = cy - ry, bot = cy + ry;
+  // 尾巴
+  const x0 = cx - rx + 1.5, tl = f.shape === 'eel' ? 5 : f.shape === 'round' ? 6.5 : 9.5, th = f.shape === 'eel' ? 3 : f.shape === 'round' ? 6 : ry * 1.05 + 1;
+  finPath(x, f, () => {
+    x.moveTo(x0, cy - 1); x.quadraticCurveTo(x0 - 3, cy - 2, x0 - tl, cy - th);
+    x.quadraticCurveTo(x0 - tl + 3, cy, x0 - tl, cy + th); x.quadraticCurveTo(x0 - 3, cy + 2, x0, cy + 1); x.closePath();
+  });
+  x.strokeStyle = 'rgba(0,0,0,.15)'; x.lineWidth = .3;
+  for (let k = -2; k <= 2; k++) { x.beginPath(); x.moveTo(x0 - 1, cy); x.lineTo(x0 - tl + 1.2, cy + k * th * .38); x.stroke(); }
+  // 背鰭、臀鰭、腹鰭
+  if (f.shape === 'long') finPath(x, f, () => { x.moveTo(cx - 9, top + 1.2); x.quadraticCurveTo(cx - 7, top - 9, cx + 6, top + .8); x.closePath(); });
+  else if (f.shape === 'eel') {
+    finPath(x, f, () => { x.moveTo(cx - 23, top + .6); x.lineTo(cx - 22, top - 1.4); x.lineTo(cx + 17, top - 1.6); x.lineTo(cx + 18, top + .6); x.closePath(); });
+    finPath(x, f, () => { x.moveTo(cx + 15, top + .5); x.quadraticCurveTo(cx + 16, top - 8, cx + 20, top - 7); x.quadraticCurveTo(cx + 18, top - 3, cx + 19, top + .8); x.closePath(); });
+  } else if (f.shape === 'round' && !f.lantern) {
+    const fin = vivid(f.fin);
+    x.fillStyle = fin; x.strokeStyle = shade(fin, -.5); x.lineWidth = .35;
+    for (let a = 0; a < 20; a++) {   // 河豚的刺
+      const ang = a / 20 * Math.PI * 2, ca = Math.cos(ang), sa = Math.sin(ang);
+      x.beginPath(); x.moveTo(cx + ca * (rx - .5) - sa * .9, cy + sa * (ry - .5) + ca * .9); x.lineTo(cx + ca * (rx + 2.4), cy + sa * (ry + 2.4)); x.lineTo(cx + ca * (rx - .5) + sa * .9, cy + sa * (ry - .5) - ca * .9);
+      x.closePath(); x.fill(); x.stroke();
     }
+  } else if (f.lantern) {
+    finPath(x, f, () => { x.moveTo(cx - 8, top + 2.5); x.quadraticCurveTo(cx - 6, top - 2, cx - 1, top + .6); x.closePath(); });
+  } else {
+    finPath(x, f, () => { x.moveTo(cx - 7, top + 1.2); x.quadraticCurveTo(cx - 5, top - 4.5, cx + 3, top + .8); x.closePath(); });
+    finPath(x, f, () => { x.moveTo(cx - 10, bot - 1.2); x.quadraticCurveTo(cx - 9, bot + 3, cx - 5, bot - .8); x.closePath(); });
+    finPath(x, f, () => { x.moveTo(cx - 2, bot - .8); x.quadraticCurveTo(cx - 1.5, bot + 3, cx + 2, bot - .6); x.closePath(); });
   }
-  const top = Math.round(cy - ry);
-  if (f.shape === 'long') {   // 旗魚的大背鰭
-    for (let x = cx - 9; x <= cx + 6; x++) for (let h = 1; h <= 7 - Math.floor(Math.abs(x - cx + 2) / 1.6); h++) fin(x, top - h + 1, x);
-  } else if (f.shape === 'eel') {   // 皇帶魚的紅色背鰭和頭冠
-    for (let x = cx - 22; x <= cx + 18; x++) { set(x, top, f.fin); if (x % 3 === 0) set(x, top - 1, shade(f.fin, -.15)); }
-    for (let h = 1; h <= 8; h++) { set(cx + 19 - (h % 2), top - h, f.fin); set(cx + 18 - (h % 2), top - h, shade(f.fin, .15)); }
-  } else if (f.shape !== 'round') {
-    for (let x = cx - 7; x <= cx + 3; x++) for (let h = 1; h <= 4 - Math.floor(Math.abs(x - cx + 2) / 2.2); h++) fin(x, top - h + 1, x);
-    for (let x = cx - 3; x <= cx + 1; x++) { fin(x, cy + ry, x); fin(x - 1, cy + ry + 1, x); }   // 腹鰭
-    for (let x = cx - 10; x <= cx - 6; x++) fin(x, cy + ry - 1, x);                           // 臀鰭
+  // 身體＋外框
+  paintFishBody(x, f, false);
+  x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  x.strokeStyle = shade(vivid(f.body), -.6); x.lineWidth = .6; x.stroke();
+  // 胸鰭（貼在身上）
+  finPath(x, f, () => { x.moveTo(cx + rx * .28, cy + ry * .15); x.quadraticCurveTo(cx + rx * .05, cy + ry * .55, cx + rx * .02, cy + ry * .2); x.closePath(); });
+  if (f.shape === 'long') {   // 旗魚的長嘴
+    x.strokeStyle = '#2b2b3b'; x.lineWidth = 1.1;
+    x.beginPath(); x.moveTo(cx + rx - 1, cy - 1.2); x.lineTo(cx + rx + 12, cy - 1.8); x.stroke();
   }
-  // 身體
-  const gx = cx + rx * .45;
-  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
-    const dx = (x + .5 - cx) / rx, dy = (y + .5 - cy) / ry;
-    if (dx * dx + dy * dy > 1) continue;
-    let col = dy < -.5 ? back : dy > .38 ? f.belly : dy > .2 ? belly2 : f.body;
-    if (dy < -.82) col = sheen;   // 背上的反光
-    if (f.stripe && dy < .38 && Math.floor(x / 2) % 3 === 0 && dx < .5) col = f.stripe;
-    if (f.spots && dx < .55 && hash(x >> 1, y >> 1) % 7 === 0) col = f.spots;
-    if (f.patch && vnoise(x / 5.2, y / 5.2) > .5) col = f.patch;
-    if (dy < .3 && dx < .45 && (x + (y % 4 < 2 ? 0 : 2)) % 4 === 0 && y % 2 === 0) col = shade(col, -.09);   // 鱗片
-    if (Math.abs(dy - .08) < .07 && dx > -.8 && dx < .42) col = shade(col, -.16);                          // 側線
-    if (Math.abs(x + .5 - gx - dy * dy * 3) < .7 && Math.abs(dy) < .78) col = shade(col, -.28);            // 鰓蓋
-    g[y][x] = col;
+  if (f.whisker) {   // 鯰魚的鬍鬚
+    x.strokeStyle = '#2a2335'; x.lineWidth = .35;
+    for (const [dy, ey] of [[.6, 4], [1, 6], [-.2, -2.5]]) { x.beginPath(); x.moveTo(cx + rx - 1.5, cy + dy); x.quadraticCurveTo(cx + rx + 3, cy + dy, cx + rx + 5, cy + ey); x.stroke(); }
   }
-  if (f.shape === 'round') {   // 河豚的刺
-    for (let a = 0; a < 22; a++) {
-      const ang = a / 22 * Math.PI * 2;
-      set(cx - .5 + Math.cos(ang) * (rx + 1.2), cy - .5 + Math.sin(ang) * (ry + 1.2), f.fin);
-      set(cx - .5 + Math.cos(ang) * (rx + 2.2), cy - .5 + Math.sin(ang) * (ry + 2.2), shade(f.fin, -.2));
-    }
+  if (f.lantern) {   // 鮟鱇的燈籠
+    x.strokeStyle = shade(vivid(f.body), -.5); x.lineWidth = .6;
+    const lx = cx + rx + 3.5, ly = top + 2.5;
+    x.beginPath(); x.moveTo(cx + rx * .3, top + .5); x.quadraticCurveTo(cx + rx * .5, top - 3.5, lx, ly); x.stroke();
+    const lg = x.createRadialGradient(lx, ly, 0, lx, ly, 3.2);
+    lg.addColorStop(0, '#ffffd0'); lg.addColorStop(.4, '#c8ff50'); lg.addColorStop(1, 'rgba(170,255,68,0)');
+    x.fillStyle = lg; x.beginPath(); x.arc(lx, ly, 3.2, 0, Math.PI * 2); x.fill();
   }
-  if (f.shape === 'long') for (let x = cx + rx - 1; x < cx + rx + 13; x++) { set(x, cy - 2, '#2b2b2b'); if (x < cx + rx + 6) set(x, cy - 1, '#444444'); }   // 旗魚的長嘴
-  // 眼睛：白眼圈、黑瞳孔、反光點
-  const ex = Math.round(cx + rx * (f.shape === 'round' ? .5 : .62)), ey = Math.round(cy - ry * .3);
-  for (let y = -2; y <= 1; y++) for (let x = -2; x <= 1; x++) if (x * x + y * y < 5) set(ex + x, ey + y, '#f4f4f4');
-  for (let y = -1; y <= 0; y++) for (let x = -1; x <= 0; x++) set(ex + x, ey + y, '#111111');
-  set(ex - 1, ey - 1, '#ffffff');
-  // 嘴
-  const mouth = shade(f.body, -.55);
-  set(cx + rx - 1, cy + 1, mouth); set(cx + rx - 2, cy + 1, mouth); set(cx + rx - 3, cy + 2, mouth);
-  if (f.teeth) for (let k = 0; k < 4; k++) set(cx + rx - 2 - k, cy + (k % 2), '#ffffff');
-  if (f.whisker) for (let k = 0; k < 6; k++) { set(cx + rx + k, cy + 1 + k * .5, '#222'); set(cx + rx + k, cy - k * .3, '#222'); }
-  // 外框用身體的深色，比純黑柔和
-  const outline = shade(f.body, -.6), out = g.map(r => r.slice());
-  for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
-    if (g[y][x]) continue;
-    const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => { const v = g[y + b] && g[y + b][x + a]; return v && v !== '#2b2b2b' && v !== '#444444' && v !== '#222'; });
-    if (n) out[y][x] = outline;
-  }
-  out.forEach((r, y) => r.forEach((col, x) => { if (col) { x2.fillStyle = col; x2.fillRect(x, y, 1, 1); } }));
+  paintFishFace(x, f);
   return c;
 }
 const FISH_IMG = Object.fromEntries(FISH.map(f => [f.id, makeFish(f)]));
+// 介面用的魚圖：版面 56×28 的 scale 倍，再乘 2 給高解析度螢幕（顯示大小由 CSS 決定）
 function fishCanvas(id, scale) {
   const c = document.createElement('canvas');
-  c.width = FW * scale; c.height = FH * scale;
-  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
-  x.drawImage(FISH_IMG[id], 0, 0, c.width, c.height);
+  c.width = FW * scale * 2; c.height = FH * scale * 2;
+  c.getContext('2d').drawImage(FISH_IMG[id], 0, 0, c.width, c.height);
   return c;
 }
 
-// 背包圖示
-const BAG_ROWS = [
-  '....kkkk....',
-  '...k....k...',
-  '..kkkkkkkk..',
-  '.kbBBBBBBbk.',
-  '.kbBBBBBBbk.',
-  '.kbbbbbbbbk.',
-  '.kbbbyybbbk.',
-  '.kbbbyybbbk.',
-  '.kbbbbbbbbk.',
-  '.kbbbbbbbbk.',
-  '..kkkkkkkk..',
-  '............',
-];
-$('homeIcon').getContext('2d').drawImage(strSprite([
-  '.....kk.....', '....kRRk....', '...kRRRRk...', '..kRRRRRRk..', '.kRRRRRRRRk.', 'kkkkkkkkkkkk',
-  '.kwwwwwwwwk.', '.kwbbwwddwk.', '.kwbbwwddwk.', '.kwwwwwddwk.', '.kwwwwwddwk.', '.kkkkkkkkkk.',
-], { k: '#3b2414', R: '#c0392b', w: '#f4e4c1', b: '#5b9bd5', d: '#8a5a2b' }), 0, 0);
-$('bagIcon').getContext('2d').drawImage(strSprite(BAG_ROWS, { k: '#3b2414', b: '#a0622d', B: '#c8813f', y: '#ffd34d' }), 0, 0);
+// 回城、背包按鈕的圖示
+for (const [id, e] of [['homeIcon', '🏠'], ['bagIcon', '🎒']]) {
+  const c = $(id), x = c.getContext('2d');
+  c.width = c.height = 96;
+  x.font = `80px ${ITEM_FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(e, 48, 54);
+}
 
-// 人物（12×16 像素）：上半身 12 列，腿另外畫才能做走路動畫
-const PAL = { h: '#e0a526', H: '#b07c10', s: '#f1c27d', k: '#3b2a1a', c: '#217346', C: '#185c37', p: '#44546a', b: '#5b3a1e' };
-const SPR = {
-  d: ['...hhhhhh...', '..hhhhhhhh..', '.HHHHHHHHHH.', '...ssssss...', '...skssks...', '...ssssss...', '....ssss....', '..cccccccc..', '.sccCCCCccs.', '.scccccccs..', '..cccccccc..', '...pppppp...'],
-  u: ['...hhhhhh...', '..hhhhhhhh..', '.HHHHHHHHHH.', '...kkkkkk...', '...kkkkkk...', '...kkkkkk...', '....ssss....', '..cccccccc..', '.sccccccccs.', '.sccccccccs.', '..cccccccc..', '...pppppp...'],
-  r: ['...hhhhhh...', '..hhhhhhhh..', '..HHHHHHHHHH', '...kksssss..', '...ksssks...', '...kssssss..', '....ssss....', '...cccccc...', '...ccsccc...', '...ccsccc...', '...cccccc...', '...pppppp...'],
-};
-const LEGS = { d: [3, 7], u: [3, 7], r: [4, 6], l: [4, 6] };
+// 店員：卡通大頭（hair 頭髮色、shirt 衣服色；廚師戴高帽）
+function drawNpc(kind, pal) {
+  const c = document.createElement('canvas'); c.width = 96; c.height = 128;
+  const x = c.getContext('2d'); x.lineJoin = x.lineCap = 'round';
+  const ink = '#3b2a1a', skin = '#f8d2a8', hair = pal.h, shirt = pal.c;
+  const line = (w = 3) => { x.strokeStyle = ink; x.lineWidth = w; x.stroke(); };
+  // 身體
+  x.beginPath(); x.moveTo(14, 128); x.quadraticCurveTo(16, 86, 48, 84); x.quadraticCurveTo(80, 86, 82, 128); x.closePath();
+  x.fillStyle = shirt; x.fill(); line();
+  x.beginPath(); x.moveTo(38, 86); x.lineTo(48, 100); x.lineTo(58, 86); x.fillStyle = pal.C; x.fill(); line(2);
+  if (kind === 'restaurant') { x.fillStyle = '#e9edf2'; x.fillRect(30, 104, 36, 24); x.strokeStyle = ink; x.lineWidth = 2; x.strokeRect(30, 104, 36, 24); }
+  // 臉
+  x.beginPath(); x.arc(48, 54, 30, 0, Math.PI * 2); x.fillStyle = skin; x.fill(); line();
+  for (const sx of [-1, 1]) { x.beginPath(); x.arc(48 + sx * 31, 58, 6, 0, Math.PI * 2); x.fillStyle = skin; x.fill(); line(2.5); }   // 耳朵
+  // 頭髮或廚師帽
+  if (kind === 'restaurant') {
+    x.fillStyle = '#ffffff';
+    for (const [hx, hy, r] of [[30, 22, 14], [48, 14, 16], [66, 22, 14]]) { x.beginPath(); x.arc(hx, hy, r, 0, Math.PI * 2); x.fill(); line(2.5); }
+    x.beginPath(); x.rect(24, 24, 48, 14); x.fill(); line(2.5);
+  } else {
+    x.beginPath(); x.moveTo(17, 52); x.quadraticCurveTo(14, 18, 48, 18); x.quadraticCurveTo(82, 18, 79, 52);
+    x.quadraticCurveTo(66, 34, 48, 38); x.quadraticCurveTo(28, 34, 17, 52); x.closePath();
+    x.fillStyle = hair; x.fill(); line();
+    x.beginPath(); x.moveTo(30, 26); x.quadraticCurveTo(44, 20, 60, 24); x.strokeStyle = 'rgba(255,255,255,.35)'; x.lineWidth = 3; x.stroke();
+  }
+  // 眼睛、腮紅、笑臉
+  for (const sx of [-1, 1]) {
+    x.beginPath(); x.ellipse(48 + sx * 11, 56, 4, 5.5, 0, 0, Math.PI * 2); x.fillStyle = '#2a1d14'; x.fill();
+    x.beginPath(); x.arc(48 + sx * 11 - 1.2, 54, 1.6, 0, Math.PI * 2); x.fillStyle = '#fff'; x.fill();
+    x.beginPath(); x.ellipse(48 + sx * 19, 66, 5, 3, 0, 0, Math.PI * 2); x.fillStyle = 'rgba(255,120,120,.45)'; x.fill();
+  }
+  x.beginPath(); x.arc(48, 66, 8, .25, Math.PI - .25); line(2.5);
+  return c;
+}
+
 
 // ================= 遊戲狀態 =================
 const P = { x: SPAWN.x, y: SPAWN.y, dir: 'd', moving: false, walkT: 0 };
@@ -995,16 +1023,16 @@ function startFight() {
   const size = f.special ? 0 : Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
   const lv = fishLv(f, ratio), diff = lv - S.rod;
   splash(spot.x, spot.y, 10);
-  // 魚比釣竿強 2 級以上，一上鉤就斷線
-  if (diff >= 2) { state = 'walk'; toast(`啪！線斷了…這條魚太強（Lv${lv}），要換更好的釣竿` + loseLure()); return; }
+  // 魚比釣竿強 3 級以上，一上鉤就斷線
+  if (diff >= 3) { state = 'walk'; toast(`啪！線斷了…這條魚太強（Lv${lv}），要換更好的釣竿` + loseLure()); return; }
   const str = (f.junk || f.special ? 0.5 : RAR[f.rar].str) * (0.85 + 0.35 * ratio) * (weather.severe ? 1.1 : 1);
   // 魚的位置用「玩家為中心的角度＋距離」記，玩家搏鬥時不會移動
   const px = P.x * TX, pz = P.y * TZ, dx = spot.x * TX - px, dz = spot.y * TZ - pz;
-  F = newFight(f, size, str, lv, sz, diff >= 1 ? 1.35 : diff < 0 ? .85 : 1, Math.max(3, Math.hypot(dx, dz)));
+  F = newFight(f, size, str, lv, sz, diff >= 2 ? 1.6 : diff >= 1 ? 1.35 : diff < 0 ? .85 : 1, Math.max(3, Math.hypot(dx, dz)));
   F.px = px; F.pz = pz; F.a0 = Math.atan2(-dx, -dz);
   if (!S.tipFight) { S.tipFight = 1; saveAll(); toast('魚往哪衝，竿子就往反方向壓；魚累了再收線'); }
   state = 'fight';
-  $('flv').textContent = `魚力 Lv${lv}・${RODS[S.rod - 1].name} Lv${S.rod}` + (diff >= 1 ? '（竿子太弱！）' : '');
+  $('flv').textContent = `魚力 Lv${lv}・${RODS[S.rod - 1].name} Lv${S.rod}` + (diff >= 2 ? '（竿子太弱，很難拉！）' : diff >= 1 ? '（竿子太弱！）' : '');
   $('flv').className = diff >= 1 ? 'warn' : '';
   $('fight').classList.add('on');
 }
@@ -1209,13 +1237,12 @@ NPC.slot = {
   title: '遊藝場', who: '阿發', pal: { h: '#7030a0', H: '#4b2070', c: '#ffd966', C: '#c9a227' },
   greet: () => ['一次 $50，拉下去就對了！', '三個 7 就送金條一條喔！', '今天手氣如何？試試看！', '聽說昨天有人連中兩次魷魚，發光餌拿到手軟。'],
 };
-const NPC_LEGS = ['...pp..pp...', '...pp..pp...', '...pp..pp...', '...bb..bb...'];
 
 function openShop(kind, line) {
   const npc = NPC[kind];
   const d = el('div');
   const top = el('div', 'npc');
-  top.appendChild(strSprite(SPR.d.concat(NPC_LEGS), Object.assign({}, PAL, npc.pal)));
+  top.appendChild(drawNpc(kind, npc.pal));
   const bub = el('div', 'bubble');
   bub.appendChild(el('b', null, npc.who + '：'));
   bub.append(line || pick(npc.greet()));
@@ -1385,46 +1412,59 @@ function eatDish(b) {
   toast(`吃了${dishName(b)}！${m.buff}，${ms / 60000} 分鐘`);
 }
 
-// 料理的像素圖：烤、炸用魚的圖加顏色，湯和生魚片另外畫
+// 料理的卡通圖：烤、炸用魚的圖加顏色，湯和生魚片另外畫（版面 28×14，放大 FK 倍）
 const DISH_CACHE = {};
 function dishImg(fid, m) {
   const key = fid + m;
   if (DISH_CACHE[key]) return DISH_CACHE[key];
-  const DW = 28, DH = 14, f = FISH_BY[fid], c = document.createElement('canvas'); c.width = DW; c.height = DH;
-  const x = c.getContext('2d'), px = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
-  const body = f.body || '#999999', belly = f.belly || '#dddddd';
+  const DW = 28, DH = 14, f = FISH_BY[fid], c = document.createElement('canvas'); c.width = DW * FK; c.height = DH * FK;
+  const x = c.getContext('2d'); x.scale(FK, FK); x.lineJoin = x.lineCap = 'round';
+  const body = vivid(f.body || '#999999'), belly = vivid(f.belly || '#dddddd', .1, .06), ink = '#5a4a40';
   if (m === 'soup') {
-    px(9, 0, 1, 3, '#cccccc'); px(13, 1, 1, 3, '#cccccc'); px(17, 0, 1, 3, '#cccccc');   // 熱氣
-    px(4, 5, 20, 1, '#7f7f7f'); px(5, 6, 18, 1, '#f3d9a4');
-    px(8, 6, 3, 1, body); px(15, 6, 3, 1, belly); px(12, 6, 2, 1, '#5aa02c');
-    for (let y = 7; y <= 11; y++) px(5 + (y - 7), y, 18 - 2 * (y - 7), 1, y === 8 ? '#2e75b6' : '#ffffff');
-    px(4, 6, 1, 2, '#7f7f7f'); px(23, 6, 1, 2, '#7f7f7f'); px(10, 12, 8, 1, '#bfbfbf');
+    x.strokeStyle = 'rgba(200,200,200,.9)'; x.lineWidth = .5;   // 熱氣
+    for (const sx of [10, 14, 18]) { x.beginPath(); x.moveTo(sx, 4.5); x.quadraticCurveTo(sx - 1.2, 3, sx, 1.8); x.quadraticCurveTo(sx + 1.2, .8, sx, 0); x.stroke(); }
+    x.beginPath(); x.moveTo(4, 6); x.quadraticCurveTo(4.5, 13, 14, 13); x.quadraticCurveTo(23.5, 13, 24, 6); x.closePath();   // 碗
+    x.fillStyle = '#ffffff'; x.fill(); x.strokeStyle = ink; x.lineWidth = .4; x.stroke();
+    x.fillStyle = '#4f8fd0'; x.fillRect(6.5, 8.6, 15, .7);
+    x.beginPath(); x.ellipse(14, 6, 10, 1.8, 0, 0, Math.PI * 2); x.fillStyle = '#f5d48a'; x.fill(); x.stroke();   // 湯
+    for (const [px, col] of [[10, body], [16.5, belly], [13, belly]]) { x.beginPath(); x.ellipse(px, 6, 1.6, .7, 0, 0, Math.PI * 2); x.fillStyle = col; x.fill(); }
+    x.fillStyle = '#5aa02c'; for (const px of [8, 12, 15, 19]) { x.beginPath(); x.arc(px, 5.6 + (px % 3) * .3, .35, 0, Math.PI * 2); x.fill(); }
   } else {
-    // 盤子
-    px(3, 11, 22, 1, '#d9d9d9'); px(2, 12, 24, 1, '#ffffff'); px(4, 13, 20, 1, '#a6a6a6'); px(2, 11, 1, 1, '#a6a6a6'); px(25, 11, 1, 1, '#a6a6a6');
+    x.beginPath(); x.ellipse(14, 11.2, 12.5, 2.4, 0, 0, Math.PI * 2);   // 盤子
+    x.fillStyle = '#ffffff'; x.fill(); x.strokeStyle = '#b8b8b8'; x.lineWidth = .4; x.stroke();
+    x.beginPath(); x.ellipse(14, 11, 9, 1.4, 0, 0, Math.PI * 2); x.strokeStyle = '#e2e2e2'; x.stroke();
     if (m === 'sashimi') {
-      px(3, 7, 3, 4, '#5aa02c'); px(22, 8, 2, 2, '#8fd14f');   // 紫蘇葉、山葵
-      for (let k = 0; k < 4; k++) { px(7 + k * 4, 6 + (k % 2), 3, 4, belly); px(7 + k * 4, 6 + (k % 2), 3, 1, body); px(7 + k * 4, 10, 3, 1, '#7f7f7f'); }
-    } else {
-      const t = document.createElement('canvas'); t.width = DW; t.height = DH;
-      const tx = t.getContext('2d'); tx.imageSmoothingEnabled = false;
-      tx.drawImage(FISH_IMG[fid], 3, 0, 22, 11);
-      tx.globalCompositeOperation = 'source-atop';
-      tx.fillStyle = m === 'grill' ? 'rgba(110,55,10,.5)' : 'rgba(230,160,40,.6)';
-      tx.fillRect(0, 0, DW, DH);
-      tx.fillStyle = m === 'grill' ? '#3a2210' : '#fff3c0';
-      for (let k = 0; k < DW; k++) for (let y = 0; y < 11; y++) {
-        if (m === 'grill' ? (k + y) % 5 === 0 && k > 8 && k < 22 : hash(k, y) % 5 === 0) tx.fillRect(k, y, 1, 1);
+      x.fillStyle = '#5aa02c'; x.beginPath(); x.ellipse(5.5, 9, 2.5, 1.4, -.4, 0, Math.PI * 2); x.fill();   // 紫蘇葉
+      x.fillStyle = '#9ad860'; x.beginPath(); x.arc(23, 9.6, 1.1, 0, Math.PI * 2); x.fill();               // 山葵
+      for (let k = 0; k < 4; k++) {
+        const sx = 8 + k * 3.4, sy = 6.5 + (k % 2) * .6;
+        const g = x.createLinearGradient(0, sy, 0, sy + 3.6); g.addColorStop(0, body); g.addColorStop(.25, belly); g.addColorStop(1, shade(belly, -.08));
+        x.beginPath(); x.roundRect ? x.roundRect(sx, sy, 3, 3.6, .8) : x.rect(sx, sy, 3, 3.6);
+        x.fillStyle = g; x.fill(); x.strokeStyle = 'rgba(0,0,0,.25)'; x.lineWidth = .25; x.stroke();
       }
-      x.drawImage(t, 0, 0);
+    } else {
+      // 烤、炸：魚的圖整條染色，再加烤痕或麵衣
+      const t = document.createElement('canvas'); t.width = DW * FK; t.height = DH * FK;
+      const tx = t.getContext('2d'); tx.scale(FK, FK);
+      tx.drawImage(FISH_IMG[fid], 3, -.5, 22, 11);
+      tx.globalCompositeOperation = 'source-atop';
+      tx.fillStyle = m === 'grill' ? 'rgba(120,60,10,.45)' : 'rgba(235,165,40,.6)'; tx.fillRect(0, 0, DW, DH);
+      if (m === 'grill') {
+        tx.strokeStyle = 'rgba(50,25,8,.75)'; tx.lineWidth = .5;
+        for (let k = 0; k < 4; k++) { tx.beginPath(); tx.moveTo(10 + k * 3, 2.5); tx.lineTo(8 + k * 3, 8.5); tx.stroke(); }
+      } else {
+        tx.fillStyle = 'rgba(255,240,180,.85)';
+        for (let k = 0; k < 60; k++) { const h = hash(k, 3); tx.beginPath(); tx.arc(4 + (h % 200) / 10, 1 + ((h >> 8) % 90) / 10, .3, 0, Math.PI * 2); tx.fill(); }
+      }
+      x.drawImage(t, 0, 0, DW, DH);
+      if (m === 'fry') { x.fillStyle = '#ffe14d'; x.beginPath(); x.moveTo(23.5, 9.5); x.lineTo(26, 8.2); x.lineTo(25.6, 10.4); x.closePath(); x.fill(); }   // 檸檬
     }
   }
   return (DISH_CACHE[key] = c);
 }
 function dishCanvas(b, scale) {
-  const c = document.createElement('canvas'); c.width = 28 * scale; c.height = 14 * scale;
-  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
-  x.drawImage(dishImg(b.id, b.dish), 0, 0, c.width, c.height);
+  const c = document.createElement('canvas'); c.width = 28 * scale * 2; c.height = 14 * scale * 2;
+  c.getContext('2d').drawImage(dishImg(b.id, b.dish), 0, 0, c.width, c.height);
   return c;
 }
 
@@ -1615,11 +1655,12 @@ function setBoss(on) {
 const JUMPERS = new Set(['zacco', 'ayu', 'salmon', 'scad', 'mahi', 'marlin', 'tuna', 'piranha', 'koi', 'goldkoi', 'glowkoi', 'tilapia', 'porgy', 'crucian']);
 const FIGHT = {
   reelSpeed: 3.2,   // 收線速度（公尺/秒）
-  drag: .8,         // 張力超過這個值，捲線器開始出線
-  lineBase: 40,     // 線長（公尺），好竿子多 10 公尺
-  slackLose: 1.4,   // 鬆線超過幾秒魚就脫鉤
+  drag: .74,        // 張力超過這個值，捲線器開始出線
+  lineBase: 55,     // 線長（公尺），好竿子多 10 公尺
+  slackLose: 2.2,   // 鬆線超過幾秒魚就脫鉤
   landD: 2.2,       // 拉到幾公尺內算拉到腳邊
-  stamRate: .9,     // 體力消耗倍率（越大越快拉上來）
+  stamRate: 1.25,   // 體力消耗倍率（越大越快拉上來）
+  react: .55,       // 甩頭、跳水開始後這幾秒內收線不會斷（給玩家反應時間）
 };
 function newFight(f, size, str, lv, sz, tensMul, d) {
   return { f, size, str, lv, sz, tensMul, d, th: 0, stam: 1, tens: .35, spike: 0, slack: 0, rod: 0, turn: 0,
@@ -1633,7 +1674,7 @@ function nextAct(F) {
   };
   let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
   for (const k in w) { r -= w[k]; if (r <= 0) { F.act = k; break; } }
-  F.turn = 0; F.turned = false;
+  F.turn = 0; F.turned = false; F.age = 0;
   if (F.act === 'run') { F.dir = Math.random() < .3 ? 0 : (Math.random() < .5 ? -1 : 1); F.actT = rand(2.5, 4.5); }
   else if (F.act === 'charge') F.actT = rand(.9, 1.7);
   else if (F.act === 'shake') F.actT = rand(.6, 1);
@@ -1645,7 +1686,7 @@ function nextAct(F) {
 function stepFight(F, inp, dt, env) {
   F.t += dt;
   F.rod += (inp.rod - F.rod) * Math.min(1, dt * 6);
-  F.actT -= dt;
+  F.actT -= dt; F.age = (F.age || 0) + dt;
   if (F.actT <= 0) nextAct(F);
   const power = F.str * (.35 + .65 * F.stam);
   let pull = .25 * power, dd = 0, dth = 0, side = 0;
@@ -1679,7 +1720,7 @@ function stepFight(F, inp, dt, env) {
   F.drag = F.tens > FIGHT.drag;
   if (F.drag) { dd += (F.tens - FIGHT.drag) * 18 * dt; F.tens = FIGHT.drag + (F.tens - FIGHT.drag) * .3; }
   // 甩頭、跳水時還在硬收：瞬間張力暴增
-  if ((F.act === 'shake' || F.act === 'jump') && reel && Math.random() < dt * 2.4 * F.tensMul) F.spike = Math.max(F.spike, .35 + Math.random() * .2);
+  if ((F.act === 'shake' || F.act === 'jump') && reel && F.age > FIGHT.react && Math.random() < dt * 1.3 * F.tensMul) F.spike = Math.max(F.spike, .28 + Math.random() * .17);
   F.spike = Math.max(0, F.spike - dt * 1.2);
   // 體力：有張力才會累，側壓累得更快；越強的魚體力越多
   F.stam = Math.max(0, F.stam - dt * FIGHT.stamRate * (.01 + F.tens * .085 + side * .05) / Math.pow(F.str, 1.6));
@@ -1776,7 +1817,7 @@ function update(dt) {
       // 附近有魚影就會游過來；沒有的話要等比較久
       const s = nearestShadow(spot.x, spot.y, 5);
       if (s) { s.target = { x: spot.x, y: spot.y }; spot.shadow = s; waitT = rand(1, 2.5); }
-      else { spot.shadow = null; waitT = rand(CFG.waitMax, CFG.waitMax * 2); }
+      else { spot.shadow = null; waitT = rand(CFG.waitMin * 1.5, CFG.waitMax); }
       // 下雨魚比較快上鉤；誘餌、炸魚也會縮短等待
       waitT *= (weather.wait || 1) * (1 - (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0)) * (1 - .35 * hasBuff('fry'));
     }
@@ -2521,62 +2562,11 @@ function splashRing(x, z, big) {
 
 // ---- 卡通魚的花紋貼圖：跟像素圖同樣的版面，但畫成平滑的漸層、大眼睛 ----
 const FISH_TOON = {};
-function vivid(hex, ds = .25, dl = .04) {   // 顏色更鮮豔一點
-  const c = new THREE.Color(hex), h = {}; c.getHSL(h);
-  return '#' + c.setHSL(h.h, Math.min(1, h.s * (1 + ds) + .05), Math.min(.92, h.l + dl)).getHexString();
-}
 function fishToonTex(f) {
   if (FISH_TOON[f.id]) return FISH_TOON[f.id];
-  const K = 8, c = document.createElement('canvas'); c.width = FW * K; c.height = FH * K;
-  const x = c.getContext('2d'); x.scale(K, K);
-  const B = FISH_BODY[f.shape] || FISH_BODY.normal, cx = B.cx, rx = B.rx, ry = B.ry, cy = 14;
-  const body = vivid(f.body), belly = vivid(f.belly, .1, .06);
-  // 背深腹淺
-  const g = x.createLinearGradient(0, cy - ry, 0, cy + ry);
-  g.addColorStop(0, shade(body, -.32)); g.addColorStop(.3, body); g.addColorStop(.58, body); g.addColorStop(.72, belly); g.addColorStop(1, belly);
-  x.fillStyle = g; x.fillRect(0, 0, FW, FH);
-  x.save(); x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); x.clip();
-  if (f.stripe) {   // 直條紋
-    x.fillStyle = vivid(f.stripe); x.globalAlpha = .85;
-    for (let sx = cx - rx + 3; sx < cx + rx * .45; sx += 5.5) { x.beginPath(); x.ellipse(sx, cy - ry * .25, 1.3, ry * .75, 0, 0, Math.PI * 2); x.fill(); }
-    x.globalAlpha = 1;
-  }
-  if (f.spots) {    // 斑點
-    x.fillStyle = vivid(f.spots);
-    for (let k = 0; k < 26; k++) {
-      const h = hash(k, f.id.length * 31 + 7), px = cx - rx * .85 + (h % 1000) / 1000 * rx * 1.4, py = cy - ry * .8 + ((h >> 10) % 1000) / 1000 * ry * 1.1;
-      x.beginPath(); x.arc(px, py, .55 + (h >> 20) % 3 * .2, 0, Math.PI * 2); x.fill();
-    }
-  }
-  if (f.patch) {    // 錦鯉的色塊
-    x.fillStyle = vivid(f.patch);
-    for (let py = 0; py < FH; py += .5) for (let px = 0; px < FW; px += .5) if (vnoise(px / 5.2, py / 5.2) > .52) x.fillRect(px, py, .55, .55);
-  }
-  // 魚鱗：淡淡的弧線
-  x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = .25;
-  for (let py = cy - ry; py < cy + ry * .3; py += 1.6) for (let px = cx - rx; px < cx + rx * .4; px += 1.6) {
-    x.beginPath(); x.arc(px + ((py / 1.6) % 2) * .8, py, .8, -1.2, 1.2); x.stroke();
-  }
-  // 背上的亮光、側線、鰓蓋
-  const hl = x.createLinearGradient(0, cy - ry, 0, cy - ry * .4);
-  hl.addColorStop(0, 'rgba(255,255,255,0)'); hl.addColorStop(.5, 'rgba(255,255,255,.28)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = hl; x.fillRect(cx - rx, cy - ry, rx * 2, ry * .6);
-  x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = .35;
-  x.beginPath(); x.moveTo(cx - rx * .85, cy + ry * .05); x.quadraticCurveTo(cx, cy - ry * .15, cx + rx * .45, cy - ry * .05); x.stroke();
-  x.strokeStyle = shade(body, -.45); x.lineWidth = .5;
-  x.beginPath(); x.arc(cx + rx * .32, cy, ry * .78, -1.1, 1.1); x.stroke();
-  x.restore();
-  // 大眼睛：白眼球、黑瞳孔、兩個反光點
-  const ex = cx + rx * (f.shape === 'round' ? .5 : .62), ey = cy - ry * .28, er = Math.max(1.5, Math.min(2.6, ry * .34));
-  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex, ey, er, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = '#2a2335'; x.lineWidth = .35; x.stroke();
-  x.fillStyle = '#1b1525'; x.beginPath(); x.arc(ex + er * .15, ey + er * .05, er * .62, 0, Math.PI * 2); x.fill();
-  x.fillStyle = '#ffffff'; x.beginPath(); x.arc(ex - er * .1, ey - er * .25, er * .24, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.arc(ex + er * .38, ey + er * .28, er * .1, 0, Math.PI * 2); x.fill();
-  // 嘴
-  x.strokeStyle = shade(body, -.6); x.lineWidth = .45;
-  x.beginPath(); x.arc(cx + rx - 2.2, cy + ry * .18, 1.1, .2, 1.5); x.stroke();
-  if (f.teeth) { x.fillStyle = '#fff'; for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(cx + rx - 3 + k * .7, cy + ry * .22); x.lineTo(cx + rx - 2.65 + k * .7, cy + ry * .45); x.lineTo(cx + rx - 2.3 + k * .7, cy + ry * .22); x.fill(); } }
+  const c = document.createElement('canvas'); c.width = FW * FK; c.height = FH * FK;
+  const x = c.getContext('2d'); x.scale(FK, FK);
+  paintFishBody(x, f, true); paintFishFace(x, f);   // 跟介面的魚圖同一套花紋
   const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
   return (FISH_TOON[f.id] = t);
 }
@@ -2588,7 +2578,7 @@ const fightShadow = new THREE.Mesh(fishShadowGeo, new THREE.MeshBasicMaterial({ 
 fightShadow.renderOrder = 3; fightShadow.visible = false; scene.add(fightShadow);
 const FISH_TEX = {};
 function fishTex(id) {
-  if (!FISH_TEX[id]) { const t = new THREE.CanvasTexture(FISH_IMG[id]); t.magFilter = t.minFilter = THREE.NearestFilter; FISH_TEX[id] = t; }
+  if (!FISH_TEX[id]) { const t = new THREE.CanvasTexture(FISH_IMG[id]); t.anisotropy = 4; FISH_TEX[id] = t; }
   return FISH_TEX[id];
 }
 const fishSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: fishTex('tilapia'), alphaTest: .5 }));   // 透明的地方不擋住後面的水面
@@ -2665,6 +2655,7 @@ function showFish3D(f, lenM) {
 }
 // 魚的長度（公尺）：照尺寸，但太小看不到、太大塞不進畫面
 const fishLen = (f, size) => f.special || f.junk ? .5 : clamp(.25 + size / 110, .3, 3.2);
+const flatItem = f => !!(f.special || f.junk || f.emoji);   // 用平面圖（emoji）顯示的東西
 
 
 // ---- 船：在水上時出現在腳下 ----
@@ -2792,8 +2783,9 @@ function render3D(dt) {
     const jumping = F.act === 'jump' && F.jump < 1.05;
     if (jumping || F.d < 6) {   // 跳出水面，或拉近到腳邊在水面掙扎
       const k = jumping ? F.jump / 1.05 : 0, up = jumping ? Math.sin(k * Math.PI) * (1.4 + len * .5) : 0;
-      if (F.f.special || F.f.junk) {
-        fishSprite.position.set(fx, WATER_Y + up + .2, fz); fishSprite.scale.set(.8, .4, 1);
+      if (flatItem(F.f)) {
+        const sl = Math.max(1, fishLen(F.f, F.size) * 1.3);   // emoji 圖的魚身只佔一半寬
+        fishSprite.position.set(fx, WATER_Y + up + sl * .2, fz); fishSprite.scale.set(sl, sl / 2, 1);
         fishSprite.material.map = fishTex(F.f.id); fishSprite.material.rotation = Math.sin(gameT * 12) * .4; fishSprite.visible = true;
         if (jumping) lineEnd = fishSprite.position;
       } else {
@@ -2821,9 +2813,9 @@ function render3D(dt) {
     P0.y += Math.sin(k * Math.PI) * 1.2;
     const sw = Math.sin(L.t * 6) * .35 * (1 - k);   // 掛在線上左右晃
     P0.x += Math.cos(yaw) * sw; P0.z -= Math.sin(yaw) * sw;
-    if (L.f.special || L.f.junk) {
+    if (flatItem(L.f)) {
       fishSprite.position.copy(P0);
-      const len = .8; fishSprite.scale.set(len, len / 2, 1);
+      const len = Math.min(1.6, Math.max(1, fishLen(L.f, L.size) * 1.3)); fishSprite.scale.set(len, len / 2, 1);
       fishSprite.material.map = fishTex(L.f.id);
       fishSprite.material.rotation = lifting ? Math.sin(L.t * 20) * .5 : Math.sin(gameT * 5) * .08;
       fishSprite.visible = true;
