@@ -932,8 +932,44 @@ if (!BAIT_BY[S.bait] && !(LURE_BY[S.bait] && S.lures[S.bait])) S.bait = 'bread';
 function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); d.n++; d.max = Math.max(d.max, b.size); }
 if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
 function saveAll() {
+  S.at = Date.now();   // 存檔時間：本機和雲端比較，用比較新的那份
   try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); localStorage.setItem('moyu.save', JSON.stringify(S)); } catch (e) {}
+  cloudSave();
 }
+// 雲端存檔：在 claude.ai 測試網頁上玩時，進度另外存一份在每個人自己的私人空間，
+// 網頁更新、瀏覽器資料被清掉也不會不見。一般網址上沒有這個功能，只用 localStorage。
+let cloudRef = null, cloudBusy = false, cloudDirty = false;
+async function cloudSave() {
+  if (!cloudRef) return;
+  if (cloudBusy) { cloudDirty = true; return; }   // 一次只寫一筆，連續存檔合併成一次
+  cloudBusy = true;
+  try { await cloudRef.set({ save: JSON.stringify(S), bag: JSON.stringify(bag), at: S.at }); }
+  catch (e) { cloudRef = null; }   // 被拒絕（例如只能看的人）就不再上傳
+  cloudBusy = false;
+  if (cloudDirty) { cloudDirty = false; setTimeout(cloudSave, 1500); }
+}
+(async () => {
+  if (!window.claude || !window.claude.use) return;
+  const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+  const uid = user && await user.id();
+  if (!db || !uid) return;
+  const ref = db.doc('data/users/' + uid + '/moyu');
+  let d = null;
+  try { const snap = await ref.get(); d = snap.exists ? snap.data() : null; } catch (e) { return; }
+  if (d && d.at > (S.at || 0)) {
+    // 雲端的比較新（例如網頁更新後本機進度不見了）：讀回雲端的進度
+    try {
+      Object.assign(S, JSON.parse(d.save));
+      bag = JSON.parse(d.bag).filter(b => FISH_BY[b.id]);
+      localStorage.setItem('moyu.bag', d.bag); localStorage.setItem('moyu.save', d.save);
+    } catch (e) {}
+    lastHud = '';
+    $('boxBtn').classList.toggle('dot', boxHasNew());
+    toast(`已讀回存檔：$${fmtN(S.money)}・${RODS[S.rod - 1].name}`);
+  }
+  cloudRef = ref;
+  if (!d || d.at < (S.at || 0)) cloudSave();   // 本機比較新：上傳一份
+})();
 
 // ================= 輸入 =================
 const keys = new Set();

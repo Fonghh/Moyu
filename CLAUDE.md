@@ -58,5 +58,7 @@
 - 視角：眼睛高度 `CFG.eye`（3m），搏鬥時鏡頭自動往下看向魚。
 - 狀態 `state`：walk → charge → cast → wait → bite → fight → land（引拔：魚頭朝上掛在線上被吊到面前 `CFG.landFly`，再演掙扎 `L.mode`）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
+- 雲端存檔：在 claude.ai 測試網頁（artifact）上玩時，`saveAll()` 也把進度寫到每個人私人的 `data/users/<id>/moyu`（`cloudSave()`，需要 artifact 的 `db`、`user` 能力）；開啟時比較 `S.at`，雲端比較新就讀回來。一般網址沒有 `window.claude`，只用 localStorage。
+- 新增存檔欄位時要給預設值（`S` 的初始值或讀檔後補上），舊存檔才不會壞掉。
 - `setBoss()`：隱藏功能（左上角 X 圖示），畫面變成普通報表並暫停。
 - 程式註解使用繁體中文。
