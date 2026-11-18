@@ -1066,54 +1066,194 @@ $('logo2').addEventListener('click', () => setBoss(false));
 document.addEventListener('visibilitychange', () => { if (document.hidden && !boss) setBoss(true); });
 
 const pick = a => a[Math.floor(Math.random() * a.length)];
-// ================= 水裡的魚影 =================
-// 影子越大，上鉤的魚越大尾、越稀有
-const SHADOW_N = { pond: 16, river: 26, sea: 36, deep: 40, far: 40 };
+// ================= 水裡的魚 =================
+// 每條魚出生時就決定魚種和大小，在水裡自己過日子：小魚成群游、大魚單獨巡游，
+// 會在礁石、碼頭柱子旁休息、到水底覓食。下竿後附近的魚會游過來、繞圈、試探、輕啄，最後吞餌或離開。
+// 座標：x、y 是格子（跟以前的魚影一樣），移動、轉向用公尺算；h 是游的方向（世界座標 xz 的角度）
+const SHADOW_N = { pond: 18, river: 28, sea: 40, deep: 42, far: 40 };
 const SHADOW_P = { pond: [.5, .4], river: [.45, .4], sea: [.35, .45], deep: [.2, .45], far: [.15, .4] };   // 小、中的機率，其餘是大
-const SHADOW_R = [[6, 2.2], [10, 3.6], [16, 5.5], [26, 9]];   // 小／中／大／變種怪影的半徑（px）
 const waterCells = { pond: [], river: [], sea: [], deep: [], far: [] };
 for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const w = TILES[tileAt(i, j)].water; if (w) waterCells[w].push([i, j]); }
 const shadows = [];
+const SCHOOLERS = new Set(['mosq', 'crucian', 'zacco', 'ayu', 'scad', 'tilapia']);   // 成群游的小魚
+const STRUCT = [];   // 魚喜歡躲的地方：礁石、碼頭柱子（公尺座標，建 3D 場景時填進來）
+const waterOf = (x, y) => TILES[tileAt(Math.floor(x), Math.floor(y))].water;
+const depthAt = (mx, mz) => WATER_Y - hField(mx, mz);   // 水深（公尺）
+// 依水域、魚影大小挑魚種（不看餌；吃不吃餌等牠游過來再說）
+function rollFish(w, sz) {
+  const list = FISH.filter(f => f.water.includes(w) && !f.junk && !f.special && !f.mutant);
+  const ws = list.map(f => RAR[f.rar].w * SZ_MULT[sz][f.rar] * SIZE_FIT[Math.abs(sizeClass(f) - sz)] * (ONLY_BAIT[f.id] ? .5 : 1) * fishActivity(f));
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+  for (let k = 0; k < list.length; k++) { r -= ws[k]; if (r <= 0) return list[k]; }
+  return list[0];
+}
+// 魚在這個時間、天氣有多活躍（之後的系統會用到，先回傳 1）
+function fishActivity(f) { return 1; }
+function newFish(w, sz, at, f) {
+  f = f || rollFish(w, sz);
+  const ratio = SZ_RATIO[Math.min(sz, 2)](), size = Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
+  const s = { x: at[0], y: at[1], w, sz, f, ratio, size, len: fishLen(f, size), h: rand(0, 6.28), v: 0, turnRate: 0, wander: 0,
+    sp0: (sz === 0 ? rand(.5, .9) : sz === 1 ? rand(.35, .6) : rand(.25, .45)), dep: rand(.35, .9), dep0: rand(.35, 1.1), pitch: 0,
+    mode: 'cruise', modeT: rand(2, 6), target: null, ph: rand(0, 6.28) };
+  shadows.push(s);
+  return s;
+}
 function spawnShadow(w) {
   const c = waterCells[w][Math.floor(Math.random() * waterCells[w].length)], p = SHADOW_P[w], r = Math.random();
-  shadows.push({ x: c[0] + .5, y: c[1] + .5, w, sz: r < p[0] ? 0 : r < p[0] + p[1] ? 1 : 2, a: rand(0, 6.28), sp: rand(.4, .9), turn: rand(1, 3), target: null });
+  const sz = r < p[0] ? 0 : r < p[0] + p[1] ? 1 : 2, s = newFish(w, sz, [c[0] + .5, c[1] + .5]);
+  // 成群的小魚：附近有同種的魚群就加入
+  if (SCHOOLERS.has(s.f.id) && sz === 0) {
+    const lead = shadows.find(o => o !== s && !o.leader && o.f === s.f && Math.hypot((o.x - s.x) * TX, (o.y - s.y) * TZ) < 40);
+    if (lead) joinSchool(s, lead);
+  }
+  return s;
 }
-for (const w in SHADOW_N) for (let k = 0; k < SHADOW_N[w]; k++) spawnShadow(w);
+function joinSchool(s, lead) { s.leader = lead; s.off = [rand(-1.6, -.3), rand(-.9, .9)]; s.x = lead.x; s.y = lead.y; s.dep0 = lead.dep0 + rand(-.15, .15); }
+let fishInit = false;
+function initFish() {
+  fishInit = true;
+  for (const w in SHADOW_N) for (let k = 0; k < SHADOW_N[w]; k++) {
+    const s = spawnShadow(w);
+    // 一開始的小魚群：多帶幾條跟著
+    if (SCHOOLERS.has(s.f.id) && s.sz === 0 && !s.leader) for (let n = rand(2, 5); n > 0; n--) joinSchool(newFish(w, 0, [s.x, s.y], s.f), s);
+  }
+}
 // 暴風雨時出現的變種怪影（sz 3）
 function spawnMutantShadows(n) {
   for (let k = 0; k < n; k++) {
     const m = pick(MUTANTS), w = pick(m.water), c = pick(waterCells[w]);
-    shadows.push({ x: c[0] + .5, y: c[1] + .5, w, sz: 3, a: rand(0, 6.28), sp: rand(.5, 1), turn: rand(1, 3), target: null });
+    const s = newFish(w, 3, [c[0] + .5, c[1] + .5], m);
+    s.len = 3; s.sp0 = rand(.4, .8);
   }
 }
 function clearMutantShadows() { for (let k = shadows.length - 1; k >= 0; k--) if (shadows[k].sz === 3 && !shadows[k].target) shadows.splice(k, 1); }
-const waterOf = (x, y) => TILES[tileAt(Math.floor(x), Math.floor(y))].water;
+// 魚能不能游到這裡：同一種水域、夠深
+function canSwim(s, mx, mz) { return waterOf(mx / TX, mz / TZ) === s.w && depthAt(mx, mz) > Math.min(.6, s.dep + .2); }
 function updateShadows(dt) {
-  const k = CFG.cellH / CFG.cellW;   // 橫向一格比較寬，換算成相同的螢幕速度
+  if (!fishInit) initFish();
   for (const s of shadows) {
-    if (s.target) {   // 被浮標吸引，游過去
-      const dx = (s.target.x - s.x) / k, dy = s.target.y - s.y, l = Math.hypot(dx, dy);
-      s.a = Math.atan2(dy, dx);
-      if (l > .15) { const v = Math.min(l, 1.2 * dt); s.x += Math.cos(s.a) * v * k; s.y += Math.sin(s.a) * v; }
-      continue;
+    if (s.hooked) continue;
+    const mx = s.x * TX, mz = s.y * TZ;
+    let desH = s.h, desSp = s.sp0, desDep = s.dep0, desPitch = 0;
+    if (s.target) [desH, desSp, desDep] = biteMove(s, dt, mx, mz);
+    else if (s.leader && !s.leader.target && !s.leader.hooked && shadows.includes(s.leader)) {
+      // 跟著魚群的帶頭魚游，保持一點距離
+      const L = s.leader, ch = Math.cos(L.h), sh = Math.sin(L.h);
+      const tx = L.x * TX + ch * s.off[0] - sh * s.off[1], tz = L.y * TZ + sh * s.off[0] + ch * s.off[1], d = Math.hypot(tx - mx, tz - mz);
+      desH = d > .15 ? Math.atan2(tz - mz, tx - mx) : L.h; desSp = L.v * .9 + clamp(d - .2, 0, 2) * .9; desDep = L.dep + s.off[1] * .1;
+    } else {
+      if (s.leader) s.leader = null;
+      s.modeT -= dt;
+      if (s.modeT <= 0) {
+        const r = Math.random(), big = s.sz >= 1;
+        s.home = null;
+        if (big && r < .4) {   // 找附近的礁石、柱子休息
+          let best = null, bd = 18;
+          for (const p of STRUCT) { const d = Math.hypot(p[0] - mx, p[1] - mz); if (d < bd && canSwim(s, p[0], p[1])) { bd = d; best = p; } }
+          if (best) { s.mode = 'rest'; s.home = best; s.modeT = rand(6, 14); }
+        }
+        if (!s.home) { s.mode = r > .72 ? 'feed' : 'cruise'; s.modeT = s.mode === 'feed' ? rand(3, 6) : rand(4, 9); }
+      }
+      if (s.mode === 'rest' && s.home) {   // 在礁石旁邊慢慢晃
+        const d = Math.hypot(s.home[0] - mx, s.home[1] - mz);
+        desH = d > 1 ? Math.atan2(s.home[1] - mz, s.home[0] - mx) : s.h + Math.sin(s.ph * .3) * .3; desSp = d > 1 ? s.sp0 * .8 : .06;
+      } else if (s.mode === 'feed') {   // 沉到水底、頭朝下啄東西
+        s.wander += rand(-1, 1) * dt * 2; desH = s.h + s.wander * dt; desSp = .12; desDep = depthAt(mx, mz) - .15; desPitch = -.45;
+      } else { s.wander = clamp(s.wander + rand(-1, 1) * dt * 1.6, -1, 1); desH = s.h + s.wander; }
     }
-    s.turn -= dt;
-    if (s.turn <= 0) { s.a += rand(-1.5, 1.5); s.turn = rand(1, 3); }
-    const nx = s.x + Math.cos(s.a) * s.sp * k * dt, ny = s.y + Math.sin(s.a) * s.sp * dt;
-    if (waterOf(nx, ny) === s.w) { s.x = nx; s.y = ny; } else s.a += Math.PI * rand(.6, 1.4);
+    // 轉向、加減速都慢慢來
+    const dh = Math.atan2(Math.sin(desH - s.h), Math.cos(desH - s.h)), maxT = s.sz === 0 ? 3 : 1.6;
+    s.turnRate += (clamp(dh * 2.2, -maxT, maxT) - s.turnRate) * Math.min(1, dt * 4);
+    s.h += s.turnRate * dt;
+    s.v += (desSp - s.v) * Math.min(1, dt * 1.5);
+    s.pitch += (desPitch - s.pitch) * Math.min(1, dt * 2);
+    const bed = depthAt(mx, mz);
+    s.dep += (clamp(desDep, .25, Math.max(.3, bed - .12)) - s.dep) * Math.min(1, dt * .8);
+    const nx = mx + Math.cos(s.h) * s.v * dt, nz = mz + Math.sin(s.h) * s.v * dt;
+    if (canSwim(s, nx, nz) || s.target) { s.x = nx / TX; s.y = nz / TZ; }
+    else { s.h += Math.PI * rand(.5, 1); s.wander = -s.wander; s.v *= .5; }
+    s.ph += dt * (4 + s.v * 9 / Math.max(.3, s.len));   // 游越快尾巴甩越快
   }
 }
-function nearestShadow(cx, cy, maxD) {
-  let best = null, bd = maxD;
-  const k = CFG.cellW / CFG.cellH;
+// ---- 咬餌：游過來 → 繞圈試探 → 輕啄 → 吞餌或離開 ----
+// 每種魚的咬法：繞圈秒數、輕啄次數、啄的間隔
+function biteStyle(f, sz) {
+  const lure = LURE_BY[S.bait];
+  if (f.pred && lure) return { circle: [0, .6], nib: [0, 1], gap: .4, strike: true };
+  if (f.pred) return { circle: [.6, 1.5], nib: [0, 2], gap: .5, strike: true };
+  if (f.id === 'porgy' || f.id === 'crucian' || f.id === 'koi' || f.id === 'goldkoi') return { circle: [2.5, 4.5], nib: [4, 7], gap: .75 };
+  if (sz === 0) return { circle: [.6, 1.4], nib: [3, 6], gap: .35 };
+  if (sz === 2) return { circle: [2, 4], nib: [1, 2], gap: .9, slow: true };
+  return { circle: [1.2, 3], nib: [2, 4], gap: .6 };
+}
+// 這條魚吃不吃現在的餌
+function baitAccept(f, w) {
+  const lure = LURE_BY[S.bait];
+  if (lure) return f.pred && lure.waters.includes(w) ? .85 : 0;
+  if (ONLY_BAIT[f.id]) return S.bait === ONLY_BAIT[f.id] ? .9 : 0;
+  return (LIKES[f.id] || []).includes(S.bait) ? .92 : .4;
+}
+let nibbleK = 0;   // 浮標被啄的力道（畫面用）
+function hookFish(s) {   // 讓魚開始注意浮標
+  const st = biteStyle(s.f, s.sz);
+  s.target = { x: spot.x, y: spot.y };
+  s.bs = { ph: 'approach', st, t: 0, n: Math.round(rand(st.nib[0], st.nib[1])), circ: rand(st.circle[0], st.circle[1]), ang: rand(0, 6.28), accept: Math.random() < baitAccept(s.f, s.w) * (weather.rain ? 1.1 : 1) };
+  spot.shadow = s;
+  waitT = Math.max(waitT, 10);   // 有魚在看，就不會突然鉤到別的東西
+}
+function biteMove(s, dt, mx, mz) {
+  const b = s.bs, bx = s.target.x * TX, bz = s.target.y * TZ, d = Math.hypot(bx - mx, bz - mz), toB = Math.atan2(bz - mz, bx - mx);
+  b.t += dt;
+  if (b.ph === 'approach') {
+    if (d < .9 + s.len * .4) { b.ph = b.circ > .1 ? 'circle' : 'nibble'; b.t = 0; b.ang = Math.atan2(mz - bz, mx - bx); }
+    return [toB, s.sp0 * (b.st.strike ? 2.2 : 1.5) + clamp(d * .12, 0, 1.4), .3];   // 遠的話游快一點
+  }
+  if (b.ph === 'circle') {   // 繞著浮標轉一兩圈
+    b.ang += dt * (b.st.slow ? .9 : 1.6);
+    const r = .7 + s.len * .3, tx = bx + Math.cos(b.ang) * r, tz = bz + Math.sin(b.ang) * r;
+    if (b.t > b.circ) { b.ph = b.n > 0 ? 'nibble' : 'decide'; b.t = 0; b.k = 0; }
+    return [Math.atan2(tz - mz, tx - mx), .45 + Math.hypot(tx - mx, tz - mz), .3];
+  }
+  if (b.ph === 'nibble') {   // 衝上去啄一下，再退開
+    const cyc = b.st.gap, k = Math.floor(b.t / cyc), fr = (b.t % cyc) / cyc;
+    if (k >= b.n) { b.ph = 'decide'; b.t = 0; return [toB, .2, .25]; }
+    if (k !== b.k && fr > .4) { b.k = k; nibbleK = .7 + Math.random() * .5; addRipple(bx, bz, .5); }
+    return fr < .45 ? [toB, 1.2, .2] : [toB + Math.PI, .5, .3];
+  }
+  if (b.ph === 'decide') {
+    if (b.accept) { b.ph = 'take'; b.t = 0; state = 'bite'; biteT = CFG.biteWin; splash(spot.x, spot.y, b.st.strike ? 12 : 6); return [toB, 1.5, .2]; }
+    b.ph = 'leave'; b.t = 0;
+  }
+  if (b.ph === 'take') {   // 吞了餌：把浮標拖著走（掠食魚拖得快）
+    if (b.dragH == null) b.dragH = s.h;
+    if (state === 'bite') { spot.x = (mx + Math.cos(s.h) * s.len * .45) / TX; spot.y = (mz + Math.sin(s.h) * s.len * .45) / TZ; }
+    return [b.dragH, b.st.strike ? .9 : b.st.slow ? .2 : .45, .5];
+  }
+  // 不吃：轉身游走
+  if (b.t > 2.5) { s.target = null; s.bs = null; s.mode = 'cruise'; s.modeT = rand(3, 6); if (spot && spot.shadow === s) { spot.shadow = null; nextBiteT = rand(1.5, 4); } }
+  return [toB + Math.PI, s.sp0 * 1.6, s.dep0];
+}
+let nextBiteT = 0;
+// 浮標附近挑一條魚過來（會吃這個餌的魚比較會來）
+function findBiter(cx, cy, maxD) {
+  let best = null, bw = 0;
   for (const s of shadows) {
-    if (s.target) continue;
-    const d = Math.hypot((s.x - cx) * k, s.y - cy);
-    if (d < bd) { bd = d; best = s; }
+    if (s.target || s.hooked || s.sz === 3 && !weather.severe) continue;
+    const d = Math.hypot((s.x - cx) * TX, (s.y - cy) * TZ);
+    if (d > maxD) continue;
+    const w = (baitAccept(s.f, s.w) > 0 ? 1 : .15) * Math.pow(1 - d / maxD, 2) * (s.leader ? .5 : 1);
+    if (w > bw) { bw = w; best = s; }
   }
   return best;
 }
-function removeShadow(s) { const i = shadows.indexOf(s); if (i >= 0) { shadows.splice(i, 1); if (s.sz === 3) { if (weather.severe) spawnMutantShadows(1); } else spawnShadow(s.w); } }
+function nearestShadow(cx, cy, maxD) { return findBiter(cx, cy, maxD * 2); }
+function removeShadow(s) {
+  const i = shadows.indexOf(s);
+  if (i < 0) return;
+  shadows.splice(i, 1);
+  for (const o of shadows) if (o.leader === s) o.leader = null;
+  if (s.sz === 3) { if (weather.severe) spawnMutantShadows(1); } else spawnShadow(s.w);
+}
 
 // ================= 釣魚流程 =================
 // 蓄力：0→1→0 來回擺盪，放開那一刻的值就是力道
@@ -1145,11 +1285,13 @@ function doCast() {
 }
 
 function stopFishing(msg) {
-  if (spot && spot.shadow) { spot.shadow.target = null; spot.shadow = null; }
+  if (spot && spot.shadow) { spot.shadow.target = null; spot.shadow.bs = null; spot.shadow = null; }
+  nibbleK = 0;
   state = 'walk';
   if (msg) toast(msg);
 }
 
+let earlyT = -9;
 function press() {
   if (boss) return;
   if (state === 'walk') {
@@ -1157,6 +1299,8 @@ function press() {
     state = 'charge'; chargeT = 0;   // 按住蓄力，放開才拋
     hideHint();
   } else if (state === 'cast' || state === 'wait') {
+    const b = spot && spot.shadow && spot.shadow.bs;
+    if (b && (b.ph === 'circle' || b.ph === 'nibble') && gameT - earlyT > 1.5) { earlyT = gameT; toast(b.ph === 'nibble' ? '太早了！魚還在試探，等浮標整個沉下去（再按一次收竿）' : '有魚靠過來了，再等等…（再按一次收竿）'); return; }
     stopFishing('收竿了');
   } else if (state === 'bite') {
     startFight(); holding = true;
@@ -1188,14 +1332,13 @@ function pickFish(water, sz) {
 }
 
 function startFight() {
-  const sz = spot.shadow ? spot.shadow.sz : 1;
-  if (spot.shadow) removeShadow(spot.shadow);
-  spot.shadow = null;
+  const fish = spot.shadow, sz = fish ? fish.sz : 1;
+  if (fish) removeShadow(fish);
+  spot.shadow = null; nibbleK = 0;
   const water = TILES[spot.t].water;
-  // 變種怪影：釣上來的是變種怪魚
-  const muts = sz === 3 ? MUTANTS.filter(m => m.water.includes(water)) : [];
-  const f = muts.length ? pick(muts) : pickFish(water, Math.min(sz, 2));
-  const ratio = f.special ? 0 : f.mutant ? rand(.3, 1) : SZ_RATIO[Math.min(sz, 2)]();
+  // 游過來咬餌的那條魚；沒有魚游過來的話（等太久）是隨機的東西，可能是雜物、奇物
+  const f = fish ? fish.f : pickFish(water, 0);   // 等太久沒魚來：多半是雜物、小魚
+  const ratio = f.special ? 0 : fish && !f.mutant ? fish.ratio : f.mutant ? rand(.3, 1) : SZ_RATIO[Math.min(sz, 2)]();
   const size = f.special ? 0 : Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
   const lv = fishLv(f, ratio), diff = lv - S.rod;
   splash(spot.x, spot.y, 10);
@@ -2328,24 +2471,23 @@ function update(dt) {
     if (castT >= castDur) {
       state = 'wait';
       splash(spot.x, spot.y, 6);
-      // 附近有魚影就會游過來；沒有的話要等比較久
-      const s = nearestShadow(spot.x, spot.y, 5);
-      if (s) { s.target = { x: spot.x, y: spot.y }; spot.shadow = s; waitT = rand(1, 2.5); }
-      else { spot.shadow = null; waitT = rand(CFG.waitMin * 1.5, CFG.waitMax); }
+      // 附近有魚就會游過來試探；沒有的話要等比較久（可能鉤到雜物）
+      spot.shadow = null; nextBiteT = rand(.5, 1.5);
+      waitT = rand(CFG.waitMax * 1.5, CFG.waitMax * 2.5);
       // 下雨魚比較快上鉤；誘餌、炸魚也會縮短等待
       waitT *= (weather.wait || 1) * (1 - (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0)) * (1 - .35 * hasBuff('fry'));
     }
   } else if (state === 'wait') {
     waitT -= dt;
-    const s = spot.shadow;
-    const arrived = !s || Math.hypot((s.x - s.target.x) * CFG.cellW / CFG.cellH, s.y - s.target.y) < .3;
-    if (waitT <= 0 && arrived) { state = 'bite'; biteT = CFG.biteWin; splash(spot.x, spot.y, 10); }
+    if (!spot.shadow) {
+      nextBiteT -= dt * (weather.wait ? 1 / weather.wait : 1) * (1 + (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0)) * (1 + .35 * hasBuff('fry'));
+      if (nextBiteT <= 0) { const s = findBiter(spot.x, spot.y, 14); if (s) hookFish(s); else nextBiteT = rand(1, 2.5); }
+      if (waitT <= 0) { state = 'bite'; biteT = CFG.biteWin; splash(spot.x, spot.y, 10); }   // 沒有魚來：鉤到奇怪的東西
+    }
   } else if (state === 'bite') {
     biteT -= dt;
     if (biteT <= 0) {
-      if (spot.shadow) removeShadow(spot.shadow);   // 魚被嚇跑了
-      spot.shadow = null;
-      stopFishing('魚跑掉了…上鉤時要快按！');
+      stopFishing('魚把餌吃掉跑了…浮標沉下去就要快拉！');
     }
   } else if (state === 'fight') {
     updateFight(dt);
@@ -2761,7 +2903,7 @@ function buildTerrain() {
   deck.castShadow = deck.receiveShadow = true; deck.frustumCulled = false; scene.add(deck);
   const pl = [...posts.values()];
   const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .15, 3, 8), underwater(toon(0x6a4a2c)), pl.length);
-  pl.forEach(([x, z], k) => post.setMatrixAt(k, m4.compose(p.set(x, -1.3, z), q, s)));
+  pl.forEach(([x, z], k) => { post.setMatrixAt(k, m4.compose(p.set(x, -1.3, z), q, s)); if (k % 2 === 0) STRUCT.push([x, z]); });
   post.frustumCulled = false; scene.add(post); addOutline(post, .03).frustumCulled = false;
 }
 
@@ -3063,7 +3205,8 @@ function buildTrees() {
   chunked(new THREE.DodecahedronGeometry(1, 0), underwater(toon(0xffffff, { roughness: .9, flatShading: true })), rocks, 1, (im, [x, z, sc, hv, wet], n) => {
     q.setFromEuler(e.set(hv * 3, hv * 7, hv * 2));
     im.setMatrixAt(n, m.compose(p.set(x, (wet ? WATER_Y - sc * .2 : hField(x, z) + sc * .2), z), q, s.set(sc * 1.3, sc * .8, sc)));
-    im.setColorAt(n, wet ? c.setHSL(.6, .06, .3 + hv * .1) : c.setHSL(.08, .14, .5 + hv * .12));   // 海裡的礁石是深灰色
+    im.setColorAt(n, wet ? c.setHSL(.6, .06, .3 + hv * .1) : c.setHSL(.08, .14, .5 + hv * .12));
+    if (wet) STRUCT.push([x, z]);   // 海裡的礁石是深灰色
     q.identity();
   }, { cast: 1, recv: 1, ol: .05 });
 }
@@ -3143,24 +3286,89 @@ const shadowMat = {
 };
 const shadowMeshes = new Set();
 let frameNo = 0;
+// ---- 水裡游的立體魚：近的畫成會擺動的魚，遠的只畫影子（看得出哪裡魚多）----
+// 身體在 shader 裡擺動（共用幾何、每條魚自己的 uniform），手機也跑得動
+const SWIM = {}, swimFree = {}, swimUsed = new Set();
+function swimMat(tex, uni) {
+  const m = toon(0xffffff, { map: tex, roughness: .4, metalness: .1, transparent: true, opacity: .9 });
+  m.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, UW, uni);
+    sh.vertexShader = 'uniform float uPh, uAmp, uTurn;\nvarying vec3 vUW;\n' + sh.vertexShader
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        // 身體像波浪一樣擺、轉彎時整條彎過去
+        transformed.z += sin(uPh - position.x * 7.) * uAmp * (.55 - position.x) * .12 + uTurn * (position.x * position.x - .08);`)
+      .replace('#include <project_vertex>', '#include <project_vertex>\n vUW = (modelMatrix * vec4(transformed, 1.)).xyz;');
+    sh.fragmentShader = 'varying vec3 vUW; uniform float uLight, uWY; uniform vec3 uWater;\n' + sh.fragmentShader.replace('#include <fog_fragment>', `{
+        float uwd = uWY - vUW.y;
+        if (uwd > 0.) gl_FragColor.rgb = mix(gl_FragColor.rgb, uWater * (.35 + .65 * uLight), clamp(.12 + uwd * .35, 0., .85));
+      }
+      #include <fog_fragment>`);
+  };
+  m.customProgramCacheKey = () => 'swim';
+  return m;
+}
+function swimKit(f) {
+  if (SWIM[f.id]) return SWIM[f.id];
+  const B = FISH_BODY[f.shape] || FISH_BODY.normal, geo = new THREE.SphereGeometry(1, 20, 12);
+  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, (B.cx + pos.getX(i) * B.rx) / FW, 1 - (14 - pos.getY(i) * B.ry) / FH);
+  geo.scale(.5, B.h / 2, B.w / 2);
+  const finM = underwater(toon(vivid(f.fin || '#888888'), { side: THREE.DoubleSide, transparent: true, opacity: .85 }), false);
+  const th = f.shape === 'eel' ? .08 : f.shape === 'round' ? .28 : B.h * .62, sh = new THREE.Shape();
+  [[0, 0], [-.1, th * .5], [-.27, th * 1.05], [-.21, th * .35], [-.17, 0], [-.21, -th * .35], [-.27, -th * 1.05], [-.1, -th * .5]].forEach(([x, y], k) => k ? sh.lineTo(x, y) : sh.moveTo(x, y));
+  const ds = new THREE.Shape(); ds.moveTo(-.2, B.h * .42); ds.lineTo(-.05, B.h * .85); ds.lineTo(.12, B.h * .42);
+  return (SWIM[f.id] = { geo, tex: fishToonTex(f), finM, tail: new THREE.ShapeGeometry(sh), dorsal: f.shape === 'round' || f.shape === 'eel' ? null : new THREE.ShapeGeometry(ds) });
+}
+function getSwimmer(f) {
+  const free = swimFree[f.id];
+  let o = free && free.pop();
+  if (!o) {
+    const kit = swimKit(f), uni = { uPh: { value: 0 }, uAmp: { value: .5 }, uTurn: { value: 0 } };
+    const g = new THREE.Group(), body = new THREE.Mesh(kit.geo, swimMat(kit.tex, uni)), tail = new THREE.Group();
+    tail.position.x = -.47; tail.add(new THREE.Mesh(kit.tail, kit.finM)); g.add(body, tail);
+    if (kit.dorsal) g.add(new THREE.Mesh(kit.dorsal, kit.finM));
+    g.traverse(m => { if (m.isMesh) m.renderOrder = 3; });   // 畫在水面之後，看得清楚
+    scene.add(g);
+    o = { g, uni, tail, f };
+  }
+  o.g.visible = true; swimUsed.add(o);
+  return o;
+}
+function releaseSwimmer(o) { o.g.visible = false; swimUsed.delete(o); (swimFree[o.f.id] = swimFree[o.f.id] || []).push(o); }
 function syncShadows() {
   frameNo++;
-  const cx = P.x * TX, cz = P.y * TZ;
+  const cx = camera.position.x, cz = camera.position.z;
   for (const s of shadows) {
-    if (!s.mesh) {
+    const x = s.x * TX, z = s.y * TZ, d = Math.hypot(x - cx, z - cz);
+    const near = d < 38 && s.sz !== 3 && !flatItem(s.f);
+    if (near) {
+      if (!s.sw) s.sw = getSwimmer(s.f);
+      const o = s.sw; o.frame = frameNo;
+      o.g.scale.setScalar(s.len);
+      o.g.position.set(x, WATER_Y - s.dep, z);
+      o.g.rotation.set(-s.turnRate * .12, -s.h, s.pitch, 'YZX');   // 轉彎時身體微微側傾
+      const amp = clamp(.3 + s.v * 1.3 / Math.max(.4, s.len), .25, 1.4);
+      o.uni.uPh.value = s.ph; o.uni.uAmp.value = amp; o.uni.uTurn.value = clamp(-s.turnRate * .18, -.45, .45);
+      o.tail.rotation.y = Math.sin(s.ph - 3) * .55 * amp;
+    } else if (s.sw) { releaseSwimmer(s.sw); s.sw = null; }
+    // 遠的魚、變種怪影：水面下的影子
+    const showSh = !near && d < 90;
+    if (showSh && !s.mesh) {
       s.mesh = new THREE.Mesh(fishShadowGeo, s.sz === 3 ? shadowMat.mutant : s.w === 'deep' || s.w === 'far' ? shadowMat.dark : shadowMat.normal);
       s.mesh.renderOrder = 3; scene.add(s.mesh); shadowMeshes.add(s.mesh);
     }
-    const m = s.mesh, x = s.x * TX, z = s.y * TZ;
-    m.userData.f = frameNo;
-    m.visible = Math.hypot(x - cx, z - cz) < 90;
-    if (!m.visible) continue;
-    const L_ = SHADOW_LEN[s.sz];
-    m.position.set(x, WATER_Y - .15, z);
-    m.rotation.y = -s.a + Math.sin(gameT * 7 + s.x * 3) * .12;   // 擺尾
-    m.scale.set(L_, 1, L_);
+    if (s.mesh) {
+      s.mesh.userData.f = frameNo; s.mesh.visible = showSh;
+      if (showSh) {
+        const L_ = s.sz === 3 ? SHADOW_LEN[3] : Math.max(.6, s.len * 1.15);
+        s.mesh.position.set(x, WATER_Y - .15, z);
+        s.mesh.rotation.y = -s.h + Math.sin(s.ph) * .12;   // 擺尾
+        s.mesh.scale.set(L_, 1, L_);
+      }
+    }
   }
   for (const m of shadowMeshes) if (m.userData.f !== frameNo) { scene.remove(m); shadowMeshes.delete(m); }
+  for (const o of [...swimUsed]) if (o.frame !== frameNo) releaseSwimmer(o);   // 被釣走、消失的魚
 }
 
 // ---- 手上的釣竿（跟著相機）----
@@ -3413,7 +3621,8 @@ function bobberPos(out) {
   out.set(spot.x * TX, 0, spot.y * TZ);
   out.y = waterH(out.x, out.z) + .05;   // 浮標跟著浪上下
   if (state === 'wait') out.y += Math.sin(gameT * 3) * .015;
-  if (state === 'bite') out.y -= .1 + Math.abs(Math.sin(gameT * 30)) * .06;
+  out.y -= nibbleK * .09;
+  if (state === 'bite') out.y -= .22 + Math.sin(gameT * 9) * .04;
   return out;
 }
 let camGround = null, lastYaw = yaw, rodSway = 0;
@@ -3636,6 +3845,7 @@ function render3D(dt) {
     if (a) { aimRing.visible = true; aimRing.position.set(a.x * TX, WATER_Y + .03, a.y * TZ); aimRing.scale.setScalar(.6 + Math.sin(gameT * 8) * .08); }
   }
 
+  nibbleK = Math.max(0, nibbleK - dt * 4);
   syncShadows(); updateLod();
   // 水花
   const pa = partGeo.attributes.position;

@@ -38,7 +38,8 @@
 - 全部是卡通圖：魚的圖 `makeFish()`（向量畫，版面 56×28、放大 `FK` 倍；花紋 `paintFishBody()`、臉 `paintFishFace()`，3D 貼圖 `fishToonTex()` 共用同一套）；奇物、雜物、章魚、鱷魚用 `emoji` 欄位（3D 裡用平面 `fishSprite`，判斷用 `flatItem()`）；店員 `drawNpc()`；料理 `dishImg()`；回城、背包按鈕用 emoji。
 - 特殊物品 `SPECIALS`（奇物，`emoji` 當圖）；餌料偏好 `LIKES`、`ONLY_BAIT`；裝備 `RODS`、`LINES`（釣線耐久 `hp`）、`REELS`（收線倍率 `sp`、磨損倍率 `wear`）、`BAITS`；存檔 `S.rod`／`S.line`／`S.reel` 是等級。
 - 魚的力量等級 `fishLv()` 對上釣竿等級：差 1 級吃力、差 2 級很難拉，差 3 級直接斷線。
-- 水裡的魚影 `shadows`：大小代表魚的大小，下竿後最近的魚影會游過來（`SZ_MULT` 決定稀有度，`SIZE_FIT`／`sizeClass()` 讓魚影大小對上魚的體型；大魚影不會是雜物、奇物）。
+- 水裡的魚 `shadows`（名字沿用）：每條魚出生時就有魚種 `f`、大小 `size`（`rollFish()`，`SZ_MULT`／`SIZE_FIT`），在水裡自己游（`updateShadows()`）：小魚 `SCHOOLERS` 成群跟著帶頭魚（`leader`）、大魚到礁石和碼頭柱子 `STRUCT` 旁休息（`rest`）、到水底覓食（`feed`）。近的畫成會擺動的立體魚（`syncShadows()`／`getSwimmer()`，身體在 shader 裡擺），遠的畫影子。
+- 咬餌：`findBiter()` 挑附近的魚 → `hookFish()` → `biteMove()` 依序 approach（游過來）→ circle（繞圈）→ nibble（輕啄，浮標往下點 `nibbleK`）→ decide → take（吞餌，`state = 'bite'`，浮標被拖著走）或 leave。咬法看魚種 `biteStyle()`；吃不吃看餌 `baitAccept()`（喜歡的餌、誘餌只有掠食魚、`ONLY_BAIT`）。釣上來的就是游過來的那條魚。試探中太早拉只會提示、不會收竿。
 - 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
 - 拋竿：按住蓄力（state `charge`，`castPower()` 0→1→0 擺盪），放開 `doCast()`；落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
 - 誘餌 `LURES`（永久，只有 `pred` 掠食魚會咬，線斷 30% 弄丟）；船 `BOATS`（走進水裡自動上船，`canEnter()` 決定能去的水域，一開始送舢舨）。
