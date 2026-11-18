@@ -351,6 +351,9 @@
   #dlg .legend i { border: 0; border-radius: 3px; }
   #dlg .pos { color: #ff8a8a; }
   /* 畫面上的按鈕、資訊、搏鬥面板也用同一種深藍＋金邊 */
+  #rigBtn { position: absolute; right: 118px; bottom: 26px; height: 34px; padding: 0 12px; border-radius: 17px; font: 600 13px/1 inherit; font-family: inherit; color: #ffe066;
+    background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); cursor: pointer; white-space: nowrap; }
+  body.boss #rigBtn { display: none !important; }
   #boxBtn, #homeBtn, #bagBtn { background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
   #info { background: rgba(16,26,52,.72); border: 1px solid rgba(160,190,255,.4); }
   #info { cursor: pointer; pointer-events: auto; }
@@ -380,6 +383,7 @@
   <button id="homeBtn" title="回城"><canvas id="homeIcon" width="12" height="12"></canvas></button>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
   <button id="actBtn">下竿</button>
+  <button id="rigBtn" title="釣法">🎈 浮釣</button>
   <div class="note" id="hint">
     手機：左半邊拖曳＝走路，右半邊拖曳＝轉頭<br>
     電腦：WASD 走路，滑鼠拖曳或方向鍵轉頭<br>
@@ -412,6 +416,7 @@
 <script>
 // ================= 參數 =================
 const CFG = {
+  lureSp: 1.6,         // 路亞收線速度（公尺/秒，捲線器越好越快）
   cellW: 5, cellH: 2,    // 一格的大小（公尺）：東西 5、南北 2，跟報表格子一樣扁長
   mapW: 60, mapH: 80,    // 地圖格數（東邊是深海、遠洋）
   hdW: 34, hdH: 20,      // 列號寬、欄名高
@@ -937,7 +942,8 @@ if (!BAIT_BY[S.bait] && !(LURE_BY[S.bait] && S.lures[S.bait])) S.bait = 'bread';
 function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); d.n++; d.max = Math.max(d.max, b.size); }
 if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
 S.opt = Object.assign({ sound: true, motion: false }, S.opt);
-S.log = S.log || {};   // 釣魚筆記   // 設定：音效、體感拋竿
+S.log = S.log || {};   // 釣魚筆記
+S.opt.rig = S.opt.rig || 'float';   // 浮釣 / 沉底   // 設定：音效、體感拋竿
 function saveAll() {
   S.at = Date.now();   // 存檔時間：本機和雲端比較，用比較新的那份
   try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); localStorage.setItem('moyu.save', JSON.stringify(S)); } catch (e) {}
@@ -1091,6 +1097,7 @@ document.addEventListener('keydown', e => {
   if (k === ' ' || k === 'j' || k === 'enter') { if (!e.repeat) press(); e.preventDefault(); return; }
   if (k === 'i' || k === 'e') { openBag(); return; }
   if (k === 'm') { openMap(); return; }
+  if (k === 'r') { toggleRig(); return; }
   if (k === 'h') { goHome(); return; }
   keys.add(k);
   if (k.startsWith('arrow')) e.preventDefault();
@@ -1103,6 +1110,7 @@ document.addEventListener('keyup', e => {
 window.addEventListener('blur', () => { keys.clear(); release(); });
 
 $('bagBtn').addEventListener('click', openBag);
+$('rigBtn').addEventListener('click', toggleRig);
 $('homeBtn').addEventListener('click', goHome);
 $('boxBtn').addEventListener('click', () => openBox());
 $('setBtn').addEventListener('click', () => openSettings());
@@ -1280,7 +1288,7 @@ function updateShadows(dt) {
     if (s.hooked) continue;
     const mx = s.x * TX, mz = s.y * TZ;
     let desH = s.h, desSp = s.sp0, desDep = s.dep0, desPitch = 0;
-    if (s.target) [desH, desSp, desDep] = biteMove(s, dt, mx, mz);
+    if (s.target) { [desH, desSp, desDep] = biteMove(s, dt, mx, mz); if (spot && spot.rig === 'bottom' && s.bs && s.bs.ph !== 'leave') desDep = .95; }
     else if (s.leader && !s.leader.target && !s.leader.hooked && shadows.includes(s.leader)) {
       // 跟著魚群的帶頭魚游，保持一點距離
       const L = s.leader, ch = Math.cos(L.h), sh = Math.sin(L.h);
@@ -1339,10 +1347,32 @@ function baitAccept(f, w) {
   return (LIKES[f.id] || []).includes(S.bait) ? .92 : .4;
 }
 let nibbleK = 0;   // 浮標被啄的力道（畫面用）
+// ================= 三種釣法 =================
+// 浮釣：浮標看咬口，中層、表層的魚多；沉底：鉛墜沉到水底，看竿尖抖動，底棲魚多；
+// 路亞：裝上誘餌就是路亞，按住收線讓誘餌游動，「收一收、停一停」掠食魚最會追咬
+const RIGS = { float: { name: '浮釣', icon: '🎈' }, bottom: { name: '沉底', icon: '⚓' }, lure: { name: '路亞', icon: '🐟' } };
+const BOTTOM_FISH = new Set(['crucian', 'tilapia', 'catfish', 'koi', 'goldkoi', 'porgy', 'puffer', 'grouper', 'oarfish', 'coelacanth']);
+const rigOf = () => LURE_BY[S.bait] ? 'lure' : S.opt.rig === 'bottom' ? 'bottom' : 'float';
+const curRig = () => spot && spot.rig || rigOf();
+// 這種釣法對這條魚的吸引力
+function rigMult(f, rig = curRig()) {
+  if (rig === 'bottom') return BOTTOM_FISH.has(f.id) ? 1.7 : .45;
+  if (rig === 'float') return BOTTOM_FISH.has(f.id) ? .8 : 1.25;
+  return 1;
+}
+function toggleRig() {
+  if (boss) return;
+  if (state !== 'walk') { toast('收竿之後才能換釣法'); return; }
+  if (LURE_BY[S.bait]) { toast('現在裝的是誘餌（路亞）。到釣具箱換回餌料，就能用浮釣或沉底'); return; }
+  S.opt.rig = S.opt.rig === 'bottom' ? 'float' : 'bottom'; saveAll();
+  toast(S.opt.rig === 'bottom' ? '⚓ 沉底：鉛墜沉到水底，竿尖抖動、猛彎就拉竿（底棲魚多）' : '🎈 浮釣：看浮標，整個沉下去就拉竿（中、上層的魚多）');
+}
+// 路亞的節奏：收線多久、停了多久
+const lureR = { moveT: 0, stopT: 9, lastMove: -9 };
 function hookFish(s) {   // 讓魚開始注意浮標
   const st = biteStyle(s.f, s.sz);
   s.target = { x: spot.x, y: spot.y };
-  s.bs = { ph: 'approach', st, t: 0, n: Math.round(rand(st.nib[0], st.nib[1])), circ: rand(st.circle[0], st.circle[1]), ang: rand(0, 6.28), accept: Math.random() < baitAccept(s.f, s.w) * (weather.rain ? 1.1 : 1) };
+  s.bs = { ph: 'approach', st, t: 0, n: Math.round(rand(st.nib[0], st.nib[1])), circ: rand(st.circle[0], st.circle[1]), ang: rand(0, 6.28), accept: Math.random() < Math.min(.97, baitAccept(s.f, s.w) * (weather.rain ? 1.1 : 1) * Math.sqrt(rigMult(s.f))) };
   spot.shadow = s;
   waitT = Math.max(waitT, 10);   // 有魚在看，就不會突然鉤到別的東西
 }
@@ -1350,8 +1380,21 @@ function biteMove(s, dt, mx, mz) {
   const b = s.bs, bx = s.target.x * TX, bz = s.target.y * TZ, d = Math.hypot(bx - mx, bz - mz), toB = Math.atan2(bz - mz, bx - mx);
   b.t += dt;
   if (b.ph === 'approach') {
-    if (d < .9 + s.len * .4) { b.ph = b.circ > .1 ? 'circle' : 'nibble'; b.t = 0; b.ang = Math.atan2(mz - bz, mx - bx); }
+    if (spot && spot.rig === 'lure' && d < 2.2 + s.len * .5) { b.ph = 'follow'; b.t = 0; b.chk = 0; }
+    if (d < .9 + s.len * .4 && b.ph === 'approach') { b.ph = b.circ > .1 ? 'circle' : 'nibble'; b.t = 0; b.ang = Math.atan2(mz - bz, mx - bx); }
     return [toB, s.sp0 * (b.st.strike ? 2.2 : 1.5) + clamp(d * .12, 0, 1.4), .3];   // 遠的話游快一點
+  }
+  if (b.ph === 'follow') {   // 跟在誘餌後面：誘餌突然停下來（收一收、停一停）最會咬
+    b.chk -= dt;
+    if (b.chk <= 0) {
+      b.chk = .4;
+      const pause = lureR.stopT > .08 && lureR.stopT < 1.1 && lureR.moveT > .5, still = lureR.stopT > 2.5;
+      const p = !b.accept || b.t < 1 ? 0 : pause ? .32 : lureR.stopT < .08 ? .03 : .01;   // 先跟一下才咬；一直收不停很少咬
+      if (Math.random() < p) { b.ph = 'take'; b.t = 0; state = 'bite'; biteT = CFG.biteWin; SFX.bite(); splash(spot.x, spot.y, 14); return [toB, 2, .3]; }
+      if (b.t > 9 || still && Math.random() < .2) { b.ph = 'leave'; b.t = 0; if (lureR.stopT > 2) toast('魚跟過來又走了…誘餌要動一動'); }
+    }
+    const want = .5 + s.len * .5;   // 追到誘餌後面一點點
+    return [toB, clamp((d - want) * 1.6, 0, 3.2) + (lureR.stopT < .1 ? 1 : .2), .35];
   }
   if (b.ph === 'circle') {   // 繞著浮標轉一兩圈
     b.ang += dt * (b.st.slow ? .9 : 1.6);
@@ -1366,7 +1409,7 @@ function biteMove(s, dt, mx, mz) {
     return fr < .45 ? [toB, 1.2, .2] : [toB + Math.PI, .5, .3];
   }
   if (b.ph === 'decide') {
-    if (b.accept) { b.ph = 'take'; b.t = 0; state = 'bite'; biteT = CFG.biteWin; SFX.bite(); splash(spot.x, spot.y, b.st.strike ? 12 : 6); return [toB, 1.5, .2]; }
+    if (b.accept) { b.ph = 'take'; b.t = 0; state = 'bite'; biteT = CFG.biteWin; SFX.bite(); if (spot.rig !== 'bottom') splash(spot.x, spot.y, b.st.strike ? 12 : 6); return [toB, 1.5, .2]; }
     b.ph = 'leave'; b.t = 0;
   }
   if (b.ph === 'take') {   // 吞了餌：把浮標拖著走（掠食魚拖得快）
@@ -1384,9 +1427,10 @@ function findBiter(cx, cy, maxD) {
   let best = null, bw = 0;
   for (const s of shadows) {
     if (s.target || s.hooked || s.sz === 3 && !weather.severe) continue;
+    if (curRig() === 'lure' && !s.f.pred && s.sz !== 3) continue;
     const d = Math.hypot((s.x - cx) * TX, (s.y - cy) * TZ);
     if (d > maxD) continue;
-    const w = (baitAccept(s.f, s.w) > 0 ? 1 : .15) * Math.pow(1 - d / maxD, 2) * (s.leader ? .5 : 1) * Math.min(2, fishActivity(s.f));
+    const w = (baitAccept(s.f, s.w) > 0 ? 1 : .15) * Math.pow(1 - d / maxD, 2) * (s.leader ? .5 : 1) * Math.min(2, fishActivity(s.f)) * rigMult(s.f);
     if (w > bw) { bw = w; best = s; }
   }
   return best;
@@ -1428,7 +1472,8 @@ function castNow(pw, yawOff) {
     else S.baits[S.bait]--;
     saveAll();
   }
-  spot = s; state = 'cast'; castT = 0; castDur = CFG.castTime * (.6 + pw);
+  spot = s; spot.rig = rigOf(); spot.sink = 0; state = 'cast'; castT = 0; castDur = CFG.castTime * (.6 + pw);
+  lureR.moveT = 0; lureR.stopT = 9; lureR.lastMove = -9;
 }
 
 function stopFishing(msg) {
@@ -1446,6 +1491,8 @@ function press(e) {
     if (!aimSpot(1)) { toast('前面拋不到水，轉向水面再下竿'); return; }
     startCharge(e);   // 按住往下拉、往上甩；或按住蓄力
     hideHint();
+  } else if ((state === 'cast' || state === 'wait') && spot && spot.rig === 'lure') {
+    holding = true;   // 路亞：按住收線，放開停住
   } else if (state === 'cast' || state === 'wait') {
     const b = spot && spot.shadow && spot.shadow.bs;
     if (b && (b.ph === 'circle' || b.ph === 'nibble') && gameT - earlyT > 1.5) { earlyT = gameT; toast(b.ph === 'nibble' ? '太早了！魚還在試探，等浮標整個沉下去（再按一次收竿）' : '有魚靠過來了，再等等…（再按一次收竿）'); return; }
@@ -2624,21 +2671,36 @@ function update(dt) {
       splash(spot.x, spot.y, 6); SFX.plop();
       // 附近有魚就會游過來試探；沒有的話要等比較久（可能鉤到雜物）
       spot.shadow = null; nextBiteT = rand(.5, 1.5);
+      if (spot.rig !== 'float' && !(S.tipRig || {})[spot.rig]) { S.tipRig = Object.assign(S.tipRig || {}, { [spot.rig]: 1 }); saveAll(); toast(spot.rig === 'bottom' ? '沉底：看竿尖！輕輕抖是在試探，猛彎下去就拉竿' : '路亞：按住收線、放開停一下，「收一收、停一停」最會咬'); }
       waitT = rand(CFG.waitMax * 1.5, CFG.waitMax * 2.5);
       // 下雨魚比較快上鉤；誘餌、炸魚也會縮短等待
       waitT *= (weather.wait || 1) * (1 - (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0)) * (1 - .35 * hasBuff('fry'));
     }
   } else if (state === 'wait') {
     waitT -= dt;
-    if (!spot.shadow) {
+    spot.sink = Math.min(1, (spot.sink || 0) + dt / (spot.rig === 'bottom' ? 1.8 : 1));
+    if (spot.rig === 'lure') {
+      const mv = holding && spot.sink > .3;
+      if (mv) {   // 誘餌往人這邊游回來
+        const dx = P.x * TX - spot.x * TX, dz = P.y * TZ - spot.y * TZ, d = Math.hypot(dx, dz), sp = CFG.lureSp * REELS[S.reel - 1].sp * dt;
+        if (d < 3) { stopFishing(spot.shadow ? '魚跟到腳邊又走了…試試收一收、停一停' : '誘餌收回來了'); return; }
+        const nx = spot.x + dx / d * sp / TX, ny = spot.y + dz / d * sp / TZ;
+        if (!TILES[tileAt(Math.floor(nx), Math.floor(ny))].water) { stopFishing('誘餌收回來了'); return; }
+        spot.x = nx; spot.y = ny; spot.i = Math.floor(nx); spot.j = Math.floor(ny); spot.t = tileAt(spot.i, spot.j);
+        lureR.moveT += dt; lureR.stopT = 0; lureR.lastMove = gameT;
+      } else { if (lureR.stopT === 0 && lureR.moveT < .5) lureR.moveT = 0; lureR.stopT += dt; if (lureR.stopT > 1.2) lureR.moveT = 0; }
+      if (spot.shadow) spot.shadow.target = { x: spot.x, y: spot.y };
+      waitT = 99;   // 路亞不會鉤到雜物
+    }
+    if (!spot.shadow && (spot.rig !== 'lure' || gameT - lureR.lastMove < 2)) {   // 路亞要動過，魚才會注意到
       nextBiteT -= dt * (weather.wait ? 1 / weather.wait : 1) * (1 + (LURE_BY[S.bait] ? LURE_BY[S.bait].cut : 0)) * (1 + .35 * hasBuff('fry'));
       if (nextBiteT <= 0) { const s = findBiter(spot.x, spot.y, 14); if (s) hookFish(s); else nextBiteT = rand(1, 2.5); }
-      if (waitT <= 0) { state = 'bite'; biteT = CFG.biteWin; splash(spot.x, spot.y, 10); }   // 沒有魚來：鉤到奇怪的東西
+      if (waitT <= 0) { state = 'bite'; biteT = CFG.biteWin; if (spot.rig !== 'bottom') splash(spot.x, spot.y, 10); }   // 沒有魚來：鉤到奇怪的東西
     }
   } else if (state === 'bite') {
     biteT -= dt;
     if (biteT <= 0) {
-      stopFishing('魚把餌吃掉跑了…浮標沉下去就要快拉！');
+      stopFishing(spot.rig === 'lure' ? '魚咬了誘餌又吐掉了…一咬就要拉！' : spot.rig === 'bottom' ? '魚把餌吃掉跑了…竿尖猛彎就要快拉！' : '魚把餌吃掉跑了…浮標沉下去就要快拉！');
     }
   } else if (state === 'fight') {
     updateFight(dt);
@@ -3554,6 +3616,18 @@ const bobber = new THREE.Group();
   stick.position.y = .2; bobber.add(top, bot, stick); addOutline(top, .012); addOutline(bot, .012);
 }
 bobber.visible = false; scene.add(bobber);
+// 沉底的鉛墜、路亞的誘餌（小魚形狀、亮亮的）
+const sinker = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), toon(0x555a60, { metalness: .6, roughness: .4 }));
+sinker.renderOrder = 3; sinker.visible = false; scene.add(sinker);
+const lureMesh = new THREE.Group();
+{
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 6), toon(0xd8e4ee, { metalness: .9, roughness: .25, emissive: 0x223344 }));
+  body.scale.set(2.6, 1, .8);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(.04, .08, 4), toon(0xff7040));
+  tail.rotation.z = Math.PI / 2; tail.position.x = .16;
+  lureMesh.add(body, tail); lureMesh.traverse(m => { if (m.isMesh) m.renderOrder = 3; });
+}
+lureMesh.visible = false; scene.add(lureMesh);
 const LINE_N = 26;
 const lineGeo = new THREE.BufferGeometry();
 lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(LINE_N * 3), 3));
@@ -3805,6 +3879,8 @@ let flash = 0;
 function bobberPos(out) {
   out.set(spot.x * TX, 0, spot.y * TZ);
   out.y = waterH(out.x, out.z) + .05;   // 浮標跟著浪上下
+  if (state !== 'cast' && spot.rig === 'bottom') { out.y = out.y + (hField(out.x, out.z) + .06 - out.y) * (spot.sink || 0); return out; }
+  if (state !== 'cast' && spot.rig === 'lure') { out.y -= (holding ? .35 : .55) * (spot.sink || 0) + .05; return out; }
   if (state === 'wait') out.y += Math.sin(gameT * 3) * .015;
   out.y -= nibbleK * .09;
   if (state === 'bite') out.y -= .22 + Math.sin(gameT * 9) * .04;
@@ -3839,8 +3915,8 @@ function render3D(dt) {
   let tilt = -.95 + Math.sin(P.walkT * 4.5) * (P.moving ? .04 : 0), bend = .03;
   if (state === 'charge') tilt = S.opt.motion ? -.55 : swipe.on && swipe.pull > 10 ? -.95 + clamp(swipe.pull / 160, 0, 1) * .8 : -.95 + castPower() * .6;
   else if (state === 'cast') tilt = castT < .15 ? -1.45 : -1.15;
-  else if (state === 'wait') tilt = -1.1;
-  else if (state === 'bite') { tilt = -1.1; bend = .08 + Math.abs(Math.sin(gameT * 30)) * .05; }
+  else if (state === 'wait') { tilt = spot && spot.rig === 'lure' ? -.9 + (holding ? Math.sin(gameT * 9) * .03 : 0) : -1.1; if (spot && spot.rig === 'bottom') bend = .03 + nibbleK * .2; }   // 沉底：竿尖被啄得一抖一抖
+  else if (state === 'bite') { tilt = -1.1; bend = spot && spot.rig !== 'float' ? .3 + Math.abs(Math.sin(gameT * 11)) * .12 : .08 + Math.abs(Math.sin(gameT * 30)) * .05; }   // 沉底、路亞：竿子被拉彎
   else if (state === 'fight') { tilt = -.65 - (F.act === 'jump' ? .25 : 0); bend = .04 + F.tens * .32 + F.spike * .4 + Math.sin(gameT * 24) * .015 * (F.act === 'shake' ? 3 : 1); }
   else if (state === 'land') tilt = -.25;
   rodRig.rotation.x += (tilt - rodRig.rotation.x) * Math.min(1, dt * 14);
@@ -3857,21 +3933,27 @@ function render3D(dt) {
 
   // 浮標與釣線
   const showBob = spot && (state === 'cast' || state === 'wait' || state === 'bite');   // 搏鬥時浮標被拖進水裡
-  bobber.visible = !!showBob; ripple.visible = false;
+  const rigNow = showBob ? spot.rig || 'float' : null;
+  bobber.visible = rigNow === 'float'; sinker.visible = rigNow === 'bottom'; lureMesh.visible = rigNow === 'lure'; ripple.visible = false;
+  const tackle = rigNow === 'bottom' ? sinker : rigNow === 'lure' ? lureMesh : bobber;
   let lineEnd = null, sag = 0;
   if (showBob) {
     const target = bobberPos(V2);
     if (state === 'cast') {   // 沿弧線飛出去，越遠飛越高
       const k = clamp(castT / castDur, 0, 1);
-      bobber.position.lerpVectors(tip, target, k); bobber.position.y += Math.sin(k * Math.PI) * (2 + castDur * 6);
-    } else bobber.position.copy(target);
-    lineEnd = bobber.position; sag = state === 'cast' ? .2 : 1.2;
+      tackle.position.lerpVectors(tip, target, k); tackle.position.y += Math.sin(k * Math.PI) * (2 + castDur * 6);
+    } else tackle.position.copy(target);
+    if (rigNow === 'lure') {   // 誘餌頭朝人、游的時候左右擺
+      lureMesh.rotation.set(0, Math.atan2(-(tackle.position.z - P.y * TZ), tackle.position.x - P.x * TX) + (holding ? Math.sin(gameT * 18) * .35 : 0), state === 'bite' ? Math.sin(gameT * 20) * .5 : 0);
+    }
+    lineEnd = tackle.position; sag = state === 'cast' ? .2 : rigNow === 'float' ? 1.2 : rigNow === 'lure' ? (holding ? .03 : .3) : .25;
     // 浮標晃動、魚咬的時候在水面打出漣漪
-    if (state === 'wait' && Math.random() < dt * .45) addRipple(bobber.position.x, bobber.position.z, .22);
-    if (state === 'bite' && Math.random() < dt * 5) addRipple(bobber.position.x, bobber.position.z, .6);
+    if (rigNow === 'float' && state === 'wait' && Math.random() < dt * .45) addRipple(tackle.position.x, tackle.position.z, .22);
+    if (rigNow === 'lure' && holding && state === 'wait' && Math.random() < dt * 2) addRipple(tackle.position.x, tackle.position.z, .12);
+    if (rigNow !== 'bottom' && state === 'bite' && Math.random() < dt * 5) addRipple(tackle.position.x, tackle.position.z, .6);
   }
   // 魚上鉤：浮標一閃一閃的光
-  biteGlow.visible = state === 'bite' && !!showBob;
+  biteGlow.visible = state === 'bite' && rigNow === 'float';
   if (biteGlow.visible) { biteGlow.position.copy(bobber.position); biteGlow.position.y += .25; biteGlow.scale.setScalar(1.4 + Math.abs(Math.sin(gameT * 12)) * 1.4); }
 
   // 搏鬥：線拉進水裡、水下的魚影；跳出水面或拉近時看得到立體的魚
@@ -4125,7 +4207,8 @@ function updateHud() {
     btn = aimSpot(1) ? '' : 'dim';
     label = '下竿<small>' + (S.bait === 'bread' ? '麵包屑' : LURE_BY[S.bait] ? LURE_BY[S.bait].name + '（誘餌）' : BAIT_BY[S.bait].name + '×' + (S.baits[S.bait] || 0)) + '</small>';
   }
-  else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>等魚上鉤…</small>'; }
+  else if ((state === 'cast' || state === 'wait') && spot && spot.rig === 'lure') { btn = 'wait' + (holding ? ' hold' : ''); label = '收線<small>收一收、停一停</small>'; }
+  else if (state === 'cast' || state === 'wait') { btn = 'wait'; label = '收竿<small>' + (spot && spot.rig === 'bottom' ? '看竿尖…' : '等魚上鉤…') + '</small>'; }
   else if (state === 'bite') { btn = 'bite'; label = '拉竿！'; }
   else if (state === 'fight') {
     btn = 'fight' + (holding ? ' hold' : ''); label = '收線<small>按住捲線</small>';
@@ -4141,12 +4224,14 @@ function updateHud() {
   const hh = gameHour(), info = `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor(hh % 1 * 6) * 10).padStart(2, '0')} ${TIDE_NAME[tide().k]}・$${fmtN(S.money)}・${weather.name}` + (nb ? `・加成 ${nb}` : '') + (onBoat() ? `・${BOATS[S.boat - 1].name}` : '');
   $('bang').classList.toggle('on', state === 'bite');
   $('danger').style.opacity = state === 'fight' && F ? clamp((F.tens + F.spike - .62) / .3, 0, 1) : 0;   // 快斷線時畫面邊緣泛紅
-  const key = [btn, label, info, bag.length].join('|');
+  const rg = RIGS[state === 'walk' || !spot ? rigOf() : spot.rig || 'float'], rigTxt = rg.icon + ' ' + rg.name;
+  const key = [btn, label, info, bag.length, rigTxt].join('|');
   if (key === lastHud) return;
   lastHud = key;
   act.className = btn; act.innerHTML = label;
   $('info').textContent = info;
   $('bagCount').textContent = bag.length || '';
+  $('rigBtn').textContent = rigTxt;
 }
 
 // ================= 隱藏模式的報表 =================
@@ -4259,6 +4344,10 @@ function updateSound(dt) {
   SND.amb.wind.gain.setTargetAtTime(weather.severe ? .16 : weather.id === 'cloud' ? .035 : .015, t, .5);
   SND.amb.rain.gain.setTargetAtTime(weather.rain ? weather.rain / 170 * .16 : 0, t, .5);
   // 捲線器：收線時喀喀喀，魚把線拉出去（洩線）時快速尖銳的聲音
+  if (state === 'wait' && holding && spot && spot.rig === 'lure') {
+    SND.clickT -= dt;
+    while (SND.clickT <= 0) { SND.clickT += 1 / (10 + 6 * REELS[S.reel - 1].sp); tone(1700, .015, .03, 'square'); }
+  }
   if (state === 'fight' && F) {
     const rate = F.drag ? 38 + F.tens * 20 : holding ? 12 + 8 * REELS[S.reel - 1].sp : 0;
     if (rate) {

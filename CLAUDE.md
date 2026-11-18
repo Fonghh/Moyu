@@ -42,6 +42,7 @@
 - 咬餌：`findBiter()` 挑附近的魚 → `hookFish()` → `biteMove()` 依序 approach（游過來）→ circle（繞圈）→ nibble（輕啄，浮標往下點 `nibbleK`）→ decide → take（吞餌，`state = 'bite'`，浮標被拖著走）或 leave。咬法看魚種 `biteStyle()`；吃不吃看餌 `baitAccept()`（喜歡的餌、誘餌只有掠食魚、`ONLY_BAIT`）。釣上來的就是游過來的那條魚。試探中太早拉只會提示、不會收竿。
 - 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
 - 拋竿 `castNow(力道, 偏角)`：甩竿 `swipe`（按住下竿鍵往下拉、往上甩，`releaseCharge()` 用最後 160ms 的速度算力道、左右偏一點）；按住不動就用舊的蓄力（`castPower()` 0→1→0 擺盪，鍵盤也是這個）；體感拋竿 `S.opt.motion`（`devicemotion` 揮動手機，iPhone 要 `askMotion()` 允許）。落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
+- 三種釣法 `RIGS`（下竿鍵左邊的 `#rigBtn` 切換浮釣／沉底，鍵盤 R；裝誘餌就是路亞），`rigOf()` 下竿時記在 `spot.rig`：浮釣看浮標；沉底 `sinker` 沉到水底（`spot.sink`）、看竿尖抖動，底棲魚 `BOTTOM_FISH` 多（`rigMult()`）；路亞 `lureMesh` 按住收線（`CFG.lureSp`），節奏 `lureR`，魚 `follow` 跟在後面，「收一收、停一停」最會咬。
 - 釣線 `ropeStep()`：一串點的物理（重力、風、水中阻力、只會變鬆不會拉長），等魚時鬆、搏鬥時張力越大越直。
 - 聲音 `SND`／`SFX`／`updateSound()`：Web Audio 即時合成（海浪、風、雨、蟲鳴、咻聲、落水、啄、捲線器、洩線、斷線、釣到、賣錢），第一次觸控才開始（`sndInit()`）。
 - 設定 `openSettings()`（左上角 ⚙）：`S.opt.sound`、`S.opt.motion`、操作說明。
