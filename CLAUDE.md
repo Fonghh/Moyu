@@ -24,8 +24,10 @@
 - 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、畫圖參數）；稀有度 `RAR`。
 - 地圖仍是格子（`genMap()`），一格 = 東西 `TX`（5m）× 南北 `TZ`（2m）；邏輯座標用格子（`P.x`、`P.y`、魚影、`spot.x/y`），畫面換算成公尺。
 - 3D：`buildTerrain()` 地形與水面、`buildTrees()` 樹林、`buildShops()` 店面房子；`render3D()` 每幀更新相機、手上的釣竿（`rodRig`／`rodSegs`）、浮標、釣線、魚影 mesh、天氣、船。
-- 卡通畫風：材質用 `toon()`（三段明暗 `TOON_GRAD`），描邊 `addOutline()`；天空 `skyMat`（漸層＋太陽）、雲 `clouds`、遠方的島。
-- 地形：每格高度 `tileH`，`hField()` 平滑內插（海岸線落在格子邊上），`groundH()` 是腳下高度（相機跟著走）；水面是 shader `waterMat`（水深 `depthTex` 上色、岸邊浪花、波光）。
+- 寫實畫面：材質 `toon()` 現在回傳 PBR 的 MeshStandardMaterial（名字沿用），`addOutline()` 不再畫描邊；水面下的東西用 `underwater(mat)`（越深越偏水色、海底焦散 `UW`）。
+- 一天的時間：`gameHour()`（現實 1 分鐘＝遊戲 1 小時，5 點日出、19 點日落），`updateEnv()` 每幀算太陽 `SUN_DIR`、月亮 `MOON_DIR`、天空 `skyMat`（含黃昏、星星 `starMat`）、光線、雲 `clouds`（貼圖雲）、遠方的島、晚上亮的窗戶 `nightGlow`。
+- 水面：以鏡頭為中心的同心圓網格 `waterMesh`，四道浪 `WAVES` 疊加（大小 `waveAmp` 看天氣、`CALM` 看水域），JS 的 `waterH(x, z)` 跟 shader 同一組浪（浮標、船跟著浪）；鏡面倒影 `renderReflection()`（低解析度、第 1 層的小花灌木不畫進倒影）；漣漪 `addRipple(x, z, amp)`；陰影每幀只更新一次（`shadowMap.autoUpdate = false`）。
+- 地形：每格高度 `tileH`，`hField()` 平滑內插（海岸線落在格子邊上），`groundH()` 是腳下高度（相機跟著走）；水面是 shader `waterMat`（水深 `depthTex` 上色、`tintTex` 的 A 是浪的大小、岸邊浪花）。
 - 樹、灌木、花、石頭用 `chunked()` 分塊的 InstancedMesh，遠的區塊用 `updateLod()` 關掉描邊和小花。
 - 順暢度：`QUALITY` 畫質等級，`watchFps()` 依實際幀率自動調整解析度、陰影、描邊。
 - 特效：`splashRing()` 水花波紋、`biteGlow` 上鉤閃光、`catchRays`／`stars` 釣到時的放射光和星星。

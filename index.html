@@ -2418,6 +2418,7 @@ function splash(x, y, n, pw = 1) {   // pw：力道，越強的魚水花越大
   n = Math.round(n * pw);
   for (let k = 0; k < n; k++) parts.push({ x: x * TX, y: WATER_Y + .05, z: y * TZ, vx: rand(-1.2, 1.2) * Math.sqrt(pw), vy: rand(1.5, 3.5) * pw, vz: rand(-1.2, 1.2) * Math.sqrt(pw), life: rand(.4, .8) * Math.sqrt(pw) });
   if (n >= 4) splashRing(x * TX, y * TZ, n >= 8);
+  addRipple(x * TX, y * TZ, Math.min(1.6, .25 + n * .06));
   if (parts.length > PART_N) parts.splice(0, parts.length - PART_N);
 }
 function updateParts(dt) {
@@ -2485,8 +2486,8 @@ $('miniBox').addEventListener('click', openMap);
 // 一格：東西 TX 公尺、南北 TZ 公尺；格座標 (x, y) → 世界座標 (x*TX, 高度, y*TZ)
 // 畫面是平滑的地形（海岸線、沙灘、小山丘），走路、釣魚的判斷還是用格子
 const BED_Y = { pond: -1.2, river: -1.5, sea: -2.4, deep: -4, far: -5.5 };
-const WATER_COL = { pond: '#2fb3a6', river: '#2aa0cf', sea: '#1d8ad3', deep: '#145fae', far: '#0b3b84' };
-const GROUND_COL = { [T.GRASS]: '#86cf4e', [T.FOREST]: '#5fb03d', [T.SAND]: '#f4dc8e', [T.PATH]: '#e2cfa4', [T.DOCK]: '#c9a26b' };
+const WATER_COL = { pond: '#2d6f5e', river: '#2a6f86', sea: '#1d5f8a', deep: '#123f6e', far: '#0a2a52' };
+const GROUND_COL = { [T.GRASS]: '#6f9446', [T.FOREST]: '#4f7836', [T.SAND]: '#d8c690', [T.PATH]: '#b9a888', [T.DOCK]: '#9c7a52' };
 const SKY = {   // top 天頂、hor 地平線、light 亮度、far 霧的距離
   sun: { top: 0x3d8de3, hor: 0xc4e6ff, light: 1, far: 220 }, cloud: { top: 0x7d98b6, hor: 0xd5dee7, light: .82, far: 170 },
   rain: { top: 0x5a6979, hor: 0xa2afbb, light: .68, far: 120 }, storm: { top: 0x1d2533, hor: 0x4b5668, light: .45, far: 80 },
@@ -2495,11 +2496,12 @@ const MW = W * TX, MH = H * TZ;
 const SUN_DIR = new THREE.Vector3(.5, .62, .6).normalize();   // 太陽在東南方，面海時看得到海面反光
 
 const renderer = new THREE.WebGLRenderer({ canvas: cvEl, antialias: true, powerPreference: 'high-performance' });
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = false;   // 陰影每幀只算一次（倒影那次不算）
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY.sun.hor);
 scene.fog = new THREE.Fog(SKY.sun.hor, 45, SKY.sun.far);
 const camera = new THREE.PerspectiveCamera(70, 1, .05, 700);
+camera.layers.enable(1);   // 第 1 層：小花、灌木（不畫進倒影）
 scene.add(camera);
 const hemi = new THREE.HemisphereLight(0xe6f3ff, 0x8a9a6a, .85);
 scene.add(hemi);
@@ -2517,7 +2519,7 @@ function resize() {
 window.addEventListener('resize', resize);
 
 // ---- 畫質：依手機效能自動調整解析度、陰影、描邊，維持順暢 ----
-const QUALITY = [{ pr: 2, sh: 2048, ol: 1 }, { pr: 1.5, sh: 1024, ol: 1 }, { pr: 1.2, sh: 1024, ol: 1 }, { pr: 1, sh: 0, ol: 0 }];
+const QUALITY = [{ pr: 2, sh: 2048, ol: 1, refl: .5 }, { pr: 1.5, sh: 1024, ol: 1, refl: .45 }, { pr: 1.2, sh: 1024, ol: 1, refl: .33 }, { pr: 1, sh: 0, ol: 0, refl: 0 }];
 let qLv = 1, qSum = 0, qN = 0, qGood = 0;
 const qBad = new Set();   // 跑不順過的等級，不再升回去
 const outlined = [];      // 描邊 mesh，最低畫質時關掉
@@ -2541,79 +2543,105 @@ function watchFps(rawDt) {
   else if (avg < 1 / 56 && qLv > 0 && !qBad.has(qLv - 1) && ++qGood >= 4) { qLv--; qGood = 0; applyQuality(); }
 }
 
-// ---- 卡通材質：三段明暗＋深色描邊 ----
-const TOON_GRAD = new THREE.DataTexture(new Uint8Array([155, 215, 255]), 3, 1, THREE.LuminanceFormat);
-TOON_GRAD.minFilter = TOON_GRAD.magFilter = THREE.NearestFilter; TOON_GRAD.needsUpdate = true;
-const toon = (color, o) => new THREE.MeshToonMaterial(Object.assign({ color, gradientMap: TOON_GRAD }, o));
-const OUTLINE_MAT = {};
-function outlineMat(w) {   // 沿法線往外推一點、只畫背面，就是一圈描邊
-  if (OUTLINE_MAT[w]) return OUTLINE_MAT[w];
-  return (OUTLINE_MAT[w] = new THREE.ShaderMaterial({
-    uniforms: Object.assign({ w: { value: w }, col: { value: new THREE.Color(0x2a2335) } }, THREE.UniformsLib.fog),
-    vertexShader: `uniform float w;
-      #include <fog_pars_vertex>
-      void main() {
-        vec4 p = vec4(position + normal * w, 1.);
-        #ifdef USE_INSTANCING
-        p = instanceMatrix * p;
-        #endif
-        vec4 mvPosition = modelViewMatrix * p;
-        gl_Position = projectionMatrix * mvPosition;
-        #include <fog_vertex>
-      }`,
-    fragmentShader: `uniform vec3 col;
-      #include <fog_pars_fragment>
-      void main() { gl_FragColor = vec4(col, 1.);
-        #include <fog_fragment>
-      }`,
-    side: THREE.BackSide, fog: true,
-  }));
-}
-function addOutline(m, w = .03) {
-  const o = m.isInstancedMesh ? new THREE.InstancedMesh(m.geometry, outlineMat(w), m.count) : new THREE.Mesh(m.geometry, outlineMat(w));
-  if (m.isInstancedMesh) o.instanceMatrix = m.instanceMatrix;
-  m.add(o);
-  outlined.push(o);
-  return o;
+// ---- 材質：寫實一點的 PBR 材質（不再用卡通三段明暗、沒有描邊）----
+const toon = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: .85, metalness: 0 }, o));
+// 舊的描邊介面保留（回傳一個不畫的空物件），呼叫的地方不用改
+function addOutline() { const o = new THREE.Object3D(); outlined.push(o); return o; }
+// 水面下的東西：越深越偏水色、海底有晃動的光紋（焦散）
+const UW = { uT: { value: 0 }, uLight: { value: 1 }, uWater: { value: new THREE.Color(0x0d4a5c) }, uWY: { value: WATER_Y } };
+function underwater(mat, caustic = true) {
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, UW);
+    sh.vertexShader = 'varying vec3 vUW;\n' + sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vec4 uwp = vec4(transformed, 1.);
+      #ifdef USE_INSTANCING
+      uwp = instanceMatrix * uwp;
+      #endif
+      vUW = (modelMatrix * uwp).xyz;`);
+    sh.fragmentShader = `varying vec3 vUW; uniform float uT, uLight, uWY; uniform vec3 uWater;
+      float causticF(vec2 p, float t) {
+        vec2 q = p * .8 + vec2(sin(p.y * .7 + t * .6), cos(p.x * .6 - t * .5)) * .9;
+        float c = abs(sin(q.x * 1.6 + t) + sin(q.y * 1.7 - t * 1.2) + sin((q.x + q.y) * 1.1 + t * .8));
+        return pow(clamp(1. - c / 2.2, 0., 1.), 5.);
+      }
+      ` + sh.fragmentShader.replace('#include <fog_fragment>', `{
+        float uwd = uWY - vUW.y;
+        if (uwd > 0.) {
+          ${caustic ? 'gl_FragColor.rgb += causticF(vUW.xz, uT * 1.3) * .5 * uLight * exp(-uwd * .45);' : ''}
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, uWater * (.35 + .65 * uLight), clamp(uwd * .3, 0., .88));
+        }
+      }
+      #include <fog_fragment>`);
+  };
+  mat.customProgramCacheKey = () => 'uw' + (caustic ? 1 : 0);
+  return mat;
 }
 
-// ---- 天空：漸層天空、太陽、雲、遠方的島 ----
+// ---- 天空：一天的時間（日出、正午、黃昏、夜晚）、太陽、月亮、星星、雲 ----
+// 遊戲時間：現實 1 分鐘＝遊戲 1 小時（一天 24 分鐘），5 點日出、19 點日落
+const gameHour = () => ((Date.now() / 60000) % 24 + 24) % 24;
+const MOON_DIR = new THREE.Vector3();
 const skyMat = new THREE.ShaderMaterial({
-  uniforms: { top: { value: new THREE.Color(SKY.sun.top) }, hor: { value: new THREE.Color(SKY.sun.hor) }, sun: { value: SUN_DIR }, sunK: { value: 1 } },
+  uniforms: {
+    top: { value: new THREE.Color(0x3d8de3) }, hor: { value: new THREE.Color(0xc4e6ff) }, glow: { value: new THREE.Color(0xffa860) },
+    sun: { value: SUN_DIR }, moon: { value: MOON_DIR }, sunK: { value: 1 }, moonK: { value: 0 }, duskK: { value: 0 },
+  },
   vertexShader: 'varying vec3 vd; void main() { vd = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
-  fragmentShader: `uniform vec3 top, hor, sun; uniform float sunK; varying vec3 vd;
+  fragmentShader: `uniform vec3 top, hor, glow, sun, moon; uniform float sunK, moonK, duskK; varying vec3 vd;
     void main() {
       vec3 d = normalize(vd);
-      vec3 c = mix(hor, top, pow(max(d.y, 0.), .55));
+      float h = max(d.y, 0.);
+      vec3 c = mix(hor, top, pow(h, .5));
       float s = max(dot(d, sun), 0.);
-      c += vec3(1., .93, .75) * (smoothstep(.9988, .9993, s) * .9 + pow(s, 14.) * .3) * sunK;
+      // 黃昏：太陽那一側的地平線一片橘紅
+      c = mix(c, glow, duskK * pow(s, 3.) * (1. - smoothstep(0., .45, h)) * .9);
+      c += vec3(1., .9, .7) * pow(s, 8.) * .25 * sunK;                       // 太陽周圍的光暈
+      c += vec3(1., .96, .85) * smoothstep(.9992, .9996, s) * 1.6 * sunK;   // 太陽本體
+      float m = max(dot(d, moon), 0.);
+      c += vec3(.85, .9, 1.) * (smoothstep(.9994, .9997, m) * 1.1 + pow(m, 60.) * .12) * moonK;
+      if (d.y < 0.) c = mix(hor, hor * .7, smoothstep(0., -.2, d.y));
       gl_FragColor = vec4(c, 1.);
     }`,
   side: THREE.BackSide, depthWrite: false, fog: false,
 });
-const skyDome = new THREE.Mesh(new THREE.SphereGeometry(600, 24, 12), skyMat);
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), skyMat);
 skyDome.renderOrder = -10; skyDome.frustumCulled = false; scene.add(skyDome);
-const clouds = new THREE.Group(); clouds.position.set(MW / 2, 0, MH / 2); scene.add(clouds);
-const cloudMat = toon(0xffffff, { emissive: 0x8a96aa, fog: false });
+// 星星
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, depthWrite: false, fog: false });
 {
-  const puffs = [];
-  for (let k = 0; k < 18; k++) {
-    const a = k / 18 * Math.PI * 2 + rand(-.15, .15), r = rand(190, 330), y = rand(55, 95), s = rand(9, 16);
-    const cx = Math.cos(a) * r, cz = Math.sin(a) * r, n = 4 + (k % 3);
-    for (let p = 0; p < n; p++) {
-      const off = (p - (n - 1) / 2) * s * .9;
-      puffs.push([cx - Math.sin(a) * off, y + rand(-1, 3) - Math.abs(off) * .15, cz + Math.cos(a) * off, s * rand(.7, 1.15) * (1 - Math.abs(off) / (n * s) * .6)]);
-    }
+  const n = 700, a = new Float32Array(n * 3);
+  for (let k = 0; k < n; k++) {
+    const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, y = Math.abs(u) * .95 + .05, r = Math.sqrt(1 - y * y);
+    a.set([Math.cos(th) * r * 550, y * 550, Math.sin(th) * r * 550], k * 3);
   }
-  const im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 9), cloudMat, puffs.length);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
-  puffs.forEach(([x, y, z, r], k) => im.setMatrixAt(k, m.compose(p.set(x, y, z), q, s.set(r, r * .62, r))));
-  im.frustumCulled = false; clouds.add(im);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(a, 3));
+  var stars3d = new THREE.Points(g, starMat); stars3d.renderOrder = -9; stars3d.frustumCulled = false; skyDome.add(stars3d);
 }
-const isleMat = [new THREE.MeshBasicMaterial({ color: 0x6f9fae, fog: false }), new THREE.MeshBasicMaterial({ color: 0x95bccb, fog: false })];
+// 雲：柔和的雲朵貼圖，一片一片面向鏡頭
+const cloudTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  for (let k = 0; k < 26; k++) {
+    const px = 24 + Math.random() * 80, py = 50 + Math.random() * 40 - Math.abs(px - 64) * .3, r = 14 + Math.random() * 20;
+    const g = x.createRadialGradient(px, py, 0, px, py, r);
+    g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  }
+  return new THREE.CanvasTexture(c);
+})();
+const cloudMat = new THREE.SpriteMaterial({ map: cloudTex, color: 0xffffff, transparent: true, depthWrite: false, fog: false });
+const clouds = new THREE.Group(); clouds.position.set(MW / 2, 0, MH / 2); scene.add(clouds);
+for (let k = 0; k < 34; k++) {
+  const a = Math.random() * Math.PI * 2, r = rand(150, 380), s = rand(50, 110);
+  const sp = new THREE.Sprite(cloudMat); sp.position.set(Math.cos(a) * r, rand(55, 110), Math.sin(a) * r); sp.scale.set(s, s * rand(.35, .5), 1);
+  clouds.add(sp);
+}
+// 遠方的島：起伏的山形，被大氣染成藍灰色
+const isleMat = [new THREE.MeshBasicMaterial({ color: 0x5f8a78, fog: false }), new THREE.MeshBasicMaterial({ color: 0x8aaab8, fog: false })];
 {
-  const g = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
   for (let k = 0; k < 22; k++) {
+    const g = new THREE.SphereGeometry(1, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2), pa = g.attributes.position;
+    for (let i = 0; i < pa.count; i++) { const y = pa.getY(i); if (y > .02) pa.setY(i, y * (.6 + vnoise(pa.getX(i) * 3 + k, pa.getZ(i) * 3) * .8)); }
     const far = k % 2, a = k / 22 * Math.PI * 2 + rand(-.1, .1), r = far ? rand(470, 540) : rand(360, 420);
     const m = new THREE.Mesh(g, isleMat[far]);
     m.position.set(MW / 2 + Math.cos(a) * r, -3, MH / 2 + Math.sin(a) * r);
@@ -2621,17 +2649,20 @@ const isleMat = [new THREE.MeshBasicMaterial({ color: 0x6f9fae, fog: false }), n
     scene.add(m);
   }
 }
+// 晚上亮起來的窗戶
+const nightGlow = [];
 
 // ---- 地形：每格一個高度，平滑內插成連續的地面 ----
 // 靠岸的水和陸地對稱在水面上下，海岸線剛好落在格子邊上；越往內陸越高、越往外海越深
 const tAt = (i, j) => map[clamp(j, 0, H - 1) * W + clamp(i, 0, W - 1)];
 const isWet = t => !!TILES[t].water || t === T.DOCK;   // 碼頭底下是水
 const tileH = new Float32Array(W * H), tileTint = new Uint8Array(W * H * 4);
+const CALM_A = { pond: .1 / 1.2, river: .22 / 1.2, sea: .8 / 1.2, deep: 1 / 1.2, far: 1.15 / 1.2 };   // 浪的大小（÷1.2 存進貼圖）
 {
   const tint = new THREE.Color();
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
     const t = tAt(i, j), wet = isWet(t);
-    let dm = 16, near = null;   // 到最近一格「另一種」（水↔陸）的距離（公尺）
+    let dm = 16, near = null, calmA = .3;   // 到最近一格「另一種」（水↔陸）的距離（公尺）
     for (let b = -7; b <= 7; b++) for (let a = -3; a <= 3; a++) {
       const nt = tAt(i + a, j + b);
       if (isWet(nt) === wet) continue;
@@ -2642,13 +2673,13 @@ const tileH = new Float32Array(W * H), tileTint = new Uint8Array(W * H * 4);
     if (wet) {
       const w = TILES[t].water || 'sea', bed = BED_Y[w];
       tileH[k] = WATER_Y - .45 + (bed - WATER_Y + .45) * clamp((dm - 2) / 12, 0, 1);
-      tint.set(WATER_COL[w]);
+      tint.set(WATER_COL[w]); calmA = CALM_A[w];
     } else {
       const inland = clamp((dm - 4) / 14, 0, 1);
       tileH[k] = WATER_Y + .45 + inland * (.7 + (t === T.FOREST ? .6 : 0) + (vnoise(i * .45, j * .22) - .5) * 1.2);
       tint.set(WATER_COL[near && TILES[near].water || 'sea']);   // 陸地格用旁邊水域的顏色，岸邊才不會混到怪顏色
     }
-    tileTint.set([tint.r * 255, tint.g * 255, tint.b * 255, 255], k * 4);
+    tileTint.set([tint.r * 255, tint.g * 255, tint.b * 255, calmA * 255], k * 4);
   }
 }
 // Catmull-Rom 內插：平滑、沒有一格一格的台階
@@ -2677,7 +2708,7 @@ const GSX = 1.25, GSZ = 1, GW = Math.round(MW / GSX) + 1, GH = Math.round(MH / G
 const depthData = new Uint8Array(GW * GH);   // 水深（給水面上色、畫浪花）
 function buildTerrain() {
   const pos = new Float32Array(GW * GH * 3), col = new Float32Array(GW * GH * 3), c = new THREE.Color(), c2 = new THREE.Color();
-  const sandWet = new THREE.Color('#d9c98e'), bedDeep = new THREE.Color('#1f5a70'), beach = new THREE.Color('#f6e2a0');
+  const sandWet = new THREE.Color('#bfae7c'), bedDeep = new THREE.Color('#2f5560'), beach = new THREE.Color('#e2d2a0');
   for (let gz = 0; gz < GH; gz++) for (let gx = 0; gx < GW; gx++) {
     const x = gx * GSX, z = gz * GSZ, h = hField(x, z), k = gz * GW + gx;
     pos.set([x, h, z], k * 3);
@@ -2708,7 +2739,7 @@ function buildTerrain() {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.setIndex(idx); g.computeVertexNormals();
-  const land = new THREE.Mesh(g, toon(0xffffff, { vertexColors: true }));
+  const land = new THREE.Mesh(g, underwater(toon(0xffffff, { vertexColors: true, roughness: .95 })));
   land.receiveShadow = true; scene.add(land);
   // 地圖外面的海底
   const fg = new THREE.PlaneGeometry(5000, 5000); fg.rotateX(-Math.PI / 2);
@@ -2729,81 +2760,227 @@ function buildTerrain() {
   decks.forEach(([x, z], k) => deck.setMatrixAt(k, m4.compose(p.set(x, .17, z), q, s)));
   deck.castShadow = deck.receiveShadow = true; deck.frustumCulled = false; scene.add(deck);
   const pl = [...posts.values()];
-  const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .15, 3, 8), toon(0x7a5530), pl.length);
+  const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(.13, .15, 3, 8), underwater(toon(0x6a4a2c)), pl.length);
   pl.forEach(([x, z], k) => post.setMatrixAt(k, m4.compose(p.set(x, -1.3, z), q, s)));
   post.frustumCulled = false; scene.add(post); addOutline(post, .03).frustumCulled = false;
 }
 
-// ---- 水面：依水深上色、岸邊白色浪花、會動的波光與太陽反光 ----
+// ---- 水面：真的會起伏的波浪、鏡面倒影、漣漪、依水深上色、岸邊浪花 ----
 const depthTex = new THREE.DataTexture(depthData, GW, GH, THREE.LuminanceFormat);
 depthTex.magFilter = depthTex.minFilter = THREE.LinearFilter;
-const tintTex = new THREE.DataTexture(tileTint, W, H, THREE.RGBAFormat);
+const tintTex = new THREE.DataTexture(tileTint, W, H, THREE.RGBAFormat);   // RGB 水色、A 浪的大小（池塘平靜、外海大）
 tintTex.magFilter = tintTex.minFilter = THREE.LinearFilter;
+// 四道不同方向、波長的浪疊在一起（JS 和 shader 用同一組，浮標、船才會跟著浪走）
+const WAVES = [[1, .3, 14, .5], [.6, -.8, 8, .3], [-.3, 1, 5, .15], [.9, .45, 3, .07]].map(([dx, dz, L, a]) => {
+  const l = Math.hypot(dx, dz), k = Math.PI * 2 / L;
+  return { dx: dx / l, dz: dz / l, k, w: Math.sqrt(9.8 * k), a };
+});
+const WAVE_AMP = { sun: .16, cloud: .24, rain: .32, storm: .62 };
+const CALM = { pond: .1, river: .22, sea: .8, deep: 1, far: 1.15 };
+let waveAmp = WAVE_AMP.sun, waveT = 0;
+function waveSum(x, z) {
+  let h = 0;
+  for (const v of WAVES) h += v.a * Math.sin(v.k * (v.dx * x + v.dz * z) - v.w * waveT);
+  return h;
+}
+// 某一點的水面高度（浮標、船、魚用）
+function waterH(x, z) {
+  const t = tAt(Math.floor(x / TX), Math.floor(z / TZ)), w = TILES[t].water || 'sea';
+  const dep = clamp((WATER_Y - hField(x, z)) / 1.2, 0, 1);
+  return WATER_Y + waveSum(x, z) * waveAmp * (CALM[w] || 1) * dep;
+}
+// 漣漪：浮標落水、魚咬餌、雨滴、水花，一圈一圈往外擴散（最多同時 16 個）
+const RIP_N = 16, ripples = Array.from({ length: RIP_N }, () => new THREE.Vector4(0, 0, -99, 0));
+let ripNext = 0;
+function addRipple(x, z, amp = 1) { ripples[ripNext++ % RIP_N].set(x, z, waveT, amp); }
+// 鏡面倒影：從水面下方的鏡像相機再畫一次場景（低解析度）
+const reflRT = new THREE.WebGLRenderTarget(256, 256, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+const mirrorCam = new THREE.PerspectiveCamera();
+const reflMatrix = new THREE.Matrix4(), clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -WATER_Y + .05);
 const waterMat = new THREE.ShaderMaterial({
   uniforms: Object.assign({
-    t: { value: 0 }, light: { value: 1 }, dMap: { value: depthTex }, cMap: { value: tintTex },
-    mapSz: { value: new THREE.Vector2(MW, MH) }, cellSz: { value: new THREE.Vector2(TX, TZ) }, skyC: { value: new THREE.Color(SKY.sun.hor) }, skyTop: { value: new THREE.Color(SKY.sun.top) }, sunD: { value: SUN_DIR },
+    t: { value: 0 }, light: { value: 1 }, amp: { value: waveAmp }, dMap: { value: depthTex }, cMap: { value: tintTex },
+    mapSz: { value: new THREE.Vector2(MW, MH) }, skyC: { value: new THREE.Color() }, skyTop: { value: new THREE.Color() },
+    sunD: { value: SUN_DIR }, sunC: { value: new THREE.Color(1, 1, 1) }, moonD: { value: MOON_DIR }, moonK: { value: 0 },
+    rip: { value: ripples }, WV: { value: WAVES.map(v => new THREE.Vector4(v.dx, v.dz, v.k, v.w)) }, WA: { value: WAVES.map(v => v.a) }, reflTex: { value: reflRT.texture }, reflM: { value: reflMatrix }, useRefl: { value: 1 },
   }, THREE.UniformsLib.fog),
-  vertexShader: `varying vec3 wp;
+  vertexShader: `uniform float t, amp; uniform sampler2D dMap, cMap; uniform vec2 mapSz;
+    varying vec3 wp; varying float vD, vCalm;
     #include <fog_pars_vertex>
+    uniform vec4 WV[4]; uniform float WA[4];
     void main() {
-      vec4 w = modelMatrix * vec4(position, 1.); wp = w.xyz;
+      vec4 w = modelMatrix * vec4(position, 1.);
+      vec2 uv = w.xz / mapSz;
+      bool inMap = uv.x > 0. && uv.y > 0. && uv.x < 1. && uv.y < 1.;
+      vD = inMap ? texture2D(dMap, uv).r : 1.;
+      vCalm = inMap ? texture2D(cMap, uv).a * 1.2 : 1.15;
+      float k = amp * vCalm * smoothstep(0., .3, vD) * (1. - smoothstep(70., 160., distance(w.xz, cameraPosition.xz)));
+      float h = 0.;
+      for (int i = 0; i < 4; i++) h += WA[i] * sin(WV[i].z * dot(WV[i].xy, w.xz) - WV[i].w * t);
+      w.y += h * k;
+      wp = w.xyz;
       vec4 mvPosition = viewMatrix * w;
       gl_Position = projectionMatrix * mvPosition;
       #include <fog_vertex>
     }`,
-  fragmentShader: `uniform float t, light; uniform sampler2D dMap, cMap; uniform vec2 mapSz, cellSz; uniform vec3 skyC, skyTop, sunD;
+  fragmentShader: `uniform float t, light, amp, moonK, useRefl; uniform sampler2D cMap, reflTex; uniform vec2 mapSz;
+    uniform vec3 skyC, skyTop, sunD, sunC, moonD; uniform vec4 rip[${RIP_N}]; uniform mat4 reflM;
+    varying vec3 wp; varying float vD, vCalm;
+    #include <fog_pars_fragment>
+    uniform vec4 WV[4]; uniform float WA[4];
     float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
       return mix(mix(hs(i), hs(i + vec2(1., 0.)), f.x), mix(hs(i + vec2(0., 1.)), hs(i + vec2(1., 1.)), f.x), f.y); }
-    varying vec3 wp;
-    #include <fog_pars_fragment>
-    float wv(vec2 p) { return sin(p.x * .55 + t * 1.2) * .5 + sin(p.y * .8 - t * 1.5 + p.x * .3) * .35 + sin((p.x + p.y) * 1.7 + t * 2.1) * .15; }
     void main() {
-      vec2 uv = wp.xz / mapSz;
+      vec2 uv = wp.xz / mapSz, p = wp.xz;
       bool inMap = uv.x > 0. && uv.y > 0. && uv.x < 1. && uv.y < 1.;
-      float d = inMap ? texture2D(dMap, uv).r : 1.;
-      vec2 tuv = (wp.xz / cellSz) / vec2(${W}., ${H}.);
-      vec3 tint = inMap ? texture2D(cMap, tuv).rgb : vec3(.043, .23, .52);
-      // 波浪的法線
-      vec2 p = wp.xz; float h0 = wv(p);
-      vec3 n = normalize(vec3((h0 - wv(p + vec2(.2, 0.))) * 1.1, 1., (h0 - wv(p + vec2(0., .2))) * 1.1));
+      vec3 tint = inMap ? texture2D(cMap, uv).rgb : vec3(.035, .2, .42);
+      float d = vD, k = amp * vCalm * smoothstep(0., .3, d);
+      // 浪的法線（大浪）＋細碎的小波紋
+      vec2 g = vec2(0.);
+      for (int i = 0; i < 4; i++) g += WA[i] * WV[i].z * WV[i].xy * cos(WV[i].z * dot(WV[i].xy, p) - WV[i].w * t);
+      g *= k;
+      float e = .25, n0 = vn(p * 1.3 + t * .4) + vn(p * 2.7 - t * .6) * .5;
+      g += vec2(vn(p * 1.3 + vec2(e, 0.) + t * .4) - vn(p * 1.3 - vec2(e, 0.) + t * .4), vn(p * 1.3 + vec2(0., e) + t * .4) - vn(p * 1.3 - vec2(0., e) + t * .4)) * (.12 + amp * .4);
+      // 漣漪：一圈一圈往外推
+      for (int i = 0; i < ${RIP_N}; i++) {
+        float age = t - rip[i].z;
+        if (age < 0. || age > 3.5) continue;
+        vec2 dv = p - rip[i].xy; float r = length(dv) + .001, front = age * 1.4;
+        float ring = sin((r - front) * 10.) * exp(-pow((r - front) * 1.6, 2.)) * exp(-age * 1.1) * rip[i].w;
+        g += dv / r * ring * .9;
+      }
+      vec3 n = normalize(vec3(-g.x, 1., -g.y));
       vec3 v = normalize(cameraPosition - wp);
-      float fr = pow(1. - max(dot(n, v), 0.), 4.);
-      vec3 shallow = mix(tint, vec3(.42, .92, .86), .55);
-      vec3 col = mix(shallow, tint, smoothstep(0., .45, d));
-      // 倒影：反射天空的漸層和雲（像鏡子一樣，越斜看越亮）
-      vec3 r = reflect(-v, normalize(mix(vec3(0., 1., 0.), n, .3))); float ry = max(r.y, .03);   // 倒影用比較平的法線，雲才不會扭成一團
-      vec3 refl = mix(skyC, skyTop, pow(ry, .55));
-      vec2 cp = r.xz / ry * 60. + vec2(t * 1.2, t * .4);
-      float cl = vn(cp * .018) * .6 + vn(cp * .045) * .3 + vn(cp * .11) * .1;
-      refl = mix(refl, vec3(.8 + .2 * light), smoothstep(.56, .74, cl) * .9);
-      float fr2 = mix(.18, .8, pow(1. - max(dot(n, v), 0.), 2.)) * mix(.45, 1., smoothstep(0., .25, d));
-      col = mix(col, refl, fr2);
-      // 外海零星的白浪
-      col = mix(col, vec3(1.), smoothstep(.8, .92, vn(p * .3 + vec2(t * .35, t * .2))) * smoothstep(.6, .95, h0 * .5 + .5) * smoothstep(.3, .6, d) * .5);
-      // 卡通的太陽反光、細碎波光
-      float sp = pow(max(dot(reflect(-sunD, n), v), 0.), 90.);
-      col += smoothstep(.3, .42, sp) * .85 * light;
-      float gl = sin(p.x * 2.3 + t * 1.6 + sin(p.y * 1.1 + t * .7) * 2.5) * sin(p.y * 3.1 - t * 1.3 + sin(p.x * .8 - t * .5) * 2.5);
-      col += smoothstep(.975, .995, gl * (.85 + .15 * h0)) * .22 * (1. - d * .5);
-      col *= light;
-      // 岸邊白色浪花：貼著岸一圈，外面一條條往岸邊推
+      float ndv = max(dot(n, v), 0.);
+      // 水色：淺的地方看得到底（透明、偏綠），深的地方深藍
+      vec3 shallow = mix(tint, vec3(.35, .7, .62), .45);
+      vec3 col = mix(shallow, tint * .75, smoothstep(0., .5, d)) * (.35 + .65 * light);
+      // 倒影：鏡面反射的畫面（水波讓它晃動），沒有的話用天空顏色
+      vec3 r = reflect(-v, n);
+      vec3 refl = mix(skyC, skyTop, pow(max(r.y, 0.), .5));
+      if (useRefl > .5) {
+        vec4 rc = reflM * vec4(wp, 1.);
+        vec2 ruv = rc.xy / rc.w + n.xz * .06;
+        refl = texture2D(reflTex, clamp(ruv, .001, .999)).rgb;
+      }
+      float fr = .03 + .97 * pow(1. - ndv, 5.);
+      fr = mix(fr, max(fr, .35), smoothstep(.1, .6, d));
+      col = mix(col, refl, clamp(fr * 1.15, 0., .95));
+      // 太陽、月亮的反光：太陽低的時候是一條金色的光路
+      vec3 hv = normalize(sunD + v);
+      float sp = pow(max(dot(n, hv), 0.), 260.) * 4. + pow(max(dot(n, hv), 0.), 40.) * .25;
+      col += sunC * sp * light * step(0., sunD.y);
+      vec3 hm = normalize(moonD + v);
+      col += vec3(.6, .7, .9) * pow(max(dot(n, hm), 0.), 600.) * .9 * moonK;   // 月光的反光：細細一條
+      // 外海的白浪、岸邊的浪花
+      float crest = smoothstep(.75, .95, vn(p * .25 + t * .2)) * smoothstep(.5, 1., amp * vCalm * 2.) * smoothstep(.3, .6, d);
       float edge = 1. - smoothstep(.015, .05, d);
-      float band = smoothstep(.55, .85, sin(d * 70. - t * 2.4 + wv(p * 1.7) * 1.5)) * (1. - smoothstep(.04, .13, d));
-      float foam = clamp(edge + band * .8, 0., 1.);
-      float a = mix(.5, .93, smoothstep(0., .35, d));
-      gl_FragColor = vec4(mix(col, vec3(1.), foam * .9), max(a, foam * .9));
+      float band = smoothstep(.6, .9, sin(d * 70. - t * 2.4 + n0 * 2.)) * (1. - smoothstep(.04, .13, d));
+      float foam = clamp(edge + band * .7 + crest * .6, 0., 1.) * (.55 + .45 * light);
+      float a = mix(.42, .94, smoothstep(0., .45, d));
+      a = max(a, fr);
+      gl_FragColor = vec4(mix(col, vec3(.92, .95, .97) * (.4 + .6 * light), foam * .85), max(a, foam * .9));
       #include <fog_fragment>
     }`,
   transparent: true, depthWrite: false, fog: true,
 });
+// 水面網格：以鏡頭為中心的同心圓，近的地方密、遠的地方疏，一路延伸到海平線
+let waterMesh;
 {
-  const g = new THREE.PlaneGeometry(5000, 5000); g.rotateX(-Math.PI / 2);
-  const water = new THREE.Mesh(g, waterMat);
-  water.position.set(MW / 2, WATER_Y, MH / 2); water.renderOrder = 2; water.frustumCulled = false;
-  scene.add(water);
+  const RINGS = 70, SEG = 112, pos = [0, 0, 0], idx = [];
+  for (let i = 1; i <= RINGS; i++) {
+    const r = .55 * (Math.pow(1.105, i) - 1) / .105;
+    for (let s = 0; s < SEG; s++) { const a = s / SEG * Math.PI * 2; pos.push(Math.cos(a) * r, 0, Math.sin(a) * r); }
+  }
+  for (let s = 0; s < SEG; s++) idx.push(0, 1 + (s + 1) % SEG, 1 + s);
+  for (let i = 0; i < RINGS - 1; i++) for (let s = 0; s < SEG; s++) {
+    const a = 1 + i * SEG + s, b = 1 + i * SEG + (s + 1) % SEG, c = a + SEG, d2 = b + SEG;
+    idx.push(a, b, c, b, d2, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+  waterMesh = new THREE.Mesh(g, waterMat);
+  waterMesh.position.y = WATER_Y; waterMesh.renderOrder = 2; waterMesh.frustumCulled = false;
+  scene.add(waterMesh);
 }
+// 每幀：把倒影畫到貼圖上
+function renderReflection() {
+  const q = QUALITY[qLv];
+  waterMat.uniforms.useRefl.value = q.refl ? 1 : 0;
+  if (!q.refl || camera.position.y < WATER_Y) return;
+  const pr = renderer.getPixelRatio(), w = Math.round(innerWidth * pr * q.refl), h = Math.round(innerHeight * pr * q.refl);
+  if (reflRT.width !== w || reflRT.height !== h) reflRT.setSize(w, h);
+  mirrorCam.copy(camera, false);
+  mirrorCam.position.copy(camera.position); mirrorCam.position.y = 2 * WATER_Y - camera.position.y;
+  camera.getWorldDirection(V5); V5.y = -V5.y;
+  mirrorCam.up.set(0, -1, 0);   // 鏡像：上下顛倒
+  mirrorCam.lookAt(V4.copy(mirrorCam.position).add(V5));
+  mirrorCam.up.set(0, 1, 0);
+  mirrorCam.projectionMatrix.copy(camera.projectionMatrix);
+  mirrorCam.updateMatrixWorld(); mirrorCam.matrixWorldInverse.copy(mirrorCam.matrixWorld).invert();
+  mirrorCam.layers.set(0);   // 小花、灌木不畫進倒影
+  reflMatrix.set(.5, 0, 0, .5, 0, .5, 0, .5, 0, 0, .5, .5, 0, 0, 0, 1).multiply(mirrorCam.projectionMatrix).multiply(mirrorCam.matrixWorldInverse);
+  const vis = [waterMesh.visible, rodRig.visible];
+  waterMesh.visible = false; rodRig.visible = false;
+  renderer.setRenderTarget(reflRT); renderer.clippingPlanes = [clipPlane];
+  renderer.render(scene, mirrorCam);
+  renderer.setRenderTarget(null); renderer.clippingPlanes = [];
+  [waterMesh.visible, rodRig.visible] = vis;
+}
+
+// ---- 每幀更新天空、光線、天氣（時間＋天氣一起決定）----
+const C_DAY_TOP = new THREE.Color(0x3a86d8), C_DAY_HOR = new THREE.Color(0xbcdcf2), C_DUSK_TOP = new THREE.Color(0x35507e), C_DUSK_HOR = new THREE.Color(0xf2a46a);
+const C_NIGHT_TOP = new THREE.Color(0x050a1a), C_NIGHT_HOR = new THREE.Color(0x16223a), C_GREY = new THREE.Color(0x8a96a4);
+const CLOUDY = { sun: 0, cloud: .55, rain: .75, storm: .95 };
+const T1 = new THREE.Color(), T2 = new THREE.Color();
+let envDay = 1, envCloud = 0;
+function updateEnv(dt) {
+  waveT += dt;
+  const hr = gameHour(), tt = (hr - 5) / 14;   // 0＝日出、1＝日落
+  const el = Math.sin(tt * Math.PI) * .95 - (tt < 0 || tt > 1 ? .3 : 0);
+  SUN_DIR.set(Math.cos(tt * Math.PI), Math.max(el, -.6), .35).normalize();
+  MOON_DIR.set(-SUN_DIR.x, Math.max(.25, -SUN_DIR.y), -.3).normalize();
+  const day = smoothstep(-.1, .22, SUN_DIR.y), dusk = Math.exp(-SUN_DIR.y * SUN_DIR.y / .025) * (SUN_DIR.y > -.15 ? 1 : 0);
+  const kk = Math.min(1, dt * 1.5);
+  envCloud += ((CLOUDY[weather.id] || 0) - envCloud) * kk;
+  envDay = day;
+  const su = skyMat.uniforms, light = Math.max(.12, day * (1 - envCloud * .55)) + flash;
+  T1.copy(C_NIGHT_TOP).lerp(C_DAY_TOP, day).lerp(C_DUSK_TOP, dusk * .5);
+  T2.copy(C_NIGHT_HOR).lerp(C_DAY_HOR, day).lerp(C_DUSK_HOR, dusk * .75);
+  T1.lerp(C_GREY, envCloud * .7).multiplyScalar(1 - envCloud * .35 * day);
+  T2.lerp(C_GREY, envCloud * .6).multiplyScalar(1 - envCloud * .3 * day);
+  su.top.value.copy(T1); su.hor.value.copy(T2);
+  su.duskK.value = dusk * (1 - envCloud); su.sunK.value = (1 - envCloud) * smoothstep(-.05, .05, SUN_DIR.y);
+  su.moonK.value = (1 - day) * (1 - envCloud);
+  starMat.opacity = Math.max(0, 1 - day * 1.6) * (1 - envCloud);
+  scene.fog.color.copy(T2); scene.background.copy(T2);
+  scene.fog.far += (SKY[weather.id].far * (.6 + .4 * day) - scene.fog.far) * kk;
+  // 光線：白天是太陽，晚上是淡淡的藍色月光
+  const sunC = T1.setRGB(1, .55 + .45 * smoothstep(0, .35, SUN_DIR.y), .3 + .7 * smoothstep(0, .4, SUN_DIR.y));
+  if (SUN_DIR.y > -.02) { sunLight.color.copy(sunC); sunLight.intensity = .95 * smoothstep(-.02, .15, SUN_DIR.y) * (1 - envCloud * .65); }
+  else { sunLight.color.setRGB(.6, .7, 1); sunLight.intensity = .18 * (1 - envCloud); }
+  hemi.intensity = .18 + .62 * day * (1 - envCloud * .3) + flash * 3;
+  hemi.color.copy(T2).lerp(C_DAY_HOR, .4);
+  // 天氣：浪的大小、雲的顏色
+  waveAmp += (WAVE_AMP[weather.id] - waveAmp) * Math.min(1, dt * .3);
+  const wu = waterMat.uniforms;
+  wu.t.value = waveT; wu.amp.value = waveAmp; wu.light.value = light;
+  wu.skyC.value.copy(su.hor.value); wu.skyTop.value.copy(su.top.value); wu.sunC.value.copy(sunC).multiplyScalar(1 - envCloud * .85); wu.moonK.value = su.moonK.value;
+  UW.uT.value = waveT; UW.uLight.value = light;
+  cloudMat.color.setRGB(1, 1, 1).lerp(C_DUSK_HOR, dusk * .6).multiplyScalar(.25 + .75 * day * (1 - envCloud * .45)).lerp(C_GREY, envCloud * .3);
+  cloudMat.opacity = .55 + envCloud * .45;
+  clouds.rotation.y = waveT * .003;
+  isleMat[0].color.setHex(0x4f7a63).multiplyScalar(.3 + .7 * day).lerp(su.hor.value, .45);
+  isleMat[1].color.setHex(0x5d7f90).multiplyScalar(.3 + .7 * day).lerp(su.hor.value, .65);
+  nightGlow.forEach(m => { m.emissiveIntensity = .3 + (1 - day) * 2.2; });
+  skyDome.position.copy(camera.position);
+  // 水面網格跟著鏡頭（對齊 2 公尺，浪才不會跟著飄）
+  waterMesh.position.x = Math.round(camera.position.x / 2) * 2; waterMesh.position.z = Math.round(camera.position.z / 2) * 2;
+  // 下雨時雨滴在水面打出漣漪
+  if (weather.rain && Math.random() < dt * weather.rain * .12) addRipple(camera.position.x + rand(-14, 14), camera.position.z + rand(-14, 14), .25);
+}
+const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 // ---- 樹、灌木、花、石頭（InstancedMesh，手機也跑得動）----
 // 依位置分塊的 InstancedMesh：看不到的區塊整塊略過不畫（陰影也是），手機才跑得動
@@ -2832,7 +3009,7 @@ function chunked(geo, mat, items, per, place, opt = {}) {
     im.castShadow = !!opt.cast; im.receiveShadow = !!opt.recv;
     scene.add(im);
     if (opt.ol) LOD.push({ o: addOutline(im, opt.ol), x: cx, z: cz, d: 70, ol: 1 });
-    if (opt.lod) LOD.push({ o: im, x: cx, z: cz, d: opt.lod });
+    if (opt.lod) { LOD.push({ o: im, x: cx, z: cz, d: opt.lod }); im.layers.set(1); }
     out.push(im);
   }
   return out;
@@ -2883,7 +3060,7 @@ function buildTrees() {
     im.setColorAt(n, c.setHex(FLOWER[ci]));
   }, { lod: 75 });
   // 石頭：稜角分明的低面數造型，水裡的一半泡在水中
-  chunked(new THREE.DodecahedronGeometry(1, 0), toon(0xffffff), rocks, 1, (im, [x, z, sc, hv, wet], n) => {
+  chunked(new THREE.DodecahedronGeometry(1, 0), underwater(toon(0xffffff, { roughness: .9, flatShading: true })), rocks, 1, (im, [x, z, sc, hv, wet], n) => {
     q.setFromEuler(e.set(hv * 3, hv * 7, hv * 2));
     im.setMatrixAt(n, m.compose(p.set(x, (wet ? WATER_Y - sc * .2 : hField(x, z) + sc * .2), z), q, s.set(sc * 1.3, sc * .8, sc)));
     im.setColorAt(n, wet ? c.setHSL(.6, .06, .3 + hv * .1) : c.setHSL(.08, .14, .5 + hv * .12));   // 海裡的礁石是深灰色
@@ -2940,7 +3117,8 @@ function buildShops() {
     const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.6, .12), toon(0x7a4a26)); door.position.set(0, 1.6, fz); g.add(door);
     const knob = new THREE.Mesh(new THREE.SphereGeometry(.07, 6, 4), toon(0xffd34d)); knob.position.set(.45, 1.5, fz + .08); g.add(knob);
     for (const sx of [-1, 1]) {
-      const win = new THREE.Mesh(new THREE.BoxGeometry(1, .9, .1), toon(0x9fe0ff, { emissive: 0x2a5a70 })); win.position.set(sx * ww * .3, 2, fz); g.add(win);
+      const winMat = toon(0xffe9b0, { emissive: 0xffc46a, emissiveIntensity: .3, roughness: .2 }); nightGlow.push(winMat);
+      const win = new THREE.Mesh(new THREE.BoxGeometry(1, .9, .1), winMat); win.position.set(sx * ww * .3, 2, fz); g.add(win);
       const fr = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.1, .06), toon(0xffffff)); fr.position.set(sx * ww * .3, 2, fz - .02); g.add(fr);
     }
     const aw = new THREE.Mesh(new THREE.BoxGeometry(ww * .82, .08, .75), toon(0xffffff, { map: stripeTexture(look[2], '#ffffff') }));
@@ -3136,7 +3314,7 @@ function make3DFish(f) {
     uv.setXY(i, (B.cx + x * B.rx) / FW, 1 - (14 - y * B.ry) / FH);
   }
   geo.scale(.5, B.h / 2, B.w / 2);
-  const body = new THREE.Mesh(geo, toon(0xffffff, { map: fishToonTex(f) }));
+  const body = new THREE.Mesh(geo, underwater(toon(0xffffff, { map: fishToonTex(f), roughness: .35, metalness: .15 }), false));
   g.add(body); addOutline(body, .016);
   const fin = f.fin || '#888888';
   // 尾巴（分叉）掛在尾柄上，會左右甩
@@ -3232,8 +3410,9 @@ const CF = new THREE.Vector3(), CR = new THREE.Vector3(), CU = new THREE.Vector3
 const V1 = new THREE.Vector3(), V2 = new THREE.Vector3(), V3 = new THREE.Vector3(), V4 = new THREE.Vector3(), V5 = new THREE.Vector3(), skyCol = new THREE.Color();
 let flash = 0;
 function bobberPos(out) {
-  out.set(spot.x * TX, WATER_Y + .05, spot.y * TZ);
-  if (state === 'wait') out.y += Math.sin(gameT * 3) * .03;
+  out.set(spot.x * TX, 0, spot.y * TZ);
+  out.y = waterH(out.x, out.z) + .05;   // 浮標跟著浪上下
+  if (state === 'wait') out.y += Math.sin(gameT * 3) * .015;
   if (state === 'bite') out.y -= .1 + Math.abs(Math.sin(gameT * 30)) * .06;
   return out;
 }
@@ -3245,7 +3424,7 @@ function render3D(dt) {
   camGround = camGround == null ? gh : camGround + (gh - camGround) * Math.min(1, dt * 8);
   // 相機：走路晃動、船上隨浪起伏、搏鬥時抖動
   const walkBob = P.moving && !boat ? Math.sin(P.walkT * 9) * .05 : 0;
-  const wave = boat ? Math.sin(gameT * 1.6) * .08 : 0;
+  const wave = boat ? waterH(P.x * TX, P.y * TZ) - WATER_Y : 0;   // 船跟著浪起伏
   const shake = state === 'fight' && F ? (.004 + F.tens * .01 + F.spike * .05) * (1 + (F.lv - 1) * .3) : 0;
   camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : camGround + CFG.eye) + walkBob + wave, P.y * TZ);
   camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : 0, 'YXZ');
@@ -3254,7 +3433,12 @@ function render3D(dt) {
   boats.forEach((b, k) => { b.visible = boat && S.boat - 1 === k; });
   if (boat) {   // 人坐在船的後半段，往前看得到船頭
     const b = boats[S.boat - 1];
-    b.position.set(P.x * TX - Math.sin(yaw) * .6, WATER_Y + .3 + wave * .6, P.y * TZ - Math.cos(yaw) * .6); b.rotation.y = yaw;   // 船底浮在水面上
+    const bx = P.x * TX - Math.sin(yaw) * .6, bz = P.y * TZ - Math.cos(yaw) * .6;
+    b.position.set(bx, waterH(bx, bz) + .3, bz);
+    // 船頭船尾、左右的高低差讓船傾斜
+    const fwd = waterH(bx - Math.sin(yaw) * 1.5, bz - Math.cos(yaw) * 1.5) - waterH(bx + Math.sin(yaw) * 1.5, bz + Math.cos(yaw) * 1.5);
+    const side = waterH(bx + Math.cos(yaw) * .8, bz - Math.sin(yaw) * .8) - waterH(bx - Math.cos(yaw) * .8, bz + Math.sin(yaw) * .8);
+    b.rotation.set(fwd * .3, yaw, -side * .5, 'YXZ');
   }
 
   // 釣竿姿勢：蓄力往後拉、拋出往前甩、搏鬥時彎曲
@@ -3288,11 +3472,9 @@ function render3D(dt) {
       bobber.position.lerpVectors(tip, target, k); bobber.position.y += Math.sin(k * Math.PI) * (2 + castDur * 6);
     } else bobber.position.copy(target);
     lineEnd = bobber.position; sag = state === 'cast' ? .2 : 1.2;
-    if (state === 'wait' || state === 'bite') {
-      const r = ((gameT * (state === 'bite' ? 2.5 : .9)) % 1);
-      ripple.visible = true; ripple.position.set(bobber.position.x, WATER_Y + .02, bobber.position.z);
-      ripple.scale.setScalar(.2 + r * 1.3); ripple.material.opacity = .7 * (1 - r);
-    }
+    // 浮標晃動、魚咬的時候在水面打出漣漪
+    if (state === 'wait' && Math.random() < dt * .45) addRipple(bobber.position.x, bobber.position.z, .22);
+    if (state === 'bite' && Math.random() < dt * 5) addRipple(bobber.position.x, bobber.position.z, .6);
   }
   // 魚上鉤：浮標一閃一閃的光
   biteGlow.visible = state === 'bite' && !!showBob;
@@ -3470,23 +3652,13 @@ function render3D(dt) {
   }
 
   // 天氣：天空顏色、霧、雨、閃電
-  const sk = SKY[weather.id], kk = Math.min(1, dt * 2), su = skyMat.uniforms;
-  su.top.value.lerp(skyCol.setHex(sk.top), kk); su.hor.value.lerp(skyCol.setHex(sk.hor), kk);
-  su.sunK.value += ((weather.id === 'sun' ? 1 : weather.id === 'cloud' ? .3 : 0) - su.sunK.value) * kk;
-  scene.fog.color.copy(su.hor.value); scene.background.copy(su.hor.value);
-  scene.fog.far += (sk.far - scene.fog.far) * kk;
   if (weather.severe && Math.random() < dt / 5) flash = .35;
   flash = Math.max(0, flash - dt * 1.5);
-  hemi.intensity = sk.light * .85 + flash * 3; sunLight.intensity = sk.light * .8;
-  skyDome.position.copy(camera.position);
-  waterMat.uniforms.t.value = gameT; waterMat.uniforms.light.value = sk.light + flash; waterMat.uniforms.skyC.value.copy(su.hor.value); waterMat.uniforms.skyTop.value.copy(su.top.value);
-  cloudMat.color.setScalar(.5 + sk.light * .5); cloudMat.emissive.setScalar(.2 + sk.light * .35);
-  clouds.rotation.y = gameT * .004;
-  isleMat[0].color.setHex(0x4f8a63).lerp(su.hor.value, .45); isleMat[1].color.setHex(0x5d8fa0).lerp(su.hor.value, .65);
+  updateEnv(dt);
   // 陰影只算玩家前方一塊，跟著走
   camera.getWorldDirection(CF);
   sunLight.target.position.set(camera.position.x + CF.x * 14, 0, camera.position.z + CF.z * 14);
-  sunLight.position.copy(sunLight.target.position).addScaledVector(SUN_DIR, 90);
+  sunLight.position.copy(sunLight.target.position).addScaledVector(SUN_DIR.y > -.02 ? SUN_DIR : MOON_DIR, 90);   // 晚上是月光
   sunLight.target.updateMatrixWorld();
   rain.visible = !!weather.rain;
   if (rain.visible) {
@@ -3504,6 +3676,8 @@ function render3D(dt) {
     rainGeo.attributes.position.needsUpdate = true;
   }
 
+  renderReflection();
+  renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
 }
 
@@ -3529,7 +3703,7 @@ function updateHud() {
     $('fDurN').textContent = `${Math.ceil(F.hp == null ? LINES[S.line - 1].hp : F.hp)}/${LINES[S.line - 1].hp}`;
   } else { btn = 'dim'; label = '下竿'; }
   const nb = METHODS.filter(m => hasBuff(m.id)).length;
-  const info = `$${fmtN(S.money)}・${weather.name}` + (nb ? `・加成 ${nb}` : '') + (onBoat() ? `・${BOATS[S.boat - 1].name}` : '');
+  const hh = gameHour(), info = `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor(hh % 1 * 6) * 10).padStart(2, '0')}・$${fmtN(S.money)}・${weather.name}` + (nb ? `・加成 ${nb}` : '') + (onBoat() ? `・${BOATS[S.boat - 1].name}` : '');
   $('bang').classList.toggle('on', state === 'bite');
   $('danger').style.opacity = state === 'fight' && F ? clamp((F.tens + F.spike - .62) / .3, 0, 1) : 0;   // 快斷線時畫面邊緣泛紅
   const key = [btn, label, info, bag.length].join('|');
