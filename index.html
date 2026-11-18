@@ -357,6 +357,8 @@
   #boxBtn, #homeBtn, #bagBtn { background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
   #info { background: rgba(16,26,52,.72); border: 1px solid rgba(160,190,255,.4); }
   #info { cursor: pointer; pointer-events: auto; }
+  #dlg canvas.tankC { width: 100%; aspect-ratio: 2 / 1; border-radius: 10px; border: 2px solid rgba(160,190,255,.4); display: block; margin-bottom: 6px; }
+  #dlg .tb-quest.done { opacity: .6; }
   #dlg canvas.tideC { width: 100%; height: 74px; margin-top: 6px; display: block; }
   #fight { background: rgba(16,26,52,.8); border: 1px solid rgba(160,190,255,.45); }
   #fight .cue { color: #fff; }
@@ -943,7 +945,8 @@ function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); 
 if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
 S.opt = Object.assign({ sound: true, motion: false }, S.opt);
 S.log = S.log || {};   // 釣魚筆記
-S.opt.rig = S.opt.rig || 'float';   // 浮釣 / 沉底   // 設定：音效、體感拋竿
+S.opt.rig = S.opt.rig || 'float';   // 浮釣 / 沉底
+S.tank = (S.tank || []).filter(b => FISH_BY[b.id]);   // 水族箱裡的魚   // 設定：音效、體感拋竿
 function saveAll() {
   S.at = Date.now();   // 存檔時間：本機和雲端比較，用比較新的那份
   try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); localStorage.setItem('moyu.save', JSON.stringify(S)); } catch (e) {}
@@ -1226,7 +1229,129 @@ function openConditions() {
   if (!hot.length) d.appendChild(el('div', 'empty', '現在魚都懶洋洋的……'));
   else d.appendChild(grid);
   d.appendChild(el('div', 'tb-story', `同一種魚釣到 ${HABIT_N} 次，就會摸清楚牠的習性（圖鑑裡看得到），這裡也會顯示出來。`));
-  openDlg('釣況', d);
+  dailyBox(d);
+  openDlg('釣況・今日挑戰', d);
+}
+// ================= 今日挑戰（每天換三個） =================
+const today = () => Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+function dailyFishList() {
+  const ws = BOATS[S.boat - 1].waters;
+  return FISH.filter(f => !f.junk && !f.special && !f.mutant && !f.noDex && !ONLY_BAIT[f.id] && fishLv(f, 0) <= S.rod && f.water.some(w => ws.includes(w)));
+}
+function newDaily(day) {
+  const r = mulberry32(day * 9973 + 17), pk = a => a[Math.floor(r() * a.length)], list = dailyFishList(), out = [];
+  const f = pk(list.filter(x => x.rar <= Math.min(3, S.rod)));
+  if (r() < .5) out.push({ k: 'fish', id: f.id, n: 1, reward: Math.round(f.price * 2 + 100) });
+  else { const cm = Math.round(f.size[0] + (f.size[1] - f.size[0]) * .6); out.push({ k: 'size', id: f.id, cm, n: 1, reward: Math.round(f.price * 3 + 150) }); }
+  const rigs = ['bottom', 'float'].concat(Object.keys(S.lures || {}).length ? ['lure'] : []);
+  if (r() < .5) out.push({ k: 'rig', rig: pk(rigs), n: 3, reward: 300 });
+  else out.push({ k: 'tod', tod: Math.floor(r() * 4), n: 2, reward: 300 });
+  out.push({ k: 'kinds', n: 4, reward: 500, ids: [] });
+  out.forEach(q => { q.p = 0; q.done = false; });
+  return { day, list: out };
+}
+function daily() {
+  const d = today();
+  if (!S.daily || S.daily.day !== d) { S.daily = newDaily(d); saveAll(); }
+  return S.daily;
+}
+function dailyText(q) {
+  const f = FISH_BY[q.id];
+  if (q.k === 'fish') return `釣到一條${f.name}`;
+  if (q.k === 'size') return `釣到 ${q.cm} cm 以上的${f.name}`;
+  if (q.k === 'rig') return `用${RIGS[q.rig].name}釣到 ${q.n} 條魚`;
+  if (q.k === 'tod') return `在${TODS[q.tod]}釣到 ${q.n} 條魚`;
+  return `今天釣到 ${q.n} 種不同的魚`;
+}
+function dailyCheck(f, size, rig) {
+  if (f.junk || f.special) return;
+  for (const q of daily().list) {
+    if (q.done) continue;
+    if (q.k === 'fish' && f.id === q.id) q.p++;
+    else if (q.k === 'size' && f.id === q.id && size >= q.cm) q.p++;
+    else if (q.k === 'rig' && rig === q.rig) q.p++;
+    else if (q.k === 'tod' && todAt(gameHour()) === q.tod) q.p++;
+    else if (q.k === 'kinds' && !q.ids.includes(f.id)) { q.ids.push(f.id); q.p = q.ids.length; }
+    if (q.p >= q.n) {
+      q.done = true; S.money += q.reward;
+      setTimeout(() => { toast(`🎯 今日挑戰完成：${dailyText(q)}！獎金 $${fmtN(q.reward)}`); SFX.coin(); }, 2600);
+    }
+  }
+}
+function dailyBox(d) {
+  d.appendChild(el('div', 'sect', '今日挑戰'));
+  for (const q of daily().list) {
+    const c = el('div', 'tb-quest' + (q.done ? ' done' : '')), mid = el('div', 'tb-qm');
+    mid.appendChild(el('b', null, (q.done ? '✔ ' : '') + dailyText(q)));
+    mid.appendChild(el('div', 'tb-qline', q.done ? '完成了！' : `進度 ${Math.min(q.p, q.n)}/${q.n}`));
+    c.appendChild(mid); c.appendChild(el('span', 'tb-qr', '$' + fmtN(q.reward))); d.appendChild(c);
+  }
+  d.appendChild(el('div', 'tb-story', '每天半夜換新的挑戰，完成就直接拿到獎金。'));
+}
+
+// ================= 水族箱 =================
+const TANK_N = 8;
+const canTank = b => { const f = FISH_BY[b.id]; return !b.dish && !f.junk && !f.special; };
+function tankIncome() {   // 觀賞門票：水族箱裡的魚越值錢收越多（最多累積 8 小時）
+  const now = Date.now(), min = Math.min(480, (now - (S.tankAt || now)) / 60000);
+  S.tankAt = now;
+  const v = Math.floor(min * S.tank.reduce((a, b) => a + priceOf(b), 0) * .003);
+  if (v > 0) { S.money += v; saveAll(); toast(`水族箱的觀賞門票收入 +$${fmtN(v)}`); SFX.coin(); }
+}
+function toTank(id) {
+  if (S.tank.length >= TANK_N) { toast(`水族箱滿了（${TANK_N} 條），先放一條回背包`); return; }
+  let best = -1;
+  bag.forEach((b, i) => { if (b.id === id && canTank(b) && (best < 0 || b.size > bag[best].size)) best = i; });
+  if (best < 0) return;
+  if (!S.tank.length) S.tankAt = Date.now();
+  S.tank.push(bag.splice(best, 1)[0]); saveAll(); toast(`${FISH_BY[id].name}放進水族箱了，最大的那條`);
+}
+// 水族箱畫面：魚在玻璃缸裡游，水草擺動、冒泡泡，顏色跟著現在的時間
+function tankView(list) {
+  const W = 600, H = 300, c = document.createElement('canvas'); c.width = W; c.height = H; c.className = 'tankC';
+  const x = c.getContext('2d');
+  const fish = list.map((b, i) => {
+    const f = FISH_BY[b.id], img = fishCanvas(b.id, 2), w = clamp(60 + fishLen(f, b.size) * 60, 60, 220);
+    return { img, w, h: w / 2, x: rand(w, W - w), y: rand(60, H - 90), vx: (Math.random() < .5 ? -1 : 1) * rand(20, 45) * (w < 100 ? 1.3 : .8), ph: rand(0, 6), f };
+  });
+  const bub = Array.from({ length: 14 }, () => ({ x: rand(0, W), y: rand(0, H), r: rand(1.5, 4), v: rand(18, 40) }));
+  const weeds = Array.from({ length: 9 }, (_, i) => ({ x: 20 + i * 70 + rand(-15, 15), h: rand(60, 140), c: pick(['#2f8f5a', '#3fa36a', '#5cb85c', '#2a7a4a']) }));
+  let last = performance.now();
+  const loop = now => {
+    if (!c.isConnected) return;
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    const hr = gameHour(), day = clamp(Math.sin((hr - 5) / 14 * Math.PI) * 1.4, 0, 1);
+    const g = x.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `rgb(${40 + day * 60},${90 + day * 100},${140 + day * 90})`); g.addColorStop(1, `rgb(${12 + day * 20},${40 + day * 50},${70 + day * 60})`);
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    // 光束
+    x.fillStyle = `rgba(255,255,255,${.05 + day * .06})`;
+    for (let k = 0; k < 4; k++) { const ox = (k * 170 + now * .01) % (W + 200) - 100; x.beginPath(); x.moveTo(ox, 0); x.lineTo(ox + 60, 0); x.lineTo(ox + 140, H); x.lineTo(ox + 40, H); x.fill(); }
+    // 沙、水草
+    x.fillStyle = '#c9b48a'; x.beginPath(); x.moveTo(0, H - 30); for (let i = 0; i <= W; i += 30) x.lineTo(i, H - 30 + Math.sin(i * .05) * 6); x.lineTo(W, H); x.lineTo(0, H); x.fill();
+    for (const w of weeds) {
+      x.strokeStyle = w.c; x.lineWidth = 7; x.lineCap = 'round'; x.beginPath(); x.moveTo(w.x, H - 26);
+      for (let k = 1; k <= 6; k++) x.lineTo(w.x + Math.sin(now * .0015 + k * .7 + w.x) * k * 3, H - 26 - w.h * k / 6);
+      x.stroke();
+    }
+    // 魚：左右游，到邊邊轉身，上下慢慢飄
+    for (const o of fish) {
+      o.ph += dt; o.x += o.vx * dt; o.y += Math.sin(o.ph * .8) * 8 * dt;
+      if (o.x < o.w * .5 && o.vx < 0 || o.x > W - o.w * .5 && o.vx > 0 || Math.random() < dt * .08) o.vx = -o.vx;
+      o.y = clamp(o.y, 30, H - 60 - o.h * .3);
+      x.save(); x.translate(o.x, o.y); if (o.vx < 0) x.scale(-1, 1);   // 魚圖預設頭朝右
+      x.rotate(Math.sin(o.ph * 5) * .04); x.drawImage(o.img, -o.w / 2, -o.h / 2, o.w, o.h); x.restore();
+    }
+    for (const b of bub) {
+      b.y -= b.v * dt; b.x += Math.sin(now * .003 + b.r) * .3; if (b.y < -5) { b.y = H + 5; b.x = rand(0, W); }
+      x.strokeStyle = 'rgba(255,255,255,.6)'; x.lineWidth = 1.5; x.beginPath(); x.arc(b.x, b.y, b.r, 0, 7); x.stroke();
+    }
+    // 玻璃反光
+    x.fillStyle = 'rgba(255,255,255,.07)'; x.fillRect(W * .06, 0, 18, H); x.fillRect(W * .1, 0, 6, H);
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+  return c;
 }
 let churnT = 0;
 // 水裡的魚慢慢換班：離玩家遠的魚游走，換來符合現在時段、季節的魚
@@ -1571,7 +1696,7 @@ function endFight(ok, msg) {
   SFX.catch();
   const item = { id: F.f.id, size: F.size, t: Date.now() };
   const isNew = !S.dex[item.id];
-  bag.push(item); addDex(item); logCatch(F.f); saveAll();
+  bag.push(item); addDex(item); logCatch(F.f); dailyCheck(F.f, F.size, spot.rig || 'float'); saveAll();
   // 先播拉竿、魚飛起來甩尾、落到手上的動畫，再跳出結果
   // 拉上來之後魚怎麼掙扎：在手上亂甩、摔在地上彈跳、差點從手上跳走（隨機）
   const mode = flatItem(F.f) ? 'wobble' : F.lv >= 4 ? pick(['thrash', 'escape', 'flop']) : pick(['thrash', 'flop', 'escape']);
@@ -2025,12 +2150,13 @@ function openBag(tab) {
   if (typeof tab === 'string' && tab !== openBag.tab) bagPick = null;
   tab = openBag.tab = typeof tab === 'string' ? tab : openBag.tab || 'bag';
   const dexList = FISH.filter(f => !f.noDex);
+  if (tab === 'tank') tankIncome();   // 先結算門票，金額才會是最新的
   const d = el('div');
   d.appendChild(moneyLine());
   const bl = buffList();
   if (bl.length) d.appendChild(el('div', 'buffs', '目前加成：' + bl.join('、')));
   const tabs = el('div', 'tabs2');
-  for (const [k, name] of [['bag', `漁獲 ${bag.filter(b => !b.dish).length}`], ['dish', `料理 ${bag.filter(b => b.dish).length}`], ['dex', `圖鑑 ${dexList.filter(f => S.dex[f.id]).length}/${dexList.length}`]]) {
+  for (const [k, name] of [['bag', `漁獲 ${bag.filter(b => !b.dish).length}`], ['dish', `料理 ${bag.filter(b => b.dish).length}`], ['tank', `水族箱 ${S.tank.length}`], ['dex', `圖鑑 ${dexList.filter(f => S.dex[f.id]).length}/${dexList.length}`]]) {
     const b = el('button', tab === k ? 'on' : '', name); b.onclick = () => openBag(k); tabs.appendChild(b);
   }
   d.appendChild(tabs);
@@ -2053,7 +2179,24 @@ function openBag(tab) {
       const f = FISH_BY[id], g = groups[id];
       grid.appendChild(gridCell(fishCanvas(id, 2), { fish: true, name: f.name, cnt: '×' + g.n, price: '$' + fmtN(g.v), sel: id === sel, onclick: () => { bagPick = id; openBag(); } }));
     }
-    if (sel) { const f = FISH_BY[sel], g = groups[sel]; card = fishCard(f, { extra: [...(f.special || f.junk ? [] : [['最大', g.max + ' cm']]), ['估價', `$${fmtN(g.v)}（${g.n} 件）`]] }); }
+    if (sel) {
+      const f = FISH_BY[sel], g = groups[sel];
+      let act = null;
+      if (!f.special && !f.junk) { act = el('button', 'tb-eq', '放水族箱'); act.onclick = () => { toTank(sel); openBag(); }; }
+      card = fishCard(f, { action: act, extra: [...(f.special || f.junk ? [] : [['最大', g.max + ' cm']]), ['估價', `$${fmtN(g.v)}（${g.n} 件）`]] });
+    }
+  } else if (tab === 'tank') {
+    // 水族箱：放進去的魚在缸裡游，還有觀賞門票收入
+    d.appendChild(tankView(S.tank));
+    if (!S.tank.length) d.appendChild(el('div', 'empty', `還是空的。在「漁獲」選一條魚，按「放水族箱」（最多 ${TANK_N} 條）。`));
+    else d.appendChild(el('div', 'tb-story', `${S.tank.length}/${TANK_N} 條・魚越值錢，觀賞門票收越多（打開水族箱時結算）`));
+    const sel = S.tank.includes(bagPick) ? bagPick : S.tank[0];
+    S.tank.forEach(b => grid.appendChild(gridCell(fishCanvas(b.id, 2), { fish: true, name: FISH_BY[b.id].name, cnt: b.size + 'cm', sel: b === sel, onclick: () => { bagPick = b; openBag(); } })));
+    if (sel) {
+      const back = el('button', 'tb-eq', '放回背包');
+      back.onclick = () => { S.tank.splice(S.tank.indexOf(sel), 1); bag.push(sel); saveAll(); bagPick = null; openBag(); };
+      card = fishCard(FISH_BY[sel.id], { action: back, extra: [['大小', sel.size + ' cm'], ['價值', '$' + fmtN(priceOf(sel))]] });
+    }
   } else if (tab === 'dish') {
     // 料理：吃了有加成，要賣請拿去餐廳
     const dishes = bag.filter(b => b.dish);
@@ -4375,7 +4518,7 @@ function openSettings() {
     S.opt.motion = !S.opt.motion; saveAll(); openSettings();
   });
   d.appendChild(el('div', 'sect', '怎麼釣'));
-  for (const t of ['拋竿：按住下竿鍵往下拉（竿子往後），再往上甩出去，甩越快拋越遠，往左右甩可以偏一點', '只按住不動也可以：力道會來回擺，放開時拋出', '等魚：魚會游過來繞圈、輕啄，浮標「整個沉下去」才拉竿', '搏鬥：看線往哪邊跑，竿子往反方向壓；魚累了按住收線']) d.appendChild(el('div', 'tb-story', '・' + t));
+  for (const t of ['拋竿：按住下竿鍵往下拉（竿子往後），再往上甩出去，甩越快拋越遠，往左右甩可以偏一點', '只按住不動也可以：力道會來回擺，放開時拋出', '等魚：魚會游過來繞圈、輕啄，浮標「整個沉下去」才拉竿', '搏鬥：看線往哪邊跑，竿子往反方向壓；魚累了按住收線', '釣法（下竿鍵左邊）：浮釣看浮標、沉底看竿尖；裝誘餌就是路亞，收一收、停一停', '點上面的時間：看潮汐、現在好釣的魚、今日挑戰']) d.appendChild(el('div', 'tb-story', '・' + t));
   openDlg('設定', d);
 }
 

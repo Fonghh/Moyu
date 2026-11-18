@@ -66,6 +66,8 @@
 - 水面倒影：`waterMat` 用反射方向算天空漸層和雲（不是真的鏡面反射，手機跑得動）；外海零星白浪。
 - 視角：眼睛高度 `CFG.eye`（3m），搏鬥時鏡頭自動往下看向魚。
 - 狀態 `state`：walk → charge → cast → wait → bite → fight → land（引拔：魚頭朝上掛在線上被吊到面前 `CFG.landFly`，再演掙扎 `L.mode`）→ caught；搏鬥資料在 `F`、動畫資料在 `L`。
+- 水族箱 `S.tank`（背包「水族箱」分頁，最多 `TANK_N` 條）：`toTank()` 從漁獲放進去（最大那條）、`tankView()` 畫面上的魚在缸裡游（canvas 動畫，顏色跟著時間）、`tankIncome()` 觀賞門票（依魚的價值，`S.tankAt` 記上次結算）。
+- 今日挑戰 `S.daily`（`daily()` 依日期 `today()` 產生三個 `newDaily()`：指定魚或尺寸、釣法或時段、幾種不同的魚），`dailyCheck()` 釣到時檢查，完成直接給獎金；顯示在釣況視窗 `dailyBox()`。
 - 背包 `bag`（`moyu.bag`）與金錢、裝備、圖鑑 `S`（`moyu.save`）存在 localStorage。
 - 雲端存檔：在 claude.ai 測試網頁（artifact）上玩時，`saveAll()` 也把進度寫到每個人私人的 `data/users/<id>/moyu`（`cloudSave()`，需要 artifact 的 `db`、`user` 能力）；開啟時比較 `S.at`，雲端比較新就讀回來。一般網址沒有 `window.claude`，只用 localStorage。
 - 新增存檔欄位時要給預設值（`S` 的初始值或讀檔後補上），舊存檔才不會壞掉。
