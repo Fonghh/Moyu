@@ -53,7 +53,7 @@
 - 客人委託 `S.quests`：`questFishList()` 只挑目前釣竿、船釣得到的魚（不含變種、奇物）。
 - 拉霸 `slotBody()`／`spinSlot()`／`slotPrize()`，大獎金條（`gold`，`noDex` 不進圖鑑、不會釣到）。
 - 回城 `goHome()`：回到海邊小鎮（`SPAWN`，碼頭入口旁），面向大海。地圖外圍是一片大海。
-- 立體魚 `make3DFish()`（`FISH_BODY` 對應魚圖身體範圍的球體＋尾鰭、背鰭、胸鰭）、`animFish()` 身體擺動甩尾、`showFish3D()`／`fishLen()`；跳水、拉到 6m 內、引拔時顯示。
+- 立體魚 `make3DFish()`（`FISH_BODY` 對應魚圖身體範圍的球體＋尾鰭、背鰭、胸鰭）、`animFish(o, 相位, 幅度, 彎度)` 身體擺動甩尾＋整條彎成 C 字、`showFish3D()`／`fishLen()`；搏鬥整場都畫立體魚（14m 外才加影子），跳水有好幾種跳法 `F.jStyle`（arc 弧線、spin 翻滾、headshake 甩頭、tailwalk 尾巴走水、小魚 flop），累了側躺翻白肚；引拔掙扎的快慢方向 `L.f1`／`L.f2`／`L.sd` 每次隨機。
 - 釣具箱 `openBox()`（右邊 🧰 按鈕）：上面四格身上的裝備 `BOX_SLOTS`（釣竿、釣線、捲線器、餌），中間是持有的釣具格子（數量、新東西的藍色「!」記在 `S.seen`），下面說明卡（數值條 `gearStats()`、容易釣到的魚 `gearFish()`，沒釣過的只顯示剪影、小故事 `GEAR_STORY`）。點一下看說明、再點一下或按「換上」就裝上。持有的最高等級在 `S.own`，正在用的在 `S.rod`／`S.line`／`S.reel`。釣具的卡通圖 `gearImg()`（商店表格也用）。
 - 小鎮：商店街（出生點那條路）三格寬，四間店在兩邊各退一格。
 - 搏鬥：魚有體積（`inWater` 檢查身體四周），碰到岸邊、碼頭過不去，累了就直接在岸邊拉上來；被線拉著時頭朝人（`F.hd`）。

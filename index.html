@@ -1433,7 +1433,8 @@ function endFight(ok, msg) {
   // 拉上來之後魚怎麼掙扎：在手上亂甩、摔在地上彈跳、差點從手上跳走（隨機）
   const mode = flatItem(F.f) ? 'wobble' : F.lv >= 4 ? pick(['thrash', 'escape', 'flop']) : pick(['thrash', 'flop', 'escape']);
   const hold = { wobble: .5, thrash: 1.6, flop: 2.4, escape: 2.1 }[mode];
-  L = { f: F.f, size: F.size, sz: F.sz, lv: F.lv, isNew, where: TILES[spot.t].name, item, t: 0, mode, dur: CFG.landFly + hold, hop: -1 };
+  L = { f: F.f, size: F.size, sz: F.sz, lv: F.lv, isNew, where: TILES[spot.t].name, item, t: 0, mode, dur: CFG.landFly + hold, hop: -1,
+    f1: rand(.75, 1.35), f2: rand(.75, 1.35), sd: Math.random() < .5 ? -1 : 1 };   // 掙扎的快慢、方向每次隨機
   state = 'land';
   splash(spot.x, spot.y, 16);
   F = null;
@@ -3634,15 +3635,16 @@ function make3DFish(f) {
   return (FISH3D[f.id] = { g, body, base: Float32Array.from(geo.attributes.position.array), tail, pecs });
 }
 // 游動：身體像波浪一樣擺、尾巴甩、胸鰭划（amp 是用力程度）
-function animFish(o, t, amp) {
+// ph：擺動的相位（游越快轉越快）、amp：擺多大、turn：整條身體往一邊彎（轉彎、C 字甩尾）
+function animFish(o, ph, amp, turn = 0) {
   const p = o.body.geometry.attributes.position, b = o.base;
   for (let i = 0; i < p.count; i++) {
     const x = b[i * 3];
-    p.setZ(i, b[i * 3 + 2] + Math.sin(t * 10 - x * 6) * amp * (.5 - x) * .14);
+    p.setZ(i, b[i * 3 + 2] + Math.sin(ph * 10 - x * 6) * amp * (.5 - x) * .14 + turn * (x * x - .08));
   }
   p.needsUpdate = true;
-  o.tail.rotation.y = Math.sin(t * 10 - 3) * .55 * amp;
-  o.pecs.forEach((m, k) => { m.rotation.y = Math.sin(t * 6 + k * 3) * .4; });
+  o.tail.rotation.y = Math.sin(ph * 10 - 3) * .55 * amp - turn * .6;
+  o.pecs.forEach((m, k) => { m.rotation.y = Math.sin(ph * 6 + k * 3) * .4; });
 }
 const fish3d = new THREE.Group();   // 目前顯示的那條立體魚
 scene.add(fish3d); fish3d.visible = false;
@@ -3650,6 +3652,7 @@ let fish3dId = null;
 function showFish3D(f, lenM) {
   if (fish3dId !== f.id) {
     fish3d.clear(); fish3d.add(make3DFish(f).g); fish3dId = f.id;
+    fish3d.traverse(m => { if (m.isMesh) m.renderOrder = 3; });
   }
   fish3d.scale.setScalar(lenM);
   fish3d.visible = true;
@@ -3788,22 +3791,59 @@ function render3D(dt) {
     fightShadow.rotation.y = Math.PI / 2 + F.hd + Math.sin(gameT * 14) * .2;
     fightShadow.scale.set(len * 1.1, 1, len * 1.1);
     const jumping = F.act === 'jump' && F.jump < 1.05;
-    if (jumping || F.d < 6) {   // 跳出水面，或拉近到腳邊在水面掙扎
-      const k = jumping ? F.jump / 1.05 : 0, up = jumping ? Math.sin(k * Math.PI) * (2.2 + len * .9) * (1 + (F.lv - 1) * .12) : 0;
-      if (flatItem(F.f)) {
+    // 游動的節奏：衝的時候尾巴甩很快，休息時慢慢擺
+    const spd = F.act === 'run' ? 1 + Math.abs(F.vlat) * .6 : F.act === 'charge' ? 1.2 : F.act === 'shake' ? 1.6 : .35;
+    F.ph = (F.ph || 0) + dt * (.6 + spd * .9);
+    const turn = clamp(-(F.vlat || 0) * .25, -.5, .5);
+    if (jumping && F.jStyle == null) {   // 這一跳用哪種跳法
+      const big = F.f.shape === 'long' || ['marlin', 'mahi', 'tuna', 'salmon'].includes(F.f.id), styles = F.sz === 0 ? ['flop', 'arc', 'arc'] : big ? ['tailwalk', 'spin', 'arc', 'headshake'] : ['arc', 'headshake', 'spin', 'arc'];
+      F.jStyle = pick(styles); F.jSide = Math.random() < .5 ? -1 : 1;
+    }
+    if (!jumping) F.jStyle = null;
+    if (flatItem(F.f)) {
+      if (jumping || F.d < 6) {
+        const k = jumping ? F.jump / 1.05 : 0, up = jumping ? Math.sin(k * Math.PI) * (2.2 + len * .9) : 0;
         const sl = Math.max(1, fishLen(F.f, F.size) * 1.3);   // emoji 圖的魚身只佔一半寬
         fishSprite.position.set(fx, WATER_Y + up + sl * .2, fz); fishSprite.scale.set(sl, sl / 2, 1);
         fishSprite.material.map = fishTex(F.f.id); fishSprite.material.rotation = Math.sin(gameT * 12) * .4; fishSprite.visible = true;
         if (jumping) lineEnd = fishSprite.position;
-      } else {
-        const o = showFish3D(F.f, len);
-        fish3d.position.set(fx, WATER_Y + up + (jumping ? len * .1 : len * .06), fz);
-        // 跳水：頭先往上、空中扭身；拉近：側躺在水面甩
-        const pitchF = jumping ? (.5 - k) * 1.8 : Math.sin(gameT * 7) * .2, roll = jumping ? Math.sin(F.t * 12) * .5 : (F.act === 'rest' ? 1.15 : .6) + Math.sin(gameT * 9) * .45;   // 累了會側躺，從上面看得到身體花紋
-        fish3d.rotation.set(roll, Math.PI / 2 + F.hd, pitchF, 'YZX');
-        animFish(o, gameT, jumping ? 2.2 : 1.8);
-        if (jumping) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V5.set(.5, 0, 0)); }
       }
+    } else {
+      const o = showFish3D(F.f, len);
+      fightShadow.visible = F.d > 14;   // 近的直接看得到魚
+      let y = WATER_Y - (F.act === 'run' ? .55 : F.act === 'shake' ? .05 : .2), pitchF = 0, roll = 0, yawF = F.hd, amp = .6 + spd * .7, tw = turn;
+      let px = fx, pz = fz;
+      if (jumping) {
+        const k = F.jump / 1.05, H = (2.2 + len * .9) * (1 + (F.lv - 1) * .12), sd = F.jSide, st = F.jStyle;
+        amp = 2.2;
+        if (st === 'tailwalk') {   // 用尾巴在水面上「走」：身體直立、往旁邊滑
+          const rise = Math.min(1, k * 5) * (k > .85 ? (1 - k) / .15 : 1);
+          y = WATER_Y + rise * (len * .45 + .25); pitchF = 1.25 * rise; roll = Math.sin(F.t * 9) * .25;
+          px += Math.cos(-F.hd) * k * 2.5; pz += Math.sin(-F.hd) * k * 2.5; amp = 3; tw = Math.sin(F.t * 14) * .3;
+        } else if (st === 'headshake') {   // 跳起來甩頭
+          y = WATER_Y + Math.sin(k * Math.PI) * H * .75; pitchF = 1.3 * (1 - k) - .3; yawF += Math.sin(F.t * 26) * .55; roll = sd * k * .9;
+        } else if (st === 'spin') {   // 空中翻滾兩圈
+          y = WATER_Y + Math.sin(k * Math.PI) * H; pitchF = (.5 - k) * 1.8; roll = sd * k * Math.PI * 4;
+        } else if (st === 'flop') {   // 小魚：短短一跳翻個面
+          y = WATER_Y + Math.sin(k * Math.PI) * (.4 + len * .6); pitchF = Math.sin(k * Math.PI * 2) * .5; roll = sd * k * Math.PI; tw = Math.sin(F.t * 18) * .6;
+        } else {   // 一般的弧線跳：頭先出水、空中扭身
+          y = WATER_Y + Math.sin(k * Math.PI) * H; pitchF = (.5 - k) * 1.8; roll = Math.sin(F.t * 12) * .5 * sd; tw = Math.sin(F.t * 11) * .4;
+        }
+        y += len * .1;
+      } else if (F.act === 'shake') {   // 在水面甩頭：左右猛甩、身體 C 字
+        yawF += Math.sin(F.t * 22) * .5; tw = Math.sin(F.t * 22 + 1) * .7; roll = Math.sin(F.t * 9) * .4; amp = 2.2;
+      } else {
+        // 累了會翻出白肚子（側躺）；拉到腳邊在水面拍打
+        const tired = clamp((.45 - F.stam) / .35, 0, 1);
+        roll = tired * 1.2 + (F.d < 6 ? Math.sin(gameT * 9) * .4 : -turn * .4);
+        pitchF = F.d < 6 ? Math.sin(gameT * 7) * .2 : 0;
+        if (F.d < 6) y = WATER_Y + len * .04;
+      }
+      fish3d.position.set(px, y, pz);
+      fish3d.rotation.set(roll, Math.PI / 2 + yawF, pitchF, 'YZX');
+      animFish(o, F.ph, amp, tw);
+      if (jumping) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V5.set(.5, 0, 0)); }
+      else { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V5.set(.5, 0, 0)); if (lineEnd.y > WATER_Y - .02) lineEnd.y = WATER_Y - .02; }
     }
     // 方向指示
     const gR = clamp(.9 + F.d * .05, 1, 3), fl = Math.hypot(fx - F.px, fz - F.pz) || 1, ux = (fx - F.px) / fl, uz = (fz - F.pz) / fl;
@@ -3859,8 +3899,9 @@ function render3D(dt) {
       fish3d.position.copy(P0);
       fish3d.quaternion.copy(camera.quaternion);   // 側面朝向玩家
       const u = L.t - CFG.landFly, pw = 1 + ((L.lv || 1) - 1) * .15;   // 拉上來後的秒數；越強的魚越會掙扎
-      let amp = .6;
-      if (lifting) { fish3d.rotateZ(Math.PI / 2 + Math.sin(L.t * 9) * .35); amp = 2.4; }
+      let amp = .6, tw = 0;
+      const f1 = L.f1 || 1, f2 = L.f2 || 1, sd = L.sd || 1;
+      if (lifting) { fish3d.rotateZ(Math.PI / 2 + Math.sin(L.t * 9 * f1) * .35); amp = 2.4; tw = Math.sin(L.t * 7 * f2) * .8; }   // 吊在線上踢來踢去
       else if (state === 'land' && L.mode === 'flop') {
         // 摔在地上：彈跳三下，每跳一下翻個面，最後被撿起來
         const pick0 = L.dur - CFG.landFly - .45, hopT = Math.min(u, pick0), i = Math.floor(hopT / .55), ph = hopT / .55 - i;
@@ -3868,7 +3909,7 @@ function render3D(dt) {
         const hh = .5 * pw * Math.pow(.6, i), side = i % 2 ? 1 : -1, flip = side * Math.PI / 2 * (1 - 2 * Math.pow(Math.sin(ph * Math.PI), 2) * .9);
         fish3d.position.copy(FLOOR); fish3d.position.y += Math.abs(Math.sin(ph * Math.PI)) * hh;
         fish3d.rotation.set(flip, yaw + Math.PI / 2 + Math.sin(u * 3) * .4, Math.sin(u * 16) * .35, 'YXZ');
-        amp = 2.6 * pw;
+        amp = 2.6 * pw; tw = side * .9 * Math.sin(ph * Math.PI) * sd;   // 在空中彎成 C 字
         if (u > pick0) {   // 撿起來，慢慢移到手上
           const t2 = clamp((u - pick0) / .45, 0, 1);
           Q1.copy(fish3d.quaternion); Q2.copy(camera.quaternion);
@@ -3882,21 +3923,23 @@ function render3D(dt) {
           if (!L.esc) { L.esc = true; bigCue('差點跳走！', 3); }
           fish3d.position.addScaledVector(CU.setFromMatrixColumn(camera.matrixWorld, 1), Math.sin(t2 * Math.PI) * .9 * pw);
           fish3d.position.addScaledVector(CR.setFromMatrixColumn(camera.matrixWorld, 0), Math.sin(t2 * Math.PI) * .25);
-          fish3d.rotateZ(t2 * Math.PI * 2); amp = 3;
-        } else { fish3d.rotateZ(Math.sin(u * 13) * (u < .45 ? .4 : .5 * Math.max(0, 1 - (u - 1.35) * 1.5))); amp = 2; }
+          fish3d.rotateZ(t2 * Math.PI * 2 * sd); amp = 3; tw = Math.sin(u * 16 * f1) * .8;
+        } else { fish3d.rotateZ(Math.sin(u * 13 * f1) * (u < .45 ? .4 : .5 * Math.max(0, 1 - (u - 1.35) * 1.5))); amp = 2; tw = Math.sin(u * 9 * f2) * .5; }
       } else if (state === 'land') {
         // 在手上亂甩：扭身、往上蹦、尾巴拍
         const dec = Math.max(.25, 1 - u / 1.8);
         fish3d.position.y += Math.abs(Math.sin(u * 9)) * .1 * dec * pw;
-        fish3d.rotateZ(Math.sin(u * 11) * .45 * dec * pw); fish3d.rotateX(Math.sin(u * 7) * .6 * dec);
+        fish3d.rotateZ(Math.sin(u * 11 * f1) * .45 * dec * pw); fish3d.rotateX(Math.sin(u * 7 * f2) * .6 * dec * sd);
         amp = 2.4 * dec * pw;
+        const snap = Math.pow(Math.max(0, Math.sin(u * 3.2 * f2)), 3);   // 不時突然彎成 C 字用力一甩
+        tw = (Math.sin(u * 3.2 * f2 * 2) > 0 ? 1 : -1) * snap * 1.1 * dec;
       } else {
         // 拿在手上看結果：偶爾突然甩一下
         const burst = Math.pow(Math.max(0, Math.sin(gameT * 1.7)), 8);
         fish3d.rotateZ(Math.sin(gameT * 3) * .06 + burst * Math.sin(gameT * 22) * .3);
-        amp = .6 + burst * 2.2;
+        amp = .6 + burst * 2.2; tw = burst * Math.sin(gameT * 11) * .9;
       }
-      animFish(o, gameT, amp);
+      animFish(o, gameT * f1, amp, tw);
       if (lifting) { fish3d.updateMatrixWorld(true); lineEnd = fish3d.localToWorld(V4.set(.5, 0, 0)); sag = 0; }
     }
     // 拿到手上：背後放射光、旁邊星星閃閃
