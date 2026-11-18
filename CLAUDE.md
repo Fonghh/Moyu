@@ -47,6 +47,8 @@
 - 設定 `openSettings()`（左上角 ⚙）：`S.opt.sound`、`S.opt.motion`、操作說明。
 - 誘餌 `LURES`（永久，只有 `pred` 掠食魚會咬，線斷 30% 弄丟）；船 `BOATS`（走進水裡自動上船，`canEnter()` 決定能去的水域，一開始送舢舨）。
 - 遠洋 `T.FAR`（地圖最東邊，要漁船）。
+- 釣況：時段 `todAt()`（`TODS` 清晨/白天/黃昏/夜晚）、季節 `seasonAt()`（遊戲 3 天＝現實 72 分鐘換一季）、潮汐 `tide()`（12.4 小時一循環，`flow` 潮水流速）；每種魚的習性 `HABITS` → `fishActivity()`（影響 `rollFish()` 生出的魚、`findBiter()` 誰游過來）；`churnFish()` 讓遠處的魚慢慢換班。點上方時間 `openConditions()` 看釣況、潮位圖、現在好釣的魚。
+- 釣魚筆記 `S.log`（`logCatch()` 記時段、季節、潮汐、天氣），圖鑑卡片 `noteFacts()`；同一種魚釣到 `HABIT_N` 次就揭曉習性 `habitText()`。
 - 天氣 `WEATHERS`／`weatherAt()`，每 3 分鐘依時間換；暴風雨（`severe`）出現變種怪影（魚影 sz 3），釣到 `MUTANTS` 變種怪魚。
 - 搏鬥（擬真手感）：`FIGHT` 參數、`newFight()`、`nextAct()`（魚的動作：run 左右/外衝、charge 游過來、shake 甩頭、jump 跳水、rest 休息）、`stepFight()`（側壓、收線、洩線 drag、鬆線脫鉤、線被拉光；甩頭跳水硬收的瞬間張力 `F.spike` 和超出洩線的張力 `F.over` 會磨損釣線耐久 `F.hp`，歸零才斷，速度 `FIGHT.wearRate`）。魚的位置用玩家為中心的角度 `th`＋距離 `d`（`fishWorld()`）；左右游有慣性 `F.vlat`（慢慢加速、轉向，看線在水面劃過去就知道往哪跑）。甩頭、跳水剛開始 `FIGHT.react` 秒內收線不會有瞬間張力（給反應時間）。數值改動前先用模擬確認（一般玩家：反應慢、常忘了側壓，也要能拉上適合釣竿的魚；一直硬收的偶爾斷線）。
 - 料理 `METHODS`（烤、炸、煮湯、生魚片）：餐廳 `restBody()` 代客料理，背包的 `b.dish` 是料理；吃 `eatDish()` 得到加成 `S.buffs`（`hasBuff()`）；料理只能賣給餐廳。

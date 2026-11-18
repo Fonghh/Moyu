@@ -353,6 +353,8 @@
   /* 畫面上的按鈕、資訊、搏鬥面板也用同一種深藍＋金邊 */
   #boxBtn, #homeBtn, #bagBtn { background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
   #info { background: rgba(16,26,52,.72); border: 1px solid rgba(160,190,255,.4); }
+  #info { cursor: pointer; pointer-events: auto; }
+  #dlg canvas.tideC { width: 100%; height: 74px; margin-top: 6px; display: block; }
   #fight { background: rgba(16,26,52,.8); border: 1px solid rgba(160,190,255,.45); }
   #fight .cue { color: #fff; }
 </style>
@@ -934,7 +936,8 @@ try { const raw = localStorage.getItem('moyu.save'); if (raw) { Object.assign(S,
 if (!BAIT_BY[S.bait] && !(LURE_BY[S.bait] && S.lures[S.bait])) S.bait = 'bread';
 function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); d.n++; d.max = Math.max(d.max, b.size); }
 if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
-S.opt = Object.assign({ sound: true, motion: false }, S.opt);   // 設定：音效、體感拋竿
+S.opt = Object.assign({ sound: true, motion: false }, S.opt);
+S.log = S.log || {};   // 釣魚筆記   // 設定：音效、體感拋竿
 function saveAll() {
   S.at = Date.now();   // 存檔時間：本機和雲端比較，用比較新的那份
   try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); localStorage.setItem('moyu.save', JSON.stringify(S)); } catch (e) {}
@@ -1103,6 +1106,7 @@ $('bagBtn').addEventListener('click', openBag);
 $('homeBtn').addEventListener('click', goHome);
 $('boxBtn').addEventListener('click', () => openBox());
 $('setBtn').addEventListener('click', () => openSettings());
+$('info').addEventListener('click', () => openConditions());   // 點時間看釣況
 // 回城：回到海邊小鎮，面向大海
 function goHome() {
   if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
@@ -1136,8 +1140,99 @@ function rollFish(w, sz) {
   for (let k = 0; k < list.length; k++) { r -= ws[k]; if (r <= 0) return list[k]; }
   return list[0];
 }
-// 魚在這個時間、天氣有多活躍（之後的系統會用到，先回傳 1）
-function fishActivity(f) { return 1; }
+// ================= 釣況：時段、潮汐、季節 =================
+// 時段：0 清晨（4–7）、1 白天（7–16）、2 黃昏（16–19）、3 夜晚
+const TODS = ['清晨', '白天', '黃昏', '夜晚'], SEASONS = ['春', '夏', '秋', '冬'];
+const todAt = h => h >= 4 && h < 7 ? 0 : h >= 7 && h < 16 ? 1 : h >= 16 && h < 19 ? 2 : 3;
+// 季節：遊戲裡 3 天（現實 72 分鐘）換一季
+const SEASON_LEN = 72 * 60000;
+const seasonAt = (t = Date.now()) => Math.floor(t / SEASON_LEN) % 4;
+// 潮汐：12.4 遊戲小時漲退一次；潮水在動（漲潮、退潮）時海魚比較會吃
+function tide(t = Date.now()) {
+  const a = (t / 60000) / 12.4 * Math.PI * 2, lv = Math.sin(a), flow = Math.abs(Math.cos(a));
+  return { lv, flow, rising: Math.cos(a) > 0, k: lv > .8 ? 0 : lv < -.8 ? 1 : Math.cos(a) > 0 ? 2 : 3 };
+}
+const TIDE_NAME = ['滿潮', '乾潮', '漲潮', '退潮'];
+// 每種魚的習性：活躍的時段 t、季節 s、愛不愛潮水流動 tide（要釣過幾次才會在圖鑑裡寫出來）
+const HABITS = {
+  mosq: { t: [1, 2], s: [1] }, tilapia: { t: [1, 2], s: [1, 2] }, crucian: { t: [0, 2], s: [0, 2] }, koi: { t: [1], s: [0, 1] }, goldkoi: { t: [0], s: [0] },
+  zacco: { t: [0, 2], s: [0, 1] }, ayu: { t: [1], s: [1] }, catfish: { t: [3], s: [1, 2] }, salmon: { t: [0], s: [2, 3] },
+  scad: { t: [3, 0], s: [1, 2], tide: 1 }, porgy: { t: [0, 2], s: [0, 3], tide: 1 }, puffer: { t: [1], s: [3, 0] }, grouper: { t: [2, 3], s: [1], tide: 1 },
+  mahi: { t: [0, 1], s: [1] }, tuna: { t: [0, 2], s: [3], tide: 1 }, marlin: { t: [1], s: [1, 2], tide: 1 }, oarfish: { t: [3], s: [3] },
+  sunfish: { t: [1], s: [1] }, whaleshark: { t: [1, 2], s: [1, 2] }, coelacanth: { t: [3], s: [3, 0] },
+};
+// 魚在這個時間、季節、潮汐有多活躍（0.3～3 左右）：影響水裡有哪些魚、會不會游過來吃
+function fishActivity(f, t = Date.now()) {
+  const h = HABITS[f.id];
+  if (!h) return 1;
+  let m = h.t.includes(todAt(((t / 60000) % 24 + 24) % 24)) ? 2 : .55;
+  m *= h.s.includes(seasonAt(t)) ? 1.5 : .75;
+  if (h.tide) m *= .45 + tide(t).flow * 1.1;
+  return m;
+}
+function habitText(f) {
+  const h = HABITS[f.id];
+  if (!h) return '';
+  return h.t.map(k => TODS[k]).join('、') + '活躍・' + h.s.map(k => SEASONS[k]).join('、') + '天多' + (h.tide ? '・潮水流動時愛吃' : '');
+}
+// 釣魚筆記：每次釣到記下時段、季節、潮汐、天氣
+function logCatch(f) {
+  if (f.junk || f.special || f.mutant) return;
+  const g = S.log[f.id] || (S.log[f.id] = { t: [0, 0, 0, 0], s: [0, 0, 0, 0], tide: [0, 0, 0, 0], w: {} });
+  g.t[todAt(gameHour())]++; g.s[seasonAt()]++; g.tide[tide().k]++; g.w[weather.id] = (g.w[weather.id] || 0) + 1;
+}
+const HABIT_N = 3;   // 釣到幾次就摸清楚習性
+function noteFacts(f) {
+  const g = S.log[f.id], h = HABITS[f.id];
+  if (!g || !h) return [];
+  const n = g.t.reduce((a, b) => a + b, 0), top = (arr, names) => names[arr.indexOf(Math.max(...arr))];
+  const out = [['筆記', `最常在${top(g.t, TODS)}・${top(g.s, SEASONS)}天・${top(g.tide, TIDE_NAME)}釣到`]];
+  out.push(['習性', n >= HABIT_N ? habitText(f) : `再釣 ${HABIT_N - n} 次就能摸清楚`]);
+  return out;
+}
+// 釣況視窗（點上面的時間）：現在的時段、潮汐、季節、天氣，還有現在好釣的魚
+function openConditions() {
+  if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
+  const d = el('div'), td = tide(), hr = gameHour();
+  const facts = [['時間', `${String(Math.floor(hr)).padStart(2, '0')}:${String(Math.floor(hr % 1 * 6) * 10).padStart(2, '0')}（${TODS[todAt(hr)]}）`],
+    ['季節', SEASONS[seasonAt()] + `天（再 ${Math.ceil((SEASON_LEN - Date.now() % SEASON_LEN) / 60000)} 分鐘換季）`],
+    ['潮汐', TIDE_NAME[td.k] + `・潮水${td.flow > .6 ? '流得很快' : td.flow > .3 ? '慢慢流' : '幾乎不動'}`], ['天氣', weather.name]];
+  const card = el('div', 'tb-card');
+  for (const [k, v] of facts) { const r = el('div', 'tb-fact'); r.appendChild(el('span', null, k)); r.appendChild(el('b', null, v)); card.appendChild(r); }
+  // 潮位小圖：接下來 12 小時
+  const c = document.createElement('canvas'); c.width = 300; c.height = 74; c.className = 'tideC';
+  const x = c.getContext('2d'); x.strokeStyle = 'rgba(160,190,255,.35)'; x.beginPath(); x.moveTo(0, 30); x.lineTo(300, 30); x.stroke();
+  x.beginPath(); for (let i = 0; i <= 300; i++) { const y = 30 - tide(Date.now() + i / 300 * 12 * 60000).lv * 26; i ? x.lineTo(i, y) : x.moveTo(i, y); }
+  x.strokeStyle = '#7fc8ff'; x.lineWidth = 2.5; x.stroke();
+  x.fillStyle = '#ffe066'; x.beginPath(); x.arc(4, 30 - td.lv * 26, 4, 0, 7); x.fill();
+  x.fillStyle = 'rgba(238,243,255,.6)'; x.font = '11px sans-serif'; x.fillText('現在', 0, 72); x.fillText('12 小時後', 248, 72);
+  card.appendChild(c);
+  d.appendChild(card);
+  d.appendChild(el('div', 'sect', '現在好釣'));
+  const hot = FISH.filter(f => HABITS[f.id] && fishActivity(f) >= 2).sort((a, b) => fishActivity(b) - fishActivity(a)).slice(0, 9);
+  const grid = tbGrid(3);
+  for (const f of hot) {
+    const g = S.log[f.id], n = g ? g.t.reduce((a, b) => a + b, 0) : 0, known = n >= HABIT_N;   // 摸清楚習性的魚才知道現在好不好釣
+    grid.appendChild(gridCell(known ? fishCanvas(f.id, 2) : fishSil(f.id, 2), { fish: true, btn: false, name: known ? f.name : '？？？', cnt: known ? f.water.map(w => WATER_NAME[w])[0] : '' }));
+  }
+  if (!hot.length) d.appendChild(el('div', 'empty', '現在魚都懶洋洋的……'));
+  else d.appendChild(grid);
+  d.appendChild(el('div', 'tb-story', `同一種魚釣到 ${HABIT_N} 次，就會摸清楚牠的習性（圖鑑裡看得到），這裡也會顯示出來。`));
+  openDlg('釣況', d);
+}
+let churnT = 0;
+// 水裡的魚慢慢換班：離玩家遠的魚游走，換來符合現在時段、季節的魚
+function churnFish(dt) {
+  churnT -= dt;
+  if (churnT > 0 || !shadows.length) return;
+  churnT = 4;
+  const s = pick(shadows);
+  if (s.target || s.hooked || s.sz === 3 || s.leader) return;
+  if (Math.hypot((s.x - P.x) * TX, (s.y - P.y) * TZ) < 45) return;   // 看得到的魚不會突然消失
+  if (Math.random() < fishActivity(s.f) / 2.5) return;   // 正活躍的魚比較會留下來
+  for (let k = shadows.length - 1; k >= 0; k--) if (shadows[k].leader === s) shadows.splice(k, 1);   // 魚群一起走
+  removeShadow(s);
+}
 function newFish(w, sz, at, f) {
   f = f || rollFish(w, sz);
   const ratio = SZ_RATIO[Math.min(sz, 2)](), size = Math.round((f.size[0] + (f.size[1] - f.size[0]) * ratio) * 10) / 10;
@@ -1180,6 +1275,7 @@ function clearMutantShadows() { for (let k = shadows.length - 1; k >= 0; k--) if
 function canSwim(s, mx, mz) { return waterOf(mx / TX, mz / TZ) === s.w && depthAt(mx, mz) > Math.min(.6, s.dep + .2); }
 function updateShadows(dt) {
   if (!fishInit) initFish();
+  churnFish(dt);
   for (const s of shadows) {
     if (s.hooked) continue;
     const mx = s.x * TX, mz = s.y * TZ;
@@ -1290,7 +1386,7 @@ function findBiter(cx, cy, maxD) {
     if (s.target || s.hooked || s.sz === 3 && !weather.severe) continue;
     const d = Math.hypot((s.x - cx) * TX, (s.y - cy) * TZ);
     if (d > maxD) continue;
-    const w = (baitAccept(s.f, s.w) > 0 ? 1 : .15) * Math.pow(1 - d / maxD, 2) * (s.leader ? .5 : 1);
+    const w = (baitAccept(s.f, s.w) > 0 ? 1 : .15) * Math.pow(1 - d / maxD, 2) * (s.leader ? .5 : 1) * Math.min(2, fishActivity(s.f));
     if (w > bw) { bw = w; best = s; }
   }
   return best;
@@ -1428,7 +1524,7 @@ function endFight(ok, msg) {
   SFX.catch();
   const item = { id: F.f.id, size: F.size, t: Date.now() };
   const isNew = !S.dex[item.id];
-  bag.push(item); addDex(item); saveAll();
+  bag.push(item); addDex(item); logCatch(F.f); saveAll();
   // 先播拉竿、魚飛起來甩尾、落到手上的動畫，再跳出結果
   // 拉上來之後魚怎麼掙扎：在手上亂甩、摔在地上彈跳、差點從手上跳走（隨機）
   const mode = flatItem(F.f) ? 'wobble' : F.lv >= 4 ? pick(['thrash', 'escape', 'flop']) : pick(['thrash', 'flop', 'escape']);
@@ -1932,7 +2028,7 @@ function openBag(tab) {
       grid.appendChild(gridCell(known ? fishCanvas(f.id, 2) : fishSil(f.id, 2), { fish: true, name: known ? f.name : '？？？', sel: f === sel, onclick: () => { bagPick = f.id; openBag(); } }));
     }
     const k = S.dex[sel.id];
-    card = fishCard(sel, { known: !!k, extra: k ? [[sel.special || sel.junk ? '撈到' : '最大', sel.special || sel.junk ? k.n + ' 次' : k.max + ' cm（釣過 ' + k.n + ' 次）']] : [] });
+    card = fishCard(sel, { known: !!k, extra: k ? [[sel.special || sel.junk ? '撈到' : '最大', sel.special || sel.junk ? k.n + ' 次' : k.max + ' cm（釣過 ' + k.n + ' 次）'], ...noteFacts(sel)] : [] });
   }
   if (card) d.appendChild(card);
   d.appendChild(grid);
@@ -4042,7 +4138,7 @@ function updateHud() {
     $('fDurN').textContent = `${Math.ceil(F.hp == null ? LINES[S.line - 1].hp : F.hp)}/${LINES[S.line - 1].hp}`;
   } else { btn = 'dim'; label = '下竿'; }
   const nb = METHODS.filter(m => hasBuff(m.id)).length;
-  const hh = gameHour(), info = `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor(hh % 1 * 6) * 10).padStart(2, '0')}・$${fmtN(S.money)}・${weather.name}` + (nb ? `・加成 ${nb}` : '') + (onBoat() ? `・${BOATS[S.boat - 1].name}` : '');
+  const hh = gameHour(), info = `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor(hh % 1 * 6) * 10).padStart(2, '0')} ${TIDE_NAME[tide().k]}・$${fmtN(S.money)}・${weather.name}` + (nb ? `・加成 ${nb}` : '') + (onBoat() ? `・${BOATS[S.boat - 1].name}` : '');
   $('bang').classList.toggle('on', state === 'bite');
   $('danger').style.opacity = state === 'fight' && F ? clamp((F.tens + F.spike - .62) / .3, 0, 1) : 0;   // 快斷線時畫面邊緣泛紅
   const key = [btn, label, info, bag.length].join('|');
