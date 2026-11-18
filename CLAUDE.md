@@ -41,7 +41,10 @@
 - 水裡的魚 `shadows`（名字沿用）：每條魚出生時就有魚種 `f`、大小 `size`（`rollFish()`，`SZ_MULT`／`SIZE_FIT`），在水裡自己游（`updateShadows()`）：小魚 `SCHOOLERS` 成群跟著帶頭魚（`leader`）、大魚到礁石和碼頭柱子 `STRUCT` 旁休息（`rest`）、到水底覓食（`feed`）。近的畫成會擺動的立體魚（`syncShadows()`／`getSwimmer()`，身體在 shader 裡擺），遠的畫影子。
 - 咬餌：`findBiter()` 挑附近的魚 → `hookFish()` → `biteMove()` 依序 approach（游過來）→ circle（繞圈）→ nibble（輕啄，浮標往下點 `nibbleK`）→ decide → take（吞餌，`state = 'bite'`，浮標被拖著走）或 leave。咬法看魚種 `biteStyle()`；吃不吃看餌 `baitAccept()`（喜歡的餌、誘餌只有掠食魚、`ONLY_BAIT`）。釣上來的就是游過來的那條魚。試探中太早拉只會提示、不會收竿。
 - 商店：店面格 `T.SHOP_T`／`T.SHOP_M`，走進去 `openShop()`，店員台詞在 `NPC`；今日行情 `hotList()` 每 30 分鐘換；售價 `priceOf()`。
-- 拋竿：按住蓄力（state `charge`，`castPower()` 0→1→0 擺盪），放開 `doCast()`；落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
+- 拋竿 `castNow(力道, 偏角)`：甩竿 `swipe`（按住下竿鍵往下拉、往上甩，`releaseCharge()` 用最後 160ms 的速度算力道、左右偏一點）；按住不動就用舊的蓄力（`castPower()` 0→1→0 擺盪，鍵盤也是這個）；體感拋竿 `S.opt.motion`（`devicemotion` 揮動手機，iPhone 要 `askMotion()` 允許）。落點 `aimSpot()`，距離 `CFG.castMin`～`castMax`。
+- 釣線 `ropeStep()`：一串點的物理（重力、風、水中阻力、只會變鬆不會拉長），等魚時鬆、搏鬥時張力越大越直。
+- 聲音 `SND`／`SFX`／`updateSound()`：Web Audio 即時合成（海浪、風、雨、蟲鳴、咻聲、落水、啄、捲線器、洩線、斷線、釣到、賣錢），第一次觸控才開始（`sndInit()`）。
+- 設定 `openSettings()`（左上角 ⚙）：`S.opt.sound`、`S.opt.motion`、操作說明。
 - 誘餌 `LURES`（永久，只有 `pred` 掠食魚會咬，線斷 30% 弄丟）；船 `BOATS`（走進水裡自動上船，`canEnter()` 決定能去的水域，一開始送舢舨）。
 - 遠洋 `T.FAR`（地圖最東邊，要漁船）。
 - 天氣 `WEATHERS`／`weatherAt()`，每 3 分鐘依時間換；暴風雨（`severe`）出現變種怪影（魚影 sz 3），釣到 `MUTANTS` 變種怪魚。

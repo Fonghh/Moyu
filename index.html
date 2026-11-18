@@ -250,6 +250,9 @@
     display: flex; align-items: center; gap: 8px; pointer-events: none;
   }
   #hud #logo { pointer-events: auto; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  #setBtn { pointer-events: auto; width: 28px; height: 28px; border-radius: 14px; border: 1px solid rgba(255,224,102,.7); background: rgba(16,26,52,.75); color: #ffe066; font-size: 15px; line-height: 1; padding: 0; cursor: pointer; }
+  body.boss #setBtn { display: none; }
+  #dlg .tb-eq.off { background: rgba(255,255,255,.15); color: rgba(255,255,255,.7) !important; }
   #info { background: rgba(0,0,0,.4); color: #fff; font-size: 12px; padding: 4px 10px; border-radius: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
   #cross { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
     background: rgba(255,255,255,.75); box-shadow: 0 0 0 1px rgba(0,0,0,.35); pointer-events: none; }
@@ -360,7 +363,7 @@
   <div id="cross"></div>
   <div id="bang">！</div>
   <div id="joyBase"><div id="joyKnob"></div></div>
-  <div id="hud"><button id="logo" title="Excel">X</button><span id="info"></span></div>
+  <div id="hud"><button id="logo" title="Excel">X</button><span id="info"></span><button id="setBtn" title="設定">⚙</button></div>
   <div id="fight">
     <div class="hpRow"><canvas id="fIcon" width="112" height="56"></canvas><div class="gauge"><i id="fHp"></i></div></div>
     <div class="cue" id="fcue"></div>
@@ -931,6 +934,7 @@ try { const raw = localStorage.getItem('moyu.save'); if (raw) { Object.assign(S,
 if (!BAIT_BY[S.bait] && !(LURE_BY[S.bait] && S.lures[S.bait])) S.bait = 'bread';
 function addDex(b) { const d = S.dex[b.id] || (S.dex[b.id] = { n: 0, max: 0 }); d.n++; d.max = Math.max(d.max, b.size); }
 if (!hadSave) bag.forEach(addDex);   // 舊存檔：用背包補圖鑑
+S.opt = Object.assign({ sound: true, motion: false }, S.opt);   // 設定：音效、體感拋竿
 function saveAll() {
   S.at = Date.now();   // 存檔時間：本機和雲端比較，用比較新的那份
   try { localStorage.setItem('moyu.bag', JSON.stringify(bag)); localStorage.setItem('moyu.save', JSON.stringify(S)); } catch (e) {}
@@ -1023,11 +1027,55 @@ cvEl.addEventListener('pointercancel', ptrEnd);
 
 // 下竿／拉竿按鈕：按下觸發，按住收線
 const act = $('actBtn');
-act.addEventListener('pointerdown', e => { e.preventDefault(); act.setPointerCapture(e.pointerId); press(); });
-const release = () => { holding = false; if (state === 'charge') doCast(); };
+act.addEventListener('pointerdown', e => { e.preventDefault(); act.setPointerCapture(e.pointerId); press(e); });
+const release = e => { holding = false; if (state === 'charge') releaseCharge(e); };
 act.addEventListener('pointerup', release);
 act.addEventListener('pointercancel', release);
 act.addEventListener('contextmenu', e => e.preventDefault());
+// ---- 拋竿：手指往下拉（竿子往後）、再往上甩，甩越快拋越遠，往左右甩可以偏一點方向 ----
+// 沒有甩（按住不動）就用舊的蓄力方式：力道 0→1→0 擺盪，放開那一刻的力道
+// 開了「體感拋竿」：按一下下竿鍵，再真的揮動手機
+const swipe = { on: false, y0: 0, x0: 0, hist: [], pull: 0 };
+let motionPeak = 0, motionT = 0;
+act.addEventListener('pointermove', e => {
+  if (state !== 'charge' || !swipe.on) return;
+  const t = performance.now();
+  swipe.hist.push([e.clientX, e.clientY, t]);
+  while (swipe.hist.length > 2 && t - swipe.hist[0][2] > 160) swipe.hist.shift();
+  swipe.pull = Math.max(swipe.pull, e.clientY - swipe.y0);
+});
+function startCharge(e) {
+  state = 'charge'; chargeT = 0; motionPeak = 0; motionT = 0;
+  swipe.on = !!e; swipe.pull = 0; swipe.hist = [];
+  if (e) { swipe.y0 = e.clientY; swipe.x0 = e.clientX; swipe.hist.push([e.clientX, e.clientY, performance.now()]); }
+  if (S.opt.motion) toast('揮動手機拋竿！（再按一次取消）');
+}
+// 放開下竿鍵：看最後一下甩得多快
+function releaseCharge(e) {
+  if (S.opt.motion) return;   // 體感模式等揮手機
+  if (e && e.clientY != null && swipe.on) swipe.hist.push([e.clientX, e.clientY, performance.now()]);   // 放開的那一點也算（手機忙的時候 move 事件會被合併）
+  if (swipe.on && swipe.pull > 25 && swipe.hist.length >= 2) {
+    const a = swipe.hist[0], b = swipe.hist[swipe.hist.length - 1], dt = Math.max(16, b[2] - a[2]) / 1000;
+    const vy = (a[1] - b[1]) / dt, vx = (b[0] - a[0]) / dt;   // 往上甩是正的
+    if (vy > 250) { castNow(clamp((vy - 300) / 4000, .05, 1) * clamp(.6 + swipe.pull / 250, .6, 1), clamp(vx / vy, -1, 1) * .3); return; }   // 每秒 1000px 約 6m、4000px 拋到最遠
+    state = 'walk'; toast('往下拉之後要往上甩出去喔'); return;
+  }
+  castNow(castPower(), 0);
+}
+window.addEventListener('devicemotion', e => {
+  if (!S.opt.motion || state !== 'charge') return;
+  const r = e.rotationRate;
+  if (!r) return;
+  const mag = Math.hypot(r.alpha || 0, r.beta || 0, r.gamma || 0);   // 每秒幾度
+  if (mag > motionPeak) motionPeak = mag;
+  if (motionPeak > 240 && mag < motionPeak * .35) { const pw = clamp((motionPeak - 180) / 650, .08, 1); motionPeak = 0; castNow(pw, 0); }
+});
+async function askMotion() {   // iPhone 要先按一次允許
+  try {
+    if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) return (await DeviceMotionEvent.requestPermission()) === 'granted';
+    return typeof DeviceMotionEvent !== 'undefined';
+  } catch (e) { return false; }
+}
 
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
@@ -1054,6 +1102,7 @@ window.addEventListener('blur', () => { keys.clear(); release(); });
 $('bagBtn').addEventListener('click', openBag);
 $('homeBtn').addEventListener('click', goHome);
 $('boxBtn').addEventListener('click', () => openBox());
+$('setBtn').addEventListener('click', () => openSettings());
 // 回城：回到海邊小鎮，面向大海
 function goHome() {
   if (boss || state === 'fight' || state === 'bite' || state === 'land' || state === 'caught') return;
@@ -1217,11 +1266,11 @@ function biteMove(s, dt, mx, mz) {
   if (b.ph === 'nibble') {   // 衝上去啄一下，再退開
     const cyc = b.st.gap, k = Math.floor(b.t / cyc), fr = (b.t % cyc) / cyc;
     if (k >= b.n) { b.ph = 'decide'; b.t = 0; return [toB, .2, .25]; }
-    if (k !== b.k && fr > .4) { b.k = k; nibbleK = .7 + Math.random() * .5; addRipple(bx, bz, .5); }
+    if (k !== b.k && fr > .4) { b.k = k; nibbleK = .7 + Math.random() * .5; addRipple(bx, bz, .5); SFX.nibble(); }
     return fr < .45 ? [toB, 1.2, .2] : [toB + Math.PI, .5, .3];
   }
   if (b.ph === 'decide') {
-    if (b.accept) { b.ph = 'take'; b.t = 0; state = 'bite'; biteT = CFG.biteWin; splash(spot.x, spot.y, b.st.strike ? 12 : 6); return [toB, 1.5, .2]; }
+    if (b.accept) { b.ph = 'take'; b.t = 0; state = 'bite'; biteT = CFG.biteWin; SFX.bite(); splash(spot.x, spot.y, b.st.strike ? 12 : 6); return [toB, 1.5, .2]; }
     b.ph = 'leave'; b.t = 0;
   }
   if (b.ph === 'take') {   // 吞了餌：把浮標拖著走（掠食魚拖得快）
@@ -1270,8 +1319,10 @@ function aimSpot(power, yw = yaw) {
 }
 
 // 收竿：放掉被吸引過來的魚影
-function doCast() {
-  const pw = castPower(), s = aimSpot(pw);
+function doCast() { castNow(castPower(), 0); }
+function castNow(pw, yawOff) {
+  const s = aimSpot(pw, yaw + yawOff);
+  SFX.whoosh(pw);
   if (!s) { state = 'walk'; toast('沒拋進水裡，力道再大一點'); return; }
   // 每次下竿用掉一個餌（麵包屑免費）
   const lure = LURE_BY[S.bait];
@@ -1292,11 +1343,12 @@ function stopFishing(msg) {
 }
 
 let earlyT = -9;
-function press() {
+function press(e) {
   if (boss) return;
+  if (state === 'charge' && S.opt.motion) { state = 'walk'; toast('取消拋竿'); return; }
   if (state === 'walk') {
     if (!aimSpot(1)) { toast('前面拋不到水，轉向水面再下竿'); return; }
-    state = 'charge'; chargeT = 0;   // 按住蓄力，放開才拋
+    startCharge(e);   // 按住往下拉、往上甩；或按住蓄力
     hideHint();
   } else if (state === 'cast' || state === 'wait') {
     const b = spot && spot.shadow && spot.shadow.bs;
@@ -1372,7 +1424,8 @@ function loseLure() {
 function endFight(ok, msg) {
   $('fight').classList.remove('on');
   holding = false;
-  if (!ok) { state = 'walk'; F = null; toast(msg); return; }
+  if (!ok) { state = 'walk'; F = null; toast(msg); if (msg && msg.startsWith('啪')) SFX.snap(); return; }
+  SFX.catch();
   const item = { id: F.f.id, size: F.size, t: Date.now() };
   const isNew = !S.dex[item.id];
   bag.push(item); addDex(item); saveAll();
@@ -1502,7 +1555,7 @@ function sellItems(list) {
     if (!best || p > best.p) best = { b, p };
     const i = bag.indexOf(b); if (i >= 0) bag.splice(i, 1);
   }
-  S.money += total; saveAll();
+  S.money += total; saveAll(); SFX.coin();
   const f = FISH_BY[best.b.id];
   let line;
   if (list.length > 1) line = `總共 ${list.length} 件，$${fmtN(total)}，點一下錢喔！`;
@@ -2461,6 +2514,7 @@ function update(dt) {
     P.moving = moving;
   } else if (state === 'charge') {
     P.moving = false; chargeT += dt;   // 蓄力中可以轉頭瞄準
+    if (S.opt.motion && (motionT += dt) > 6) { state = 'walk'; toast('沒有偵測到揮動，再試一次'); }
   } else {
     P.moving = false;
     if ((state === 'cast' || state === 'wait') && moving) stopFishing();
@@ -2470,7 +2524,7 @@ function update(dt) {
     castT += dt;
     if (castT >= castDur) {
       state = 'wait';
-      splash(spot.x, spot.y, 6);
+      splash(spot.x, spot.y, 6); SFX.plop();
       // 附近有魚就會游過來試探；沒有的話要等比較久（可能鉤到雜物）
       spot.shadow = null; nextBiteT = rand(.5, 1.5);
       waitT = rand(CFG.waitMax * 1.5, CFG.waitMax * 2.5);
@@ -2561,6 +2615,7 @@ function splash(x, y, n, pw = 1) {   // pw：力道，越強的魚水花越大
   for (let k = 0; k < n; k++) parts.push({ x: x * TX, y: WATER_Y + .05, z: y * TZ, vx: rand(-1.2, 1.2) * Math.sqrt(pw), vy: rand(1.5, 3.5) * pw, vz: rand(-1.2, 1.2) * Math.sqrt(pw), life: rand(.4, .8) * Math.sqrt(pw) });
   if (n >= 4) splashRing(x * TX, y * TZ, n >= 8);
   addRipple(x * TX, y * TZ, Math.min(1.6, .25 + n * .06));
+  if (n >= 4 && state !== 'cast') SFX.splash(n);
   if (parts.length > PART_N) parts.splice(0, parts.length - PART_N);
 }
 function updateParts(dt) {
@@ -3402,11 +3457,42 @@ const bobber = new THREE.Group();
   stick.position.y = .2; bobber.add(top, bot, stick); addOutline(top, .012); addOutline(bot, .012);
 }
 bobber.visible = false; scene.add(bobber);
-const LINE_N = 16;
+const LINE_N = 26;
 const lineGeo = new THREE.BufferGeometry();
 lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(LINE_N * 3), 3));
 const fishLine = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0xf2f2f2, transparent: true, opacity: .85 }));
 fishLine.frustumCulled = false; fishLine.visible = false; scene.add(fishLine);
+// ---- 釣線：真的一條線（一串點，有重力、被風吹、會鬆會繃），水裡的部分有阻力 ----
+const ROPE_N = 26, rope = { p: [], q: [], on: false };
+for (let i = 0; i < ROPE_N; i++) { rope.p.push(new THREE.Vector3()); rope.q.push(new THREE.Vector3()); }
+const WIND = new THREE.Vector3(1, 0, .35).normalize();
+function ropeStep(tip, end, slack, dt) {
+  const P_ = rope.p, Q = rope.q, n = ROPE_N;
+  if (!rope.on) { for (let i = 0; i < n; i++) { P_[i].lerpVectors(tip, end, i / (n - 1)); Q[i].copy(P_[i]); } rope.on = true; }
+  const L = tip.distanceTo(end) * (1 + slack) + .04, seg = L / (n - 1);
+  const h = Math.min(dt, .033), g = 9.8 * h * h * .55, wind = (weather.severe ? 2.2 : weather.rain ? .8 : .35) * h * h;
+  for (let i = 1; i < n - 1; i++) {
+    const p = P_[i], q = Q[i], under = p.y < WATER_Y;
+    const vx = (p.x - q.x) * (under ? .82 : .985), vy = (p.y - q.y) * (under ? .82 : .985), vz = (p.z - q.z) * (under ? .82 : .985);
+    q.copy(p);
+    p.x += vx + WIND.x * wind * (under ? .1 : 1); p.z += vz + WIND.z * wind * (under ? .1 : 1);
+    p.y += vy - (under ? g * .15 : g);   // 水裡沉得慢
+  }
+  P_[0].copy(tip); P_[n - 1].copy(end);
+  // 線不能被拉長（只能變鬆）
+  for (let it = 0; it < 12; it++) {
+    for (let i = 0; i < n - 1; i++) {
+      const a = P_[i], b = P_[i + 1], dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (d <= seg || d < 1e-6) continue;
+      const k = (d - seg) / d * .5, fa = i === 0 ? 0 : 1, fb = i + 1 === n - 1 ? 0 : 1, s = fa + fb || 1;
+      a.x += dx * k * 2 * fa / s; a.y += dy * k * 2 * fa / s; a.z += dz * k * 2 * fa / s;
+      b.x -= dx * k * 2 * fb / s; b.y -= dy * k * 2 * fb / s; b.z -= dz * k * 2 * fb / s;
+    }
+  }
+  // 浮在水面上的線不會穿到水底下太多
+  for (let i = 1; i < n - 1; i++) { const p = P_[i]; if (p.y < WATER_Y - .6) p.y = WATER_Y - .6; }
+}
+
 const ringGeo = new THREE.RingGeometry(.85, 1, 32); ringGeo.rotateX(-Math.PI / 2);
 const ripple = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .6, depthWrite: false }));
 ripple.visible = false; ripple.renderOrder = 3; scene.add(ripple);
@@ -3570,7 +3656,7 @@ function showFish3D(f, lenM) {
   return FISH3D[f.id];
 }
 // 魚的長度（公尺）：照尺寸，但太小看不到、太大塞不進畫面
-const fishLen = (f, size) => f.special || f.junk ? .5 : clamp(.25 + size / 110, .3, 3.2);
+function fishLen(f, size) { return f.special || f.junk ? .5 : clamp(.25 + size / 110, .3, 3.2); }
 const flatItem = f => !!(f.special || f.junk || f.emoji);   // 用平面圖（emoji）顯示的東西
 
 
@@ -3652,7 +3738,7 @@ function render3D(dt) {
 
   // 釣竿姿勢：蓄力往後拉、拋出往前甩、搏鬥時彎曲
   let tilt = -.95 + Math.sin(P.walkT * 4.5) * (P.moving ? .04 : 0), bend = .03;
-  if (state === 'charge') tilt = -.95 + castPower() * .6;
+  if (state === 'charge') tilt = S.opt.motion ? -.55 : swipe.on && swipe.pull > 10 ? -.95 + clamp(swipe.pull / 160, 0, 1) * .8 : -.95 + castPower() * .6;
   else if (state === 'cast') tilt = castT < .15 ? -1.45 : -1.15;
   else if (state === 'wait') tilt = -1.1;
   else if (state === 'bite') { tilt = -1.1; bend = .08 + Math.abs(Math.sin(gameT * 30)) * .05; }
@@ -3830,17 +3916,17 @@ function render3D(dt) {
   }
   fishLine.visible = !!lineEnd;
   if (lineEnd) {
+    // 鬆緊：等魚時鬆一點，搏鬥時看張力（越緊越直）
+    const slack = state === 'fight' && F ? Math.max(0, (1 - F.tens * 1.6)) * .07 : sag * .07;
+    ropeStep(tip, lineEnd, slack, dt);
     const a = fishLine.geometry.attributes.position;
-    for (let n = 0; n < LINE_N; n++) {
-      const u = n / (LINE_N - 1);
-      a.setXYZ(n, tip.x + (lineEnd.x - tip.x) * u, tip.y + (lineEnd.y - tip.y) * u - Math.sin(u * Math.PI) * sag, tip.z + (lineEnd.z - tip.z) * u);
-    }
+    for (let n = 0; n < LINE_N; n++) a.setXYZ(n, rope.p[n].x, rope.p[n].y, rope.p[n].z);
     a.needsUpdate = true;
-  }
+  } else rope.on = false;
 
   // 蓄力時的落點
   aimRing.visible = false;
-  if (state === 'charge') {
+  if (state === 'charge' && !S.opt.motion && !(swipe.on && swipe.pull > 25)) {   // 甩竿的時候不知道會拋多遠，不畫落點
     const a = aimSpot(castPower());
     if (a) { aimRing.visible = true; aimRing.position.set(a.x * TX, WATER_Y + .03, a.y * TZ); aimRing.scale.setScalar(.6 + Math.sin(gameT * 8) * .08); }
   }
@@ -3970,6 +4056,101 @@ function bigCue(text, lv) {
   if (navigator.vibrate) navigator.vibrate(lv >= 5 ? [60, 40, 90] : 50);
 }
 
+// ================= 聲音：全部用 Web Audio 即時合成，不用音檔 =================
+// 海浪、風、雨、夜晚的蟲鳴、拋竿的咻聲、落水、魚啄、捲線器喀喀聲、洩線、斷線、釣到的音效
+const SND = { ctx: null, master: null, noise: null, amb: {}, clickT: 0, last: {} };
+function sndInit() {
+  if (SND.ctx) { if (SND.ctx.state === 'suspended') SND.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const c = SND.ctx = new AC();
+  SND.master = c.createGain(); SND.master.gain.value = S.opt.sound ? .9 : 0; SND.master.connect(c.destination);
+  const buf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), d = buf.getChannelData(0);
+  let b0 = 0;
+  for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; b0 = .97 * b0 + .03 * w; d[i] = w * .6 + b0 * 3; }   // 白噪音＋一點低頻
+  SND.noise = buf;
+  // 環境音：海浪（低沉）、風（中頻）、雨（高頻）
+  for (const [k, type, f, q] of [['wave', 'lowpass', 420, .7], ['wind', 'bandpass', 800, .6], ['rain', 'highpass', 2600, .5]]) {
+    const src = c.createBufferSource(); src.buffer = buf; src.loop = true; src.playbackRate.value = .5 + Math.random() * .2;
+    const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+    const g = c.createGain(); g.gain.value = 0;
+    src.connect(fl); fl.connect(g); g.connect(SND.master); src.start();
+    SND.amb[k] = g;
+  }
+}
+['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, sndInit, { passive: true }));
+function sndSet() { if (SND.master) SND.master.gain.setTargetAtTime(S.opt.sound ? .9 : 0, SND.ctx.currentTime, .05); }
+// 一小段濾過的噪音（水花、咻聲）
+function noiseHit(type, f0, f1, dur, vol, q = 1) {
+  const c = SND.ctx; if (!c || !S.opt.sound) return;
+  const t = c.currentTime, src = c.createBufferSource(); src.buffer = SND.noise; src.playbackRate.value = 1;
+  const fl = c.createBiquadFilter(); fl.type = type; fl.Q.value = q;
+  fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + dur);
+  const g = c.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  src.connect(fl); fl.connect(g); g.connect(SND.master); src.start(t, Math.random() * 1.5); src.stop(t + dur + .05);
+}
+// 一聲短音（喀聲、叮聲）
+function tone(freq, dur, vol, type = 'sine', when = 0, f1) {
+  const c = SND.ctx; if (!c || !S.opt.sound) return;
+  const t = c.currentTime + when, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .004); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  o.connect(g); g.connect(SND.master); o.start(t); o.stop(t + dur + .02);
+}
+const SFX = {
+  whoosh: pw => noiseHit('bandpass', 500, 2400 + pw * 1500, .3 + pw * .25, .25 + pw * .2, 1.4),
+  plop: () => { tone(320, .12, .18, 'sine', 0, 120); noiseHit('lowpass', 1400, 300, .25, .15); },
+  splash: n => {   // 太密的水花聲合併
+    const now = performance.now(); if (now - (SND.last.splash || 0) < 90) return; SND.last.splash = now;
+    noiseHit('lowpass', 900 + n * 120, 200, .2 + n * .03, Math.min(.45, .08 + n * .025));
+  },
+  nibble: () => tone(190, .06, .14, 'sine', 0, 140),
+  bite: () => { tone(140, .25, .3, 'sine', 0, 60); noiseHit('lowpass', 1100, 250, .3, .2); },
+  snap: () => { noiseHit('highpass', 5000, 2500, .08, .35); tone(90, .3, .25, 'triangle', .02, 45); },
+  catch: () => [523, 659, 784, 1047].forEach((f, k) => tone(f, .35, .16, 'triangle', k * .09)),
+  click: () => tone(1400, .03, .06, 'square'),
+  coin: () => { tone(988, .08, .12, 'square'); tone(1319, .25, .12, 'square', .07); },
+};
+// 每幀：環境音的大小、捲線器聲、洩線聲、蟲鳴
+function updateSound(dt) {
+  const c = SND.ctx; if (!c) return;
+  const t = c.currentTime, nearWater = state !== 'walk' || onBoat() || TILES[tileAt(Math.floor(P.x + 2), Math.floor(P.y))].water || TILES[tileAt(Math.floor(P.x - 2), Math.floor(P.y))].water;
+  const swell = .7 + .3 * Math.sin(waveT * .5) * Math.sin(waveT * .23 + 1);
+  SND.amb.wave.gain.setTargetAtTime((.05 + waveAmp * .35) * (nearWater ? 1 : .35) * swell, t, .3);
+  SND.amb.wind.gain.setTargetAtTime(weather.severe ? .16 : weather.id === 'cloud' ? .035 : .015, t, .5);
+  SND.amb.rain.gain.setTargetAtTime(weather.rain ? weather.rain / 170 * .16 : 0, t, .5);
+  // 捲線器：收線時喀喀喀，魚把線拉出去（洩線）時快速尖銳的聲音
+  if (state === 'fight' && F) {
+    const rate = F.drag ? 38 + F.tens * 20 : holding ? 12 + 8 * REELS[S.reel - 1].sp : 0;
+    if (rate) {
+      SND.clickT -= dt;
+      while (SND.clickT <= 0) { SND.clickT += 1 / rate; F.drag ? tone(3200 + Math.random() * 400, .012, .05, 'square') : tone(1700, .015, .035, 'square'); }
+    }
+  }
+  // 夜晚在陸地上：蟲鳴
+  if (envDay < .3 && !nearWater && Math.random() < dt * .8) for (let k = 0; k < 3; k++) tone(4300 + Math.random() * 300, .04, .02, 'sine', k * .07);
+}
+
+// ---- 設定：音效、體感拋竿、操作說明 ----
+function openSettings() {
+  if (boss || state === 'fight' || state === 'bite' || state === 'land') return;
+  const d = el('div');
+  const row = (name, desc, on, toggle) => {
+    const c = el('div', 'tb-quest'), mid = el('div', 'tb-qm');
+    mid.appendChild(el('b', null, name)); mid.appendChild(el('div', 'tb-qline', desc)); c.appendChild(mid);
+    const b = el('button', 'tb-eq', on ? '開' : '關'); if (!on) b.classList.add('off');
+    b.onclick = toggle; c.appendChild(b); d.appendChild(c);
+  };
+  row('音效', '海浪、風雨、捲線器、水花，全部即時合成', S.opt.sound, () => { S.opt.sound = !S.opt.sound; saveAll(); sndInit(); sndSet(); openSettings(); });
+  row('體感拋竿', '按一下下竿鍵，再真的揮動手機拋出去（iPhone 會先問要不要允許）', S.opt.motion, async () => {
+    if (!S.opt.motion) { const ok = await askMotion(); if (!ok) { toast('沒有允許動作感應，沒辦法用體感拋竿'); return; } }
+    S.opt.motion = !S.opt.motion; saveAll(); openSettings();
+  });
+  d.appendChild(el('div', 'sect', '怎麼釣'));
+  for (const t of ['拋竿：按住下竿鍵往下拉（竿子往後），再往上甩出去，甩越快拋越遠，往左右甩可以偏一點', '只按住不動也可以：力道會來回擺，放開時拋出', '等魚：魚會游過來繞圈、輕啄，浮標「整個沉下去」才拉竿', '搏鬥：看線往哪邊跑，竿子往反方向壓；魚累了按住收線']) d.appendChild(el('div', 'tb-story', '・' + t));
+  openDlg('設定', d);
+}
+
 // ================= 主迴圈 =================
 applyQuality();
 let lastT = performance.now();
@@ -3980,6 +4161,7 @@ function frame(now) {
     watchFps(raw);
     if (!$('dlg').classList.contains('on')) update(dt);
     render3D(dt);
+    updateSound(dt);
     updateHud();
     mctx.setTransform(2, 0, 0, 2, 0, 0); drawMap(mctx, CFG.miniW, MINI_H);
   }
