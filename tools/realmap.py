@@ -163,7 +163,7 @@ if town is not None:
                         corners = [(cx + dx * a * fw / 2 + nx * b * dp / 2, cz + dz * a * fw / 2 + nz * b * dp / 2) for a, b in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
                         g = Polygon(corners)
                         if not FRAME.contains(g) or g.intersects(blocked): continue
-                        lv = rnd.choices([1, 2, 3, 4, 5], [1, 4, 6, 3, 1])[0]
+                        lv = rnd.choices([2, 3, 4, 5], [2, 6, 5, 2])[0]
                         added.append({'g': g, 'name': None, 'kind': 'house', 'levels': lv, 'height': None, 'osm': False})
                         blocked = blocked.union(g.buffer(.6))
                 s += fw + rnd.choice([0, 0, .5, 1, 3])
@@ -171,16 +171,21 @@ print('osm buildings', len(buildings), 'added', len(added))
 buildings += added
 
 # ---- 樓高 ----
+FL = 3.4   # 每層樓高（一樓再挑高 0.4）
 def bheight(b):
     if b['height']: return b['height']
-    if b['levels']: return b['levels'] * 3.3
+    if b['levels']: return b['levels'] * FL + .4
     a = b['g'].area
     h = sum(ord(c) for c in str(round(b['g'].centroid.x)) + str(round(b['g'].centroid.y)))
-    if a < 40: return 3.2
-    if b['kind'] == 'marketplace': return 7.5
-    if a > 1500: return 9 + (h % 3) * 3
-    if a > 500: return 6.6 + (h % 2) * 3.3
-    return (2 + h % 3) * 3.3
+    n = b['name'] or ''
+    if '漁業綜合大樓' in n: return 4 * FL + .4   # 頂樓另外蓋旋轉餐廳
+    if b['kind'] == 'marketplace': return 9
+    if b['kind'] == 'place_of_worship': return 6.5
+    if a < 40: return FL + .4
+    if a > 1500: return 3 * FL + (h % 2) * FL + .4
+    if a > 500: return 2 * FL + (h % 2) * FL + .4
+    if b['kind'] == 'restaurant': return (3 + h % 2) * FL + .4   # 海鮮餐廳多是三、四樓
+    return (3 + h % 3) * FL + .4
 for b in buildings: b['h'] = round(bheight(b), 1)
 
 # ---- 四間店：真實位置 ----
@@ -295,7 +300,13 @@ rd = []
 for l, w, k, br in roads:
     if l.is_empty: continue
     for c in lines(l): rd.append([w, c])
-quayRings = [ring(g) for g in quays if g.area > 20]
+qboxes = [box(i * TX, j * TZ, (i + 1) * TX, (j + 1) * TZ) for j in range(H) for i in range(W) if tiles[j][i] == Q]
+qU = unary_union(qboxes + [g for g in quays if g.area > 20]).buffer(1.5, join_style=1).buffer(-2.2, join_style=1).simplify(.9)
+quayRings = []
+for g in (qU.geoms if hasattr(qU, 'geoms') else [qU]):
+    if g.area < 30: continue
+    quayRings.append([ring(Polygon(g.exterior))] + [ring(Polygon(h)) for h in g.interiors if Polygon(h).area > 20])
+print('quay polygons', len(quayRings))
 treeList = [[round(x, 1), round(z, 1)] for x, z in trees if 0 < x < X1 - X0 and 0 < z < Y1 - Y0]
 for g in parks:   # 公園裡種一些樹
     pg = prep(g)

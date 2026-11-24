@@ -20,6 +20,15 @@
 
 ## 程式結構（index.html）
 - `CFG`：所有手感與難度參數集中在這裡（移動速度、等魚時間、搏鬥張力等）。
+- 真實地圖（試作，預設開啟）：桃園竹圍漁港 1 公里見方（以漁港為原點：西 400～東 600、南 500～北 650 公尺），資料 `REAL_DATA`（© OpenStreetMap 貢獻者，ODbL，畫面上要標示）。網址加 `?map=old` 回到原本編出來的小島（`REAL` 是 null）。
+  - 產生資料：`tools/fetch_osm.py`（OSM 官方 API 分 16 塊抓，Overpass 常連不上）→ `tools/realmap.py`（海岸線左邊陸地、右邊海；港池、防波堤、河、道路、房子外框；地圖沒畫的透天厝沿村子的路補上；樓高 `FL`；堤防平滑外框；出生點在港邊）。輸出的 JSON 直接貼進 `REAL_DATA`。
+  - 四間店放在真實建築：漁產品直銷中心＝魚市場、避風港海鮮館＝海港餐廳、漁會大樓＝釣具行、遊藝場是補上的房子。
+  - 格子一樣 5m×2m（200×575 格），多了 `T.QUAY` 堤防、`T.BLDG` 建築；房子碰撞、進店看外框 `BLD`／`bldAt()`（不是看格子）。
+  - 比例：眼睛高度 `REAL_EYE`（1.75 公尺，跟真人一樣）；一樓 3.8、樓上每層 3.4 公尺。
+  - 3D：`buildRealTown()` 把房子合成一個網格（一樓鐵捲門／店面、樓上窗戶鐵窗冷氣的貼圖 `facadeTex()`／`groundTex()`，晚上窗戶亮）、屋頂水塔和鐵皮加蓋、招牌 `boardTex()`、馬路和標線、堤防（`REAL.quays` 每個是外圈＋洞，直立水泥塊）、外側消波塊、港內直立堤岸、漁船 `boatGeos()`（V 型船身、駕駛艙、桅杆，四成是有集魚燈的魷魚船，`realBoats`／`updateRealBoats()` 跟著浪）。
+  - 標誌性建築 `buildLandmarks()`：港口大眾爺廟 `buildTemple()`、漁產品直銷中心 `buildMarket()`、漁業綜合大樓頂樓旋轉餐廳 `buildTower()`（`spinners`）、防波堤尖端紅綠燈塔 `buildHarbourLights()`（晚上閃 `blinkers`）。外框方向用 `obbOf()`。
+  - 夜景：路燈 `buildStreetLamps()`（地上光暈 `poolMat`，店門口也有）、跟著玩家的暖色點光源 `nightLamp`；`nightK`（0 白天～1 深夜）在 `updateEnv()` 算、`updateLandmarks()` 每幀用。
+  - 地圖很大：地形網格放粗（`GSX`/`GSZ`）、`chunked()` 分塊 96 公尺、樹有距離 LOD；魚生在玩家 110 公尺內，150 公尺外的會換到身邊（`spawnShadow()`／`churnFish()`）；大地圖點一下可以直接走過去。真實地圖的水泥地靠水也不畫成沙灘色。
 - 地形 `T`／`TILES`（顏色、能不能走、水域種類）；`genMap()` 產生地圖。
 - 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、畫圖參數）；稀有度 `RAR`。
 - 地圖仍是格子（`genMap()`），一格 = 東西 `TX`（5m）× 南北 `TZ`（2m）；邏輯座標用格子（`P.x`、`P.y`、魚影、`spot.x/y`），畫面換算成公尺。
@@ -56,6 +65,7 @@
 - 客人委託 `S.quests`：`questFishList()` 只挑目前釣竿、船釣得到的魚（不含變種、奇物）。
 - 拉霸 `slotBody()`／`spinSlot()`／`slotPrize()`，大獎金條（`gold`，`noDex` 不進圖鑑、不會釣到）。
 - 回城 `goHome()`：回到海邊小鎮（`SPAWN`，碼頭入口旁），面向大海。地圖外圍是一片大海。
+- 立體魚和水裡的魚都用寫實魚皮 `fishRealTex()`（背深腹銀、細鱗片、側線、鰓蓋、小眼睛、半透明魚鰭）；介面上的魚圖（`makeFish()`）還是卡通。
 - 立體魚 `make3DFish()`（`FISH_BODY` 對應魚圖身體範圍的球體＋尾鰭、背鰭、胸鰭）、`animFish(o, 相位, 幅度, 彎度)` 身體擺動甩尾＋整條彎成 C 字、`showFish3D()`／`fishLen()`；搏鬥整場都畫立體魚（14m 外才加影子），跳水有好幾種跳法 `F.jStyle`（arc 弧線、spin 翻滾、headshake 甩頭、tailwalk 尾巴走水、小魚 flop），累了側躺翻白肚；引拔掙扎的快慢方向 `L.f1`／`L.f2`／`L.sd` 每次隨機。
 - 釣具箱 `openBox()`（右邊 🧰 按鈕）：上面四格身上的裝備 `BOX_SLOTS`（釣竿、釣線、捲線器、餌），中間是持有的釣具格子（數量、新東西的藍色「!」記在 `S.seen`），下面說明卡（數值條 `gearStats()`、容易釣到的魚 `gearFish()`，沒釣過的只顯示剪影、小故事 `GEAR_STORY`）。點一下看說明、再點一下或按「換上」就裝上。持有的最高等級在 `S.own`，正在用的在 `S.rod`／`S.line`／`S.reel`。釣具的卡通圖 `gearImg()`（商店表格也用）。
 - 小鎮：商店街（出生點那條路）三格寬，四間店在兩邊各退一格。
