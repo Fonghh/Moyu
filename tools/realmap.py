@@ -143,6 +143,8 @@ town = unary_union([b['g'].centroid.buffer(170) for b in landmarks]) if landmark
 waterU = unary_union(basin + ponds + rivers + quays + piers + [box(i * TX, j * TZ, (i + 1) * TX, (j + 1) * TZ) for j in range(H) for i in range(W) if grid[j][i] == SEA])
 roadU = unary_union([l.buffer(w / 2 + .5, cap_style=2) for l, w, k, br in roads if not l.is_empty])
 blocked = unary_union([waterU, roadU.buffer(.8), unary_union([b['g'].buffer(1.2) for b in buildings]), unary_union(parks + parking + woods)])
+# 廟前要留廟埕、市場旁邊留空地：補的房子不要蓋太近
+blocked = blocked.union(unary_union([b['g'].buffer(10 if b['kind'] == 'place_of_worship' else 4) for b in buildings if b['kind'] in ('place_of_worship', 'marketplace')]))
 added = []
 if town is not None:
     tp = prep(town)

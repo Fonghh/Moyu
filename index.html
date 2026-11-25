@@ -415,6 +415,7 @@
 <div id="dlg"><div class="win"><div class="wt"><span id="dlgTitle"></span><button id="dlgX">✕</button></div><div class="wb" id="dlgBody"></div></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 // ================= 真實地圖：竹圍漁港（試作） =================
 // 地圖資料 © OpenStreetMap 貢獻者（ODbL）。用 OSM 的海岸線、港池、防波堤、道路、房子外框轉成格子和建築；
@@ -3860,7 +3861,7 @@ function buildRealTown() {
     const y = sg.b.base + (sg.b.signY || (sg.b.h > 4.5 ? 4.25 : Math.max(2.4, sg.b.h - .7)));
     pl.position.set(sg.best.mx + sg.best.nx * .09, y, sg.best.mz + sg.best.nz * .09);
     pl.rotation.y = Math.atan2(sg.best.nx, sg.best.nz);
-    scene.add(pl);
+    scene.add(pl); sg.b.signMesh = pl;   // 廟換成 Blender 模型時，模型自己有匾額，這塊招牌藏起來
   }
   // 路燈（餐廳、店門口的地上也有一圈暖光）
   const shopPools = signs.map(sg => { const x = sg.best.mx + sg.best.nx * 2.5, z = sg.best.mz + sg.best.nz * 2.5; return [x, z, 7, groundH(x, z)]; });
@@ -4007,6 +4008,12 @@ function buildRealTown() {
     boats.forEach((b, k) => { hull.setColorAt(k, c3.set(HULL[b.h % 5])); cab.setColorAt(k, c3.set(CAB[(b.h >>> 3) % 5])); b.sc = .8 + (b.h % 7) * .06; });
     for (const im of [hull, cab, mast, bulbs]) { im.frustumCulled = false; im.castShadow = im !== bulbs; scene.add(im); }
     realBoats = { boats, hull, cab, mast, bulbs };
+    loadAsset('boat').then(m => {
+      if (!m) return;
+      const det = new THREE.InstancedMesh(m.geometry, m.material, 24);
+      det.count = 0; det.frustumCulled = false; det.castShadow = true; scene.add(det);
+      glowAsset(m.material); realBoats.det = det;
+    });
     updateRealBoats(0);
   }
 }
@@ -4044,6 +4051,26 @@ function hipRoof(o, oh, y0, rh, color, lift = 0) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals();
   return stdMesh(g, color, { side: THREE.DoubleSide, roughness: .7 });
 }
+// ---- Blender 做的模型（assets/*.glb，由 tools/blender/ 的腳本產生）----
+// 遊戲先用程式蓋的版本，模型在背景載好再換上；載入失敗（沒網路、舊瀏覽器）照樣能玩
+const ASSET_EXT = window.MOYU_ASSET_EXT || '.glb';   // 測試網頁不收 .glb，打包時改成 .gltf.json
+const gltfLoader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
+function loadAsset(name) {
+  return new Promise(res => {
+    if (!gltfLoader) return res(null);
+    gltfLoader.load('assets/' + name + ASSET_EXT, g => {
+      let mesh = null; g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+      if (mesh) {   // 遊戲的畫面沒有做 sRGB 轉換，貼圖也當成一般顏色（不然會暗一截）
+        for (const t of [mesh.material.map, mesh.material.emissiveMap]) if (t) { t.encoding = THREE.LinearEncoding; t.anisotropy = 4; t.needsUpdate = true; }
+        mesh.material.metalness = 0; mesh.material.needsUpdate = true;
+      }
+      if (mesh) mesh.geometry.computeBoundingBox();
+      res(mesh);
+    }, undefined, () => res(null));
+  });
+}
+// 模型的發光貼圖（窗戶、燈籠、集魚燈）跟著天色亮
+function glowAsset(mat) { if (mat.emissiveMap) { mat.emissive.setRGB(1, 1, 1); nightGlow.push(mat); } }
 function buildLandmarks(signs) {
   for (const b of BLD) {
     const n = b.name || '';
@@ -4055,6 +4082,7 @@ function buildLandmarks(signs) {
 }
 // 港口大眾爺廟：石台基、紅牆紅柱、橘色四坡屋頂、燕尾屋脊、紅燈籠、天公爐
 function buildTemple(b) {
+  const n0 = scene.children.length;   // 等一下把這些程式蓋的零件收成一組（模型載好就藏起來）
   const o = obbOf(b.pts), y = b.base;
   // 正面：朝向最近的馬路
   let front = 1, rd = 1e9;
@@ -4100,6 +4128,29 @@ function buildTemple(b) {
   const pot = stdMesh(new THREE.CylinderGeometry(.75, .55, 1, 14), 0x5a4a32, { metalness: .5, roughness: .4 }); pot.position.set(ix, groundH(ix, iz) + 1.1, iz);
   for (let k = 0; k < 3; k++) { const a = k * 2.09; const lg = stdMesh(new THREE.CylinderGeometry(.08, .1, .7, 6), 0x5a4a32); lg.position.set(ix + Math.cos(a) * .45, groundH(ix, iz) + .35, iz + Math.sin(a) * .45); }
   b.custom = true;
+  const proc = scene.children.slice(n0);
+  loadAsset('temple').then(m => {
+    if (!m) return;
+    const bb = m.geometry.boundingBox, c = bb.getCenter(new THREE.Vector3());
+    m.position.set(-c.x, -bb.min.y, 0);   // 模型的前廊在 z=0：對齊外框的正面（台階、天公爐在前面）
+    const g = new THREE.Group(); g.add(m);
+    // 殿身（寬 9.6、深 7.3）塞進真實的外框：外框不是長方形，所以一直縮到四個角都在外框裡面
+    let sc = clamp(Math.min(o.L / 9.6, o.Wd / 7.3) * .85, .5, 1.4);
+    const vc = (b.cx - o.cx) * -o.sa + (b.cz - o.cz) * o.ca;   // 外框重心在短邊方向的位置
+    let fv = vc + front * 3.65 * sc;                            // 殿身的中心對齊外框的重心
+    for (let it = 0; it < 30; it++) {
+      const ok = [[-4.6, 0], [4.6, 0], [-4.6, 7.1], [4.6, 7.1]].every(([u, d]) => { const [x, z] = obbPt(o, u * sc, fv - front * d * sc); return inPoly(b.pts, x, z) || edgeDist(b.pts, x, z) < .8; });
+      if (ok) break;
+      sc *= .94; fv = vc + front * 3.65 * sc;   // 縮一點再試
+    }
+    const [fx, fz] = obbPt(o, 0, fv);
+    b.modelScale = sc;
+    g.scale.setScalar(sc);
+    g.position.set(fx, groundH(o.cx, o.cz) - .15, fz);
+    g.rotation.y = Math.atan2(-o.sa * front, o.ca * front);   // 模型的正面（+z）朝向馬路
+    m.castShadow = m.receiveShadow = true; glowAsset(m.material);
+    scene.add(g); proc.forEach(x => { x.visible = false; }); if (b.signMesh) b.signMesh.visible = false;
+  });
 }
 // 漁產品直銷中心：大跨度的鐵皮斜屋頂、柱子、一攤一攤的魚攤
 function buildMarket(b) {
@@ -4315,15 +4366,23 @@ function cabinTex() {
 const _bq = new THREE.Quaternion(), _be = new THREE.Euler(), _bm = new THREE.Matrix4(), _bp = new THREE.Vector3(), _bs = new THREE.Vector3(1, 1, 1), _bo = new THREE.Vector3();
 function updateRealBoats(dt, near = 1e9) {
   if (!realBoats) return;
-  const { boats, hull, cab, mast, bulbs } = realBoats, cx = camera.position.x, cz = camera.position.z;
+  const { boats, hull, cab, mast, bulbs, det } = realBoats, cx = camera.position.x, cz = camera.position.z;
+  let nd = 0;
   boats.forEach((b, k) => {
-    if (dt && Math.abs(b.x - cx) + Math.abs(b.z - cz) > near) return;
+    const far = Math.abs(b.x - cx) + Math.abs(b.z - cz);
+    if (dt && far > near && !(det && b.wasDet)) return;
     const y = waterH(b.x, b.z), fw = waterH(b.x + Math.cos(b.yaw) * 3, b.z - Math.sin(b.yaw) * 3) - waterH(b.x - Math.cos(b.yaw) * 3, b.z + Math.sin(b.yaw) * 3);
     _be.set(Math.sin(gameT * .9 + b.ph) * .03, b.yaw, fw * .12, 'YXZ'); _bq.setFromEuler(_be);
-    _bm.compose(_bp.set(b.x, y - .1, b.z), _bq, _bs.setScalar(b.sc || 1));   // 船身、船艙、桅杆、燈泡用同一個位置
+    b.wasDet = det && far < 85 && nd < det.instanceMatrix.count;
+    if (b.wasDet) {   // 近的：Blender 的精細漁船（15 公尺長，吃水線在 1 公尺高）
+      const S = (b.sc || 1) * .75;
+      det.setMatrixAt(nd++, _bm.compose(_bp.set(b.x, y - 1.05 * S, b.z), _bq, _bs.setScalar(S)));
+      _bm.makeScale(0, 0, 0);   // 簡單的船藏起來
+    } else _bm.compose(_bp.set(b.x, y - .1, b.z), _bq, _bs.setScalar(b.sc || 1));   // 船身、船艙、桅杆、燈泡用同一個位置
     hull.setMatrixAt(k, _bm); cab.setMatrixAt(k, _bm); mast.setMatrixAt(k, _bm); if (b.li >= 0) bulbs.setMatrixAt(b.li, _bm);
   });
   hull.instanceMatrix.needsUpdate = cab.instanceMatrix.needsUpdate = mast.instanceMatrix.needsUpdate = bulbs.instanceMatrix.needsUpdate = true;
+  if (det) { det.count = nd; det.instanceMatrix.needsUpdate = true; }
 }
 
 // ---- 四間店：卡通小房子，斜屋頂、條紋遮雨棚、窗戶、招牌 ----

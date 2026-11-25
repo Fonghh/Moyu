@@ -2,3 +2,7 @@
 *.key
 *.pem
 .DS_Store
+
+# Blender 腳本的暫存輸出（確認好的模型才複製到 assets/）
+tools/blender/out/
+__pycache__/

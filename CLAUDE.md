@@ -3,7 +3,10 @@
 3D 第一人稱釣魚的手機網頁小遊戲，左上角 X 一按就變成 Excel 報表。給在這個 repo 工作的 Claude 看的規則與說明。
 
 ## 專案
-- 整個遊戲是單一檔案 `index.html`，使用 three.js r128（從 cdnjs 載入），沒有建置步驟。
+- 遊戲主程式是單一檔案 `index.html`，使用 three.js r128（從 cdnjs 載入）＋ GLTFLoader（jsdelivr 的 three@0.128.0）。
+- 3D 模型放在 `assets/`（glb），由 `tools/blender/` 的 Blender 腳本產生（`pip install bpy==5.3.0` 後直接用 python 跑，Claude 在雲端跑，玩家和使用者都不用裝）。遊戲先用程式蓋的版本，模型在背景載好再換上，載入失敗也要能玩（`loadAsset()`）。
+- 模型預算：全部 assets 合計 5MB 以內、單一模型 2MB 以內、貼圖最大 2048（重複很多的東西 1024）；重複的東西用 InstancedMesh、遠的用簡單版（LOD），手機才順。
+- 模型的貼圖在遊戲裡當一般顏色（`LinearEncoding`，遊戲畫面沒有 sRGB 轉換），金屬感關掉（`metalness = 0`），發光貼圖跟著 `nightGlow` 晚上亮。
 - 主要玩家用手機（觸控）玩，也支援電腦鍵盤。修改時兩者都要顧到。
 - 平常是全螢幕 3D；隱藏模式（`#bossView`）要像真的 Excel 報表。
 
@@ -13,6 +16,7 @@
 - 次要改動寫在 commit 內文（第一行之後空一行，用條列寫）。
 - 每次存檔要打 tag `vN`，並 push commit 與 tag。
 - 修改要先實際測試、確認可以玩，再存檔。
+- 測試網頁（artifact）不收 .glb：打包時轉成內嵌的 `.gltf.json`，並設 `window.MOYU_ASSET_EXT = '.gltf.json'`。
 - 若在雲端（手機）對話中工作，且使用者沒有指定，先推到分支並開 PR，讓使用者檢查後再合併到 `main`。
 
 ## 安全
@@ -28,6 +32,7 @@
   - 3D：`buildRealTown()` 把房子合成一個網格（一樓鐵捲門／店面、樓上窗戶鐵窗冷氣的貼圖 `facadeTex()`／`groundTex()`，晚上窗戶亮）、屋頂水塔和鐵皮加蓋、招牌 `boardTex()`、馬路和標線、堤防（`REAL.quays` 每個是外圈＋洞，直立水泥塊）、外側消波塊、港內直立堤岸、漁船 `boatGeos()`（V 型船身、駕駛艙、桅杆，四成是有集魚燈的魷魚船，`realBoats`／`updateRealBoats()` 跟著浪）。
   - 標誌性建築 `buildLandmarks()`：港口大眾爺廟 `buildTemple()`、漁產品直銷中心 `buildMarket()`、漁業綜合大樓頂樓旋轉餐廳 `buildTower()`（`spinners`）、防波堤尖端紅綠燈塔 `buildHarbourLights()`（晚上閃 `blinkers`）。外框方向用 `obbOf()`。
   - 夜景：路燈 `buildStreetLamps()`（地上光暈 `poolMat`，店門口也有）、跟著玩家的暖色點光源 `nightLamp`；`nightK`（0 白天～1 深夜）在 `updateEnv()` 算、`updateLandmarks()` 每幀用。
+  - Blender 模型：`assets/temple.glb`（大眾爺廟，縮放塞進真實外框、殿身對齊外框重心、正面朝馬路，程式蓋的版本和招牌藏起來）、`assets/boat.glb`（附近 85 公尺內最多 24 艘用精細漁船 `realBoats.det`，其他維持簡單的船）。廟前 10 公尺、市場旁 4 公尺不補房子（`tools/realmap.py`）。
   - 地圖很大：地形網格放粗（`GSX`/`GSZ`）、`chunked()` 分塊 96 公尺、樹有距離 LOD；魚生在玩家 110 公尺內，150 公尺外的會換到身邊（`spawnShadow()`／`churnFish()`）；大地圖點一下可以直接走過去。真實地圖的水泥地靠水也不畫成沙灘色。
 - 地形 `T`／`TILES`（顏色、能不能走、水域種類）；`genMap()` 產生地圖。
 - 魚種 `FISH`（水域、稀有度 `rar`、尺寸、`price`、畫圖參數）；稀有度 `RAR`。
