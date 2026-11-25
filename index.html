@@ -354,7 +354,11 @@
   #rigBtn { position: absolute; right: 118px; bottom: 26px; height: 34px; padding: 0 12px; border-radius: 17px; font: 600 13px/1 inherit; font-family: inherit; color: #ffe066;
     background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); cursor: pointer; white-space: nowrap; }
   body.boss #rigBtn { display: none !important; }
-  #boxBtn, #homeBtn, #bagBtn { background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
+  #rideBtn { position: absolute; right: max(38px, calc(env(safe-area-inset-right, 0px) + 22px)); bottom: 316px; width: 48px; height: 48px; border-radius: 10px; padding: 0;
+    font-size: 26px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #rideBtn.on { background: rgba(255,224,102,.92) !important; border-color: #fff !important; }
+  body.boss #rideBtn { display: none !important; }
+  #rideBtn, #boxBtn, #homeBtn, #bagBtn { background: rgba(16,26,52,.78); border: 2px solid rgba(255,224,102,.75); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
   #info { background: rgba(16,26,52,.72); border: 1px solid rgba(160,190,255,.4); }
   #info { cursor: pointer; pointer-events: auto; }
   #dlg canvas.tankC { width: 100%; aspect-ratio: 2 / 1; border-radius: 10px; border: 2px solid rgba(160,190,255,.4); display: block; margin-bottom: 6px; }
@@ -362,6 +366,83 @@
   #dlg canvas.tideC { width: 100%; height: 74px; margin-top: 6px; display: block; }
   #fight { background: rgba(16,26,52,.8); border: 1px solid rgba(160,190,255,.45); }
   #fight .cue { color: #fff; }
+  /* ===== 漁港手帳風格：米白紙卡、海藍標題、朱紅和金色重點，魚是照片（所有視窗共用） ===== */
+  #dlg.clear { background: rgba(6,20,32,.38); }
+  #dlg.clear .win { background: #fbf6ea; color: #3b3328; border: 1px solid #d9ccae; border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.38); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  #dlg.clear .wt { background: linear-gradient(180deg, #2a6f8c, #1f5a74); color: #fff; border-radius: 13px 13px 0 0; letter-spacing: .08em; }
+  #dlg.clear .wt button { color: #fff; }
+  #dlg .wb, #dlg .win { color: #3b3328; }
+  #dlg .sect { color: #a8402a; border-bottom: 1px solid #e3d6ba; letter-spacing: 2px; }
+  #dlg .money { color: #7a6a52; }
+  #dlg .money b, #dlg .bubble b { color: #b5452e; }
+  #dlg .bubble { background: #fff; border: 1px solid #e3d6ba; color: #3b3328; box-shadow: 0 1px 0 #efe5cf; }
+  #dlg .npc canvas { background: radial-gradient(ellipse at 50% 40%, #fffdf6, #efe4cc 75%); border: 1px solid #d9ccae; }
+  #dlg table.xl td, #dlg table.xl th { border-bottom: 1px solid #eadfca; }
+  #dlg table.xl th { color: #9a8b72; }
+  #dlg table.xl td.desc, #dlg .own, #dlg .empty, #dlg .catch .meta { color: #8b7d66; }
+  #dlg .sbtn, #dlg .okBtn, .tb-eq { background: #1f5a74; color: #fff !important; box-shadow: 0 2px 0 #143c4e; }
+  #dlg .okBtn.alt { background: transparent; color: #1f5a74 !important; border: 1px solid #1f5a74; box-shadow: none; }
+  #dlg .sbtn:disabled, #dlg .tb-eq:disabled { background: #e7dfcf; color: #a99c85 !important; box-shadow: none; }
+  #dlg .chip { background: #fff; border: 1px solid #e3d6ba; color: #3b3328; }
+  #dlg .chip.on { border-color: #1f5a74; background: #e6f1f5; color: #1f5a74; }
+  #dlg .tabs2 { border-bottom: 1px solid #e3d6ba; }
+  #dlg .tabs2 button { color: #9a8b72; }
+  #dlg .tabs2 button.on { border-bottom: 2px solid #b5452e; color: #b5452e; }
+  #dlg .up { color: #c0392b; } #dlg .down { color: #2a6fb0; } #dlg .buffs { color: #b86a1c; }
+  #dlg .catch canvas { background: radial-gradient(ellipse at 50% 55%, #fffdf6, #efe4cc 72%); border: 1px solid #e3d6ba; }
+  #dlg .catch .price { color: #b5452e; }
+  #dlg .catch .new { background: #b5452e; color: #fff; }
+  #dlg .reel { background: #fff; border: 2px solid #1f5a74; }
+  .tb-cell { background: radial-gradient(ellipse at 50% 45%, #fffdf6, #f1e8d4 78%); border: 1px solid #e3d6ba; color: #3b3328; box-shadow: 0 1px 0 #e6dbc3; }
+  .tb-cell.sel { border-color: #1f5a74; box-shadow: inset 0 0 0 1px #1f5a74, 0 2px 6px rgba(31,90,116,.25); }
+  .tb-cnt { color: #3b3328; text-shadow: none; }
+  .tb-price { color: #b5452e; text-shadow: none; }
+  .tb-hot { text-shadow: none; }
+  .tb-own { background: #efe6d3; color: #6b5d48; }
+  .tb-card { border-top: 1px solid #e3d6ba; }
+  .tb-story { color: #6b5d48; }
+  .tb-slot { background: radial-gradient(ellipse at 50% 50%, #fffdf6, #f3ead6 78%); border: 1px solid #e3d6ba; }
+  .tb-slot.on { border-color: #1f5a74; box-shadow: inset 0 0 0 1px #1f5a74; background: #eaf3f6; }
+  .tb-quest { background: #fff; border: 1px solid #e3d6ba; }
+  .tb-face { background: #f3ead6; }
+  .tb-qm b { color: #a8402a; } .tb-qr { color: #2f8a4a; }
+  #dlg .bigmap, #dlg canvas.tankC { border-color: #d9ccae; }
+  #dlg .pos { color: #b5452e; }
+  .tb-credit { margin-top: 6px; font-size: 10px; opacity: .55; text-align: right; }
+  /* 釣到的那一刻 */
+  #catchFx { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 45%, rgba(10,30,45,.35), rgba(4,12,20,.82) 70%); animation: cfxIn .35s ease-out both; font-family: inherit; color: #fff; }
+  #catchFx.out { animation: cfxOut .26s ease-in both; }
+  .cfx-rays { position: absolute; left: 50%; top: 42%; width: 160vmax; height: 160vmax; margin: -80vmax 0 0 -80vmax; opacity: .55;
+    background: repeating-conic-gradient(from 0deg, rgba(255,240,200,.55) 0 6deg, transparent 6deg 18deg); animation: cfxSpin 14s linear infinite;
+    -webkit-mask-image: radial-gradient(circle, #000 0, transparent 45%); mask-image: radial-gradient(circle, #000 0, transparent 45%); }
+  #catchFx.big .cfx-rays { opacity: .85; animation-duration: 8s; }
+  .cfx-glow { position: absolute; left: 50%; top: 42%; width: 70vmin; height: 40vmin; margin: -20vmin 0 0 -35vmin; border-radius: 50%; background: radial-gradient(closest-side, var(--rc), transparent); opacity: .7; filter: blur(8px); }
+  .cfx-fish { position: relative; width: min(86vw, 520px); aspect-ratio: 2 / 1; animation: cfxPop .7s cubic-bezier(.2,1.6,.4,1) .1s both; filter: drop-shadow(0 10px 18px rgba(0,0,0,.55)); }
+  .cfx-fish canvas { width: 100%; height: 100%; display: block; }
+  .cfx-fish::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.85) 50%, transparent 62%) -150% 0 / 60% 100% no-repeat;
+    -webkit-mask: var(--m) center / 100% 100% no-repeat; mask: var(--m) center / 100% 100% no-repeat; animation: cfxShine 1.4s ease-in-out .7s 2; }
+  .cfx-ruler { width: min(80vw, 480px); height: 14px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgba(255,255,255,.85) 0 1px, transparent 1px 10px) bottom / 100% 6px no-repeat, rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.5); position: relative; overflow: hidden; }
+  .cfx-ruler i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, #ffe066, var(--rc)); opacity: .9; }
+  .cfx-len { font-size: 15px; letter-spacing: 1px; text-shadow: 0 1px 3px #000; } .cfx-len b { font-size: 30px; font-variant-numeric: tabular-nums; }
+  .cfx-price { font-size: 30px; font-weight: 800; color: #ffe066; text-shadow: 0 2px 6px #000; }
+  .cfx-name { font-size: 28px; font-weight: 900; letter-spacing: 3px; text-shadow: 0 2px 8px #000; display: flex; align-items: baseline; gap: 10px; animation: cfxUp .5s ease-out .5s both; }
+  .cfx-name em { font-style: normal; color: #ffd34d; font-size: 18px; letter-spacing: 2px; }
+  .cfx-name small { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: var(--rc); letter-spacing: 1px; }
+  .cfx-stamp { position: absolute; top: 18%; right: 9%; padding: 6px 14px; border: 3px solid #e0402a; color: #e0402a; font-size: 26px; font-weight: 900; letter-spacing: 4px; border-radius: 8px;
+    background: rgba(255,248,235,.92); transform: rotate(-12deg); animation: cfxStamp .45s cubic-bezier(.2,1.8,.4,1) 1.5s both; }
+  .cfx-stamp.rec { border-color: #d89a1a; color: #c07a00; }
+  .cfx-tip { position: absolute; bottom: 9%; font-size: 12px; opacity: .7; animation: cfxIn .4s 2s both; }
+  .cfx-sp { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 10px 3px var(--rc); opacity: 0; animation: cfxTw 1.6s ease-in-out infinite; }
+  @keyframes cfxIn { from { opacity: 0; } }
+  @keyframes cfxOut { to { opacity: 0; transform: scale(1.04); } }
+  @keyframes cfxSpin { to { transform: rotate(360deg); } }
+  @keyframes cfxPop { from { transform: scale(.35) rotate(-8deg); opacity: 0; } }
+  @keyframes cfxShine { to { background-position: 250% 0; } }
+  @keyframes cfxUp { from { transform: translateY(14px); opacity: 0; } }
+  @keyframes cfxStamp { from { transform: rotate(-12deg) scale(2.4); opacity: 0; } }
+  @keyframes cfxTw { 50% { opacity: .95; transform: scale(1.4); } }
+  @media (prefers-reduced-motion: reduce) { .cfx-rays, .cfx-sp { animation: none; } }
 </style>
 </head>
 <body>
@@ -381,6 +462,7 @@
   <div id="bigcue"></div>
   <div id="flashFx"></div>
   <div id="miniBox" title="地圖"><div class="mt">地圖</div><canvas id="mini"></canvas></div>
+  <button id="rideBtn" title="機車（F）">🛵</button>
   <button id="boxBtn" title="釣具箱"><canvas id="boxIcon" width="12" height="12"></canvas></button>
   <button id="homeBtn" title="回城"><canvas id="homeIcon" width="12" height="12"></canvas></button>
   <button id="bagBtn" title="背包"><canvas id="bagIcon" width="12" height="12"></canvas><span id="bagCount"></span></button>
@@ -388,6 +470,7 @@
   <button id="rigBtn" title="釣法">🎈 浮釣</button>
   <div class="note" id="hint">
     手機：左半邊拖曳＝走路，右半邊拖曳＝轉頭<br>
+    🛵 騎機車：上推油門、下拉煞車、左右轉彎（電腦 F 上下車）<br>
     電腦：WASD 走路，滑鼠拖曳或方向鍵轉頭<br>
     面向水面，<b>按住</b>「下竿」蓄力，放開拋竿<br>
     出現「！」快按拉竿；搏鬥時魚往哪衝，竿子往反方向壓（左手拖曳／A、D），魚累了再按住收線<br>
@@ -430,6 +513,7 @@ const CFG = {
   mapW: REAL ? REAL.W : 60, mapH: REAL ? REAL.H : 80,    // 地圖格數（真實地圖 1 公里見方；原本的小島東邊是深海、遠洋）
   hdW: 34, hdH: 20,      // 列號寬、欄名高
   speed: 5,              // 走路速度（公尺/秒）
+  rideSp: 13,            // 機車最快速度（公尺/秒，約 47 公里）
   eye: 3,                // 眼睛高度（公尺）：高一點才看得清楚水面的魚影（真實地圖用 REAL_EYE）
   lookSpeed: .005,       // 拖曳轉頭的靈敏度
   miniW: 64,             // 小地圖寬度（px）
@@ -1061,6 +1145,49 @@ function moveInput() {
   return l > 1 ? { f: f / l, s: s / l } : { f, s };
 }
 function joyRelease() { joy.id = null; joyBase.style.display = 'none'; }
+// ---- 機車：🛵 上下車；左手搖桿（W/S）上下是油門／煞車、左右（A/D）是龍頭 ----
+const ride = { on: false, v: 0, st: 0, thr: 0, park: null, bumpT: 0, told: false };
+function toggleRide() {
+  if (boss) return;
+  if (ride.on) {
+    ride.on = false; ride.park = [P.x * TX - Math.sin(yaw) * .55, P.y * TZ - Math.cos(yaw) * .55, yaw]; ride.v = 0;
+    toast('機車停好了');
+  } else {
+    if (state !== 'walk') { toast('先收竿才能騎車'); return; }
+    if (onBoat()) { toast('在船上不能騎車'); return; }
+    const far = ride.park && Math.hypot(ride.park[0] - P.x * TX, ride.park[1] - P.y * TZ) > 6;
+    ride.on = true; ride.v = 0; ride.st = 0; hideHint();
+    toast(!ride.told ? '上車！左手往上推是油門、往下拉煞車、左右轉彎，再按 🛵 下車' : far ? '把機車牽過來了，出發！' : '出發！');
+    ride.told = true;
+  }
+  $('rideBtn').classList.toggle('on', ride.on);
+}
+const rideOK = (x, y) => free(x, y) && !TILES[tileAt(Math.floor(x), Math.floor(y))].water;   // 機車不能下水
+function rideStep(dt, vi) {
+  const MAX = CFG.rideSp, thr = vi.f; ride.thr = thr;
+  const target = thr > .05 ? thr * MAX : thr < -.05 && ride.v <= .3 ? thr * 2.5 : 0;   // 停下來再往下拉是倒車
+  const acc = thr < -.05 && ride.v > .3 ? 12 : target > ride.v ? 5.5 : 3.2;
+  ride.v += clamp(target - ride.v, -acc * dt, acc * dt);
+  ride.st += (vi.s - ride.st) * Math.min(1, dt * 6);
+  const sk = clamp(Math.abs(ride.v) / 2.5, 0, 1) * (1.7 - .8 * clamp(Math.abs(ride.v) / MAX, 0, 1));   // 慢的時候轉得急、快的時候轉得緩
+  yaw -= ride.st * sk * dt * 1.5 * (ride.v < 0 ? -1 : 1);
+  ride.bumpT -= dt;
+  if (Math.abs(ride.v) < .02) return;
+  hideHint();
+  const d = ride.v * dt, wx = -Math.sin(yaw) * d, wz = -Math.cos(yaw) * d, nx = P.x + wx / TX, ny = P.y + wz / TZ;
+  let hit = false;
+  if (rideOK(nx, P.y)) P.x = nx; else hit = true;
+  if (rideOK(P.x, ny)) P.y = ny; else hit = true;
+  if (hit) {
+    if (Math.abs(ride.v) > 4 && ride.bumpT < 0) { ride.bumpT = .6; tone(85, .18, .22, 'triangle', 0, 50); noiseHit('lowpass', 900, 200, .2, .14); }
+    ride.v *= Math.pow(.02, dt);
+  }
+  // 騎到店門口：停車進店
+  const ax = P.x - Math.sin(yaw) * 1.3 / TX, ay = P.y - Math.cos(yaw) * 1.3 / TZ, bi = REAL ? bldAt(ax * TX, ay * TZ, .7) : -1;
+  const shopHere = TILES[tileAt(Math.floor(ax), Math.floor(ay))].shop || (bi >= 0 && BLD[bi].shop);
+  if (shopHere && ride.v > 0) { if (!shopTouch) { shopTouch = true; keys.clear(); joyRelease(); toggleRide(); openShop(shopHere); } }
+  else shopTouch = false;
+}
 
 cvEl.addEventListener('pointerdown', e => {
   if (boss) return;
@@ -1154,6 +1281,7 @@ document.addEventListener('keydown', e => {
   if (k === 'm') { openMap(); return; }
   if (k === 'r') { toggleRig(); return; }
   if (k === 'h') { goHome(); return; }
+  if (k === 'f') { toggleRide(); return; }
   keys.add(k);
   if (k.startsWith('arrow')) e.preventDefault();
 });
@@ -1168,6 +1296,7 @@ $('bagBtn').addEventListener('click', openBag);
 $('rigBtn').addEventListener('click', toggleRig);
 $('homeBtn').addEventListener('click', goHome);
 $('boxBtn').addEventListener('click', () => openBox());
+$('rideBtn').addEventListener('click', toggleRide);
 $('setBtn').addEventListener('click', () => openSettings());
 $('info').addEventListener('click', () => openConditions());   // 點時間看釣況
 // 回城：回到海邊小鎮，面向大海
@@ -1672,6 +1801,7 @@ let earlyT = -9;
 function press(e) {
   if (boss) return;
   if (state === 'charge' && S.opt.motion) { state = 'walk'; toast('取消拋竿'); return; }
+  if (state === 'walk' && ride.on) { toggleRide(); toast('停好車了，面向水面就能下竿'); return; }
   if (state === 'walk') {
     if (!aimSpot(1)) { toast('前面拋不到水，轉向水面再下竿'); return; }
     startCharge(e);   // 按住往下拉、往上甩；或按住蓄力
@@ -2185,11 +2315,44 @@ function fishCard(f, o = {}) {
   for (const [k, v] of o.extra || []) facts.push([k, v]);
   for (const [k, v] of facts) { const r = el('div', 'tb-fact'); r.appendChild(el('span', null, k)); r.appendChild(el('b', null, v)); card.appendChild(r); }
   card.appendChild(el('div', 'tb-story', known ? fishStory(f) : '還沒釣過，不知道是什麼樣的魚……'));
+  if (known && PHOTO[f.id] && PHOTO[f.id].credit) card.appendChild(el('div', 'tb-credit', '照片：' + PHOTO[f.id].credit + '・FishBase'));
   return card;
 }
 
 // ---- 釣到了 ----
+// 釣到的那一刻：全螢幕的特效（光芒、魚的照片彈出來、量尺量長度、稀有度星星、新魚種印章），點一下或兩秒半後跳出結果卡
 function showCatch(f, size, isNew, where, item) {
+  if (f.junk) return showCatchCard(f, size, isNew, where, item);
+  const r = f.special ? 5 : f.mutant ? 6 : f.rar, dx = S.dex[f.id], rec = !isNew && dx && dx.n > 1 && dx.max === size && !f.special;
+  const fx = el('div'); fx.id = 'catchFx'; fx.style.setProperty('--rc', RAR[r].color);
+  if (r >= 2) fx.classList.add('big');
+  const stars = f.special ? '' : '★'.repeat(Math.min(5, (f.rar || 0) + 1));
+  fx.innerHTML = `<div class="cfx-rays"></div><div class="cfx-glow"></div><div class="cfx-fish"></div>
+    ${f.special ? `<div class="cfx-price">$${fmtN(priceOf(item))}</div>` : `<div class="cfx-ruler"><i></i></div><div class="cfx-len"><b>0</b> cm</div>`}
+    <div class="cfx-name">${f.name}<em>${stars}</em><small>${RAR[r].name}</small></div>
+    ${isNew ? `<div class="cfx-stamp">${f.special ? '新發現' : f.mutant ? '新變種' : '新魚種'}</div>` : rec ? '<div class="cfx-stamp rec">個人紀錄</div>' : ''}
+    <div class="cfx-tip">點一下繼續</div>`;
+  const cv = fishCanvas(f.id, 6), box = fx.querySelector('.cfx-fish');
+  box.appendChild(cv); box.style.setProperty('--m', `url(${cv.toDataURL()})`);
+  for (let k = 0; k < 22; k++) { const sp = el('i', 'cfx-sp'); sp.style.left = rand(4, 96) + '%'; sp.style.top = rand(8, 80) + '%'; sp.style.animationDelay = rand(.2, 1.8).toFixed(2) + 's'; fx.appendChild(sp); }
+  $('stage').appendChild(fx);
+  // 量尺：照這種魚的最大尺寸，長度從 0 數上去
+  const t0 = performance.now(), num = fx.querySelector('.cfx-len b'), bar = fx.querySelector('.cfx-ruler i');
+  let lastTick = -1;
+  const step = now => {
+    if (!fx.isConnected) return;
+    const k = clamp((now - t0 - 450) / 1000, 0, 1), e = 1 - Math.pow(1 - k, 3);
+    if (num) { num.textContent = (size * e).toFixed(1); bar.style.width = (clamp(size / f.size[1], .08, 1) * 100 * e) + '%'; }
+    const tick = Math.floor(e * 12); if (num && tick !== lastTick && k < 1) { lastTick = tick; tone(1400 + tick * 60, .02, .03, 'square'); }
+    if (k < 1) requestAnimationFrame(step); else if (!fx.dataset.done) { fx.dataset.done = 1; SFX.coin(); }
+  };
+  requestAnimationFrame(step);
+  let gone = false;
+  const finish = () => { if (gone) return; gone = true; fx.classList.add('out'); setTimeout(() => { fx.parentNode && fx.parentNode.removeChild(fx); showCatchCard(f, size, isNew, where, item); }, 260); };
+  fx.addEventListener('pointerdown', e => { e.stopPropagation(); if (performance.now() - t0 > 500) finish(); });
+  setTimeout(finish, r >= 3 ? 3600 : 2800);
+}
+function showCatchCard(f, size, isNew, where, item) {
   const d = el('div', 'catch');
   if (isNew && !f.junk) d.appendChild(el('div', 'new', f.special ? '新發現！' : f.mutant ? '新變種！' : '新魚種！'));
   d.appendChild(fishCanvas(f.id, 4));
@@ -2541,9 +2704,49 @@ function eatDish(b) {
 
 // 料理的卡通圖：烤、炸用魚的圖加顏色，湯和生魚片另外畫（版面 28×14，放大 FK 倍）
 const DISH_CACHE = {};
+// 料理照片（tools/blender/dishes.py 渲染）：魚盤、魚湯、生魚片；烤魚、炸魚是魚的照片烤上色放在魚盤上。載好之前用卡通圖
+const DISH_PHOTO = {};
+function loadDishPhotos() {
+  for (const n of ['plate', 'soup', 'sashimi']) {
+    const img = new Image();
+    img.onload = () => { DISH_PHOTO[n] = img; for (const k in DISH_CACHE) delete DISH_CACHE[k]; };
+    img.src = 'assets/dishes/' + n + '.webp';
+  }
+}
+function dishPhoto(fid, m) {
+  const ph = DISH_PHOTO[m === 'soup' ? 'soup' : m === 'sashimi' ? 'sashimi' : 'plate'];
+  if (!ph) return null;
+  const DW = 28, DH = 14, c = document.createElement('canvas'); c.width = DW * FK; c.height = DH * FK;
+  const x = c.getContext('2d'); x.drawImage(ph, 0, 0, c.width, c.height); x.scale(FK, FK);
+  if (m === 'grill' || m === 'fry') {
+    const t = document.createElement('canvas'); t.width = DW * FK; t.height = DH * FK;
+    const tx = t.getContext('2d'); tx.scale(FK, FK);
+    tx.drawImage(FISH_IMG[fid], 4.5, .6, 19, 9.5);
+    tx.globalCompositeOperation = 'source-atop';
+    if (m === 'grill') {   // 烤：焦糖色、邊緣烤焦、斜斜的烤網痕
+      tx.fillStyle = 'rgba(150,80,20,.42)'; tx.fillRect(0, 0, DW, DH);
+      const g = tx.createLinearGradient(0, 1, 0, 10); g.addColorStop(0, 'rgba(40,18,5,.55)'); g.addColorStop(.4, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(40,18,5,.35)');
+      tx.fillStyle = g; tx.fillRect(0, 0, DW, DH);
+      tx.strokeStyle = 'rgba(35,15,4,.8)'; tx.lineWidth = .55;
+      for (let k = 0; k < 5; k++) { tx.beginPath(); tx.moveTo(9 + k * 2.6, 1); tx.lineTo(7 + k * 2.6, 10); tx.stroke(); }
+      tx.fillStyle = 'rgba(255,255,255,.75)';   // 撒鹽
+      for (let k = 0; k < 40; k++) { const h = hash(k, 7); tx.fillRect(6 + (h % 160) / 10, 2 + ((h >> 8) % 60) / 10, .18, .18); }
+    } else {   // 炸：金黃麵衣、顆粒
+      tx.fillStyle = 'rgba(225,150,35,.68)'; tx.fillRect(0, 0, DW, DH);
+      for (let k = 0; k < 140; k++) {
+        const h = hash(k, 3); tx.fillStyle = k % 3 ? 'rgba(255,225,150,.85)' : 'rgba(150,80,15,.6)';
+        tx.beginPath(); tx.arc(4.5 + (h % 190) / 10, 1 + ((h >> 8) % 90) / 10, .22 + (h >> 16) % 3 * .08, 0, Math.PI * 2); tx.fill();
+      }
+    }
+    x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = 6; x.shadowOffsetY = 2;
+    x.drawImage(t, 0, 0, DW, DH);
+  }
+  return c;
+}
 function dishImg(fid, m) {
   const key = fid + m;
   if (DISH_CACHE[key]) return DISH_CACHE[key];
+  const ph = dishPhoto(fid, m); if (ph) return (DISH_CACHE[key] = ph);
   const DW = 28, DH = 14, f = FISH_BY[fid], c = document.createElement('canvas'); c.width = DW * FK; c.height = DH * FK;
   const x = c.getContext('2d'); x.scale(FK, FK); x.lineJoin = x.lineCap = 'round';
   const body = vivid(f.body || '#999999'), belly = vivid(f.belly || '#dddddd', .1, .06), ink = '#5a4a40';
@@ -2848,7 +3051,8 @@ function update(dt) {
   const v = mv;
 
   if (state === 'walk') {
-    if (moving || Math.abs(mv.f) + Math.abs(mv.s) > .03) {
+    if (ride.on) rideStep(dt, vi);
+    else if (moving || Math.abs(mv.f) + Math.abs(mv.s) > .03) {
       hideHint();
       // 在船上用船速，暴風雨時船開比較慢（公尺／秒）
       const sp = (onBoat() ? BOATS[S.boat - 1].speed * (weather.severe ? .7 : 1) : CFG.speed) * dt;
@@ -2870,7 +3074,7 @@ function update(dt) {
       }
       P.walkT += dt;
     } else shopTouch = false;
-    P.moving = moving;
+    P.moving = moving && !ride.on;
   } else if (state === 'charge') {
     P.moving = false; chargeT += dt;   // 蓄力中可以轉頭瞄準
     if (S.opt.motion && (motionT += dt) > 6) { state = 'walk'; toast('沒有偵測到揮動，再試一次'); }
@@ -3091,7 +3295,7 @@ function resize() {
 window.addEventListener('resize', resize);
 
 // ---- 畫質：依手機效能自動調整解析度、陰影、描邊，維持順暢 ----
-const QUALITY = [{ pr: 2, sh: 2048, ol: 1, refl: .5 }, { pr: 1.5, sh: 1024, ol: 1, refl: .45 }, { pr: 1.2, sh: 1024, ol: 1, refl: .33 }, { pr: 1, sh: 0, ol: 0, refl: 0 }];
+const QUALITY = [{ pr: 2, sh: 2048, ol: 1, refl: .5, lod: 1.15 }, { pr: 1.5, sh: 1024, ol: 1, refl: .45, lod: 1 }, { pr: 1.2, sh: 1024, ol: 1, refl: .33, lod: .8 }, { pr: 1, sh: 0, ol: 0, refl: 0, lod: .6 }];   // lod：街景小東西畫多遠
 let qLv = 1, qSum = 0, qN = 0, qGood = 0;
 const qBad = new Set();   // 跑不順過的等級，不再升回去
 const outlined = [];      // 描邊 mesh，最低畫質時關掉
@@ -3562,8 +3766,8 @@ const smoothstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); retu
 // items 每項前兩個值是世界座標 x、z；place(im, item, n) 用世界座標放第 n 項
 const LOD = [];   // 遠的區塊不畫描邊、小花
 function updateLod() {
-  const cx = camera.position.x, cz = camera.position.z, ol = QUALITY[qLv].ol;
-  for (const l of LOD) l.o.visible = (!l.ol || ol) && Math.hypot(l.x - cx, l.z - cz) < l.d;
+  const cx = camera.position.x, cz = camera.position.z, ol = QUALITY[qLv].ol, lk = QUALITY[qLv].lod;
+  for (const l of LOD) l.o.visible = (!l.ol || ol) && Math.hypot(l.x - cx, l.z - cz) < l.d * lk;
 }
 function chunked(geo, mat, items, per, place, opt = {}) {
   const S = REAL ? 96 : 48, groups = new Map(), m = new THREE.Matrix4(), out = [];   // 真實地圖很大：分塊大一點，少一點繪製次數
@@ -3734,6 +3938,423 @@ function mergeGeos(list) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   return g;
 }
+// ---- 街景：馬路查詢、一樓店面的室內、立面零件、路邊和港邊的小東西 ----
+const FRONTS = [], INTS = [];   // 面對馬路的牆、拉開鐵門的一樓
+let RSEG = null;
+// 離最近的馬路邊緣多遠（公尺，負的是在路上）
+function roadNear(x, z) {
+  if (!RSEG) {
+    RSEG = new Map();
+    for (const [w, c] of REAL.roads) for (let n = 2; n < c.length; n += 2) {
+      const sg = [c[n - 2], c[n - 1], c[n], c[n + 1], w / 2], r = w / 2 + 8;
+      for (let gx = Math.floor((Math.min(sg[0], sg[2]) - r) / 25); gx <= Math.floor((Math.max(sg[0], sg[2]) + r) / 25); gx++)
+        for (let gz = Math.floor((Math.min(sg[1], sg[3]) - r) / 25); gz <= Math.floor((Math.max(sg[1], sg[3]) + r) / 25); gz++) {
+          const k = gx + ',' + gz; if (!RSEG.has(k)) RSEG.set(k, []); RSEG.get(k).push(sg);
+        }
+    }
+  }
+  const l = RSEG.get(Math.floor(x / 25) + ',' + Math.floor(z / 25)); let d = 99;
+  if (l) for (const [ax, az, bx, bz, hw] of l) {
+    const ex = bx - ax, ez = bz - az, t = clamp(((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez || 1), 0, 1);
+    d = Math.min(d, Math.hypot(x - ax - ex * t, z - az - ez * t) - hw);
+  }
+  return d;
+}
+const groundOK = (x, z, pad = .35) => { const t = tAt(Math.floor(x / TX), Math.floor(z / TZ)); return TILES[t].walk && !TILES[t].water && bldAt(x, z, pad) < 0; };
+// 一樓開的是什麼店
+function intType(b, h) {
+  if (b.shop) return { restaurant: 'seafood', tackle: 'tackle', slot: 'arcade', market: 'seafood' }[b.shop];
+  return ['home', 'home', 'seafood', 'grocery', 'scooter', 'eatery', 'grocery', 'home', 'tea', 'eatery', 'seafood', 'home'][hash(h, 55) % 12];
+}
+// 有頂點顏色的合併幾何：parts 是 [幾何, 顏色]
+function colGeo(parts) {
+  const P = [], N = [], C = [], c = new THREE.Color();
+  for (const [g0, hex] of parts) {
+    const g = g0.index ? g0.toNonIndexed() : g0; c.set(hex);
+    P.push(...g.attributes.position.array); N.push(...g.attributes.normal.array);
+    for (let i = 0; i < g.attributes.position.count; i++) C.push(c.r, c.g, c.b);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+  return g;
+}
+// 小零件：底面中心在 (x, y, z) 的方塊、圓柱（可以轉）
+const pBox = (w, h, d, x, y, z, col, rx = 0, ry = 0, rz = 0) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(0, h / 2, 0); if (rx || ry || rz) g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz))); g.translate(x, y, z); return [g, col]; };
+const pCyl = (r, h, x, y, z, col, seg = 10, r2 = r, rx = 0, rz = 0) => { const g = new THREE.CylinderGeometry(r2, r, h, seg); g.translate(0, h / 2, 0); if (rx || rz) g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, 0, rz))); g.translate(x, y, z); return [g, col]; };
+const pBall = (r, x, y, z, col, sy = 1, seg = 8) => { const g = new THREE.SphereGeometry(r, seg, Math.max(4, seg >> 1)); g.scale(1, sy, 1); g.translate(x, y, z); return [g, col]; };
+// 機車：長度方向是 z（車頭 +z），寬 x；車身是白色，跟著每台的顏色染
+function scooterParts(white = '#ffffff') {
+  const dk = '#1b1b1d', gr = '#3a3b3e';
+  return [
+    pCyl(.21, .11, 0, .21, .55, dk, 9, .21, 0, Math.PI / 2), pCyl(.21, .11, 0, .21, -.55, dk, 9, .21, 0, Math.PI / 2),
+    pBox(.34, .07, .62, 0, .28, .02, gr),                       // 踏板
+    pBox(.4, .38, .78, 0, .3, -.38, white),                     // 後車身
+    pBox(.36, .1, .66, 0, .68, -.34, '#232325'),               // 坐墊
+    pBox(.42, .74, .13, 0, .26, .36, white, -.22),             // 前面的擋板
+    pBox(.16, .12, .36, 0, .36, .56, white),                    // 前輪擋泥板
+    pBox(.06, .26, .06, 0, .96, .44, gr, -.3),                  // 龍頭
+    pBox(.66, .045, .045, 0, 1.2, .5, gr), pBox(.1, .05, .05, -.34, 1.19, .5, dk), pBox(.1, .05, .05, .34, 1.19, .5, dk),
+    pBox(.22, .1, .08, 0, 1.04, .56, '#fff6d0'),                // 大燈
+    pBox(.015, .22, .015, -.27, 1.22, .48, '#6a6d70'), pBox(.015, .22, .015, .27, 1.22, .48, '#6a6d70'), pBox(.11, .07, .015, -.29, 1.43, .48, '#b9c4cc'), pBox(.11, .07, .015, .29, 1.43, .48, '#b9c4cc'),
+    pBox(.22, .07, .04, 0, .6, -.78, '#c0201a'), pBox(.2, .12, .02, 0, .44, -.79, '#f2f2ea'),
+  ];
+}
+// 一棟一棟的室內合成大塊網格（每 96 公尺一塊，遠的不畫）；燈、魚缸、神明燈晚上會亮
+function intMaterial() {
+  const m = toon(0xcfcac2, { vertexColors: true, roughness: .78, emissive: 0xffffff, emissiveIntensity: .3 });   // 室內比外面暗一點
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float glow;\nvarying float vGlow;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvGlow = glow;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vGlow;')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vColor.rgb * (0.17 + vGlow * 1.1);');
+  };
+  nightGlow.push(m);
+  return m;
+}
+const INT_SIGN = { seafood: '活海鮮・熱炒', grocery: '雜貨・飲料', scooter: '機車行', eatery: '早餐・小吃', tea: '手搖飲', tackle: '釣具・餌料', arcade: '遊藝場' };
+function buildInteriors() {
+  if (!INTS.length) return;
+  const mat = intMaterial(), chunks = new Map(), M = new THREE.Matrix4(), dirV = new THREE.Vector3(), upV = new THREE.Vector3(0, 1, 0), inV = new THREE.Vector3(), col = new THREE.Color();
+  let cur = null;
+  const add = ([g0, hex], glow = 0) => {
+    const g = g0.index ? g0.toNonIndexed() : g0; g.applyMatrix4(M);
+    col.set(hex); const n = g.attributes.position.count;
+    cur.P.push(...g.attributes.position.array); cur.N.push(...g.attributes.normal.array);
+    for (let i = 0; i < n; i++) { cur.C.push(col.r, col.g, col.b); cur.G.push(glow); }
+  };
+  const box = (w, h, d, x, y, z, c, glow, ry = 0) => add(pBox(w, h, d, x, y, z, c, 0, ry), glow);
+  const cyl = (r, h, x, y, z, c, glow, seg = 10, rx = 0, rz = 0) => add(pCyl(r, h, x, y, z, c, seg, r, rx, rz), glow);
+  const rnd = (h, k) => (hash(h, k) % 1000) / 1000;
+  const GOODS = ['#d9462b', '#f2c230', '#2f7fd0', '#3aa35b', '#f08a24', '#e9e2d0', '#8e44ad', '#e5517a', '#1f9aa8'];
+  for (const it of INTS) {
+    const key = Math.floor(it.x / 96) + ',' + Math.floor(it.z / 96);
+    if (!chunks.has(key)) chunks.set(key, { P: [], N: [], C: [], G: [] });
+    cur = chunks.get(key);
+    // 室內座標：x 沿著牆、y 往上（從地板）、z 往房子裡面
+    inV.set(-it.nx, 0, -it.nz); dirV.set(inV.z, 0, -inV.x);
+    M.makeBasis(dirV, upV, inV).setPosition(it.x, it.base + .25, it.z);
+    const W = it.w, D = it.d, h = it.hv, T = it.type, x0 = -W / 2, x1 = W / 2;
+    const floorC = { seafood: '#d6d0c2', grocery: '#cfcabe', scooter: '#6f6b65', home: '#cbc2b2', eatery: '#d2ccc0', tea: '#e8e2d6', tackle: '#b9aa90', arcade: '#3a3550' }[T];
+    const wallC = { seafood: '#f1f0ea', grocery: '#ece8dd', scooter: '#d4d1ca', home: '#ebe3d4', eatery: '#f4efe4', tea: '#fff7ec', tackle: '#e9e2d2', arcade: '#2c2a40' }[T];
+    // 房間：地板、天花板、三面牆、日光燈、捲起來的鐵捲門
+    box(W, .06, D, 0, -.06, D / 2, floorC); box(W, .06, D, 0, 2.95, D / 2, '#f3f2ee');
+    box(W, 2.95, .06, 0, 0, D - .03, wallC); box(.06, 2.95, D, x0 + .03, 0, D / 2, wallC); box(.06, 2.95, D, x1 - .03, 0, D / 2, wallC);
+    box(1.2, .05, .09, 0, 2.86, D * .35, '#fffdf0', 1); if (D > 3.5) box(1.2, .05, .09, 0, 2.86, D * .75, '#fffdf0', 1);
+    box(W + .3, .3, .32, 0, 2.95, -.17, '#8f9498');
+    if (T === 'seafood') {
+      for (let i = 0; i < 2 && 1 + i * 1.3 < D - .4; i++) {   // 活魚缸
+        box(.8, .72, 1.2, x0 + .48, 0, .9 + i * 1.3, '#9aa4ab'); box(.78, .7, 1.18, x0 + .48, .72, .9 + i * 1.3, '#3c9ccb', .75);
+        box(.6, .08, .05, x0 + .48, .9, .4 + i * 1.3, '#f08a24', .3);
+      }
+      const tz = Math.min(D - .8, 2.2);   // 圓桌、紅色塑膠椅
+      cyl(.05, .72, .45, 0, tz, '#7d7d7d', 0, 6); cyl(.5, .04, .45, .72, tz, '#ece6d6', 0, 16);
+      for (let a = 0; a < 4; a++) cyl(.16, .45, .45 + Math.cos(a * 1.57 + .4) * .75, 0, tz + Math.sin(a * 1.57 + .4) * .75, a % 2 ? '#d23a2e' : '#2f6fc0', 0, 8);
+      box(1.7, .7, .04, .3, 1.55, D - .09, '#b3261e', .2); for (let r = 0; r < 4; r++) box(1.4, .06, .02, .3, 1.66 + r * .14, D - .12, '#ffd34d', .5);
+      cyl(.17, .3, -.3, 2.3, .6, '#d42a1e', .9, 10); cyl(.17, .3, .9, 2.3, .6, '#d42a1e', .9, 10);
+      box(.7, 1.9, .6, x1 - .42, 0, D - .4, '#e8eef2'); box(.6, 1.6, .03, x1 - .42, .2, D - .72, '#bfe3ff', .7);
+      for (let r = 0; r < 4; r++) for (let q = 0; q < 3; q++) box(.12, .26, .12, x1 - .6 + q * .18, .28 + r * .4, D - .5, ['#2c7a3a', '#c9a227', '#b3261e'][(r + q) % 3], .25);
+    } else if (T === 'grocery') {
+      for (const sx of [x0 + .26, x1 - .26]) {   // 兩邊的貨架，擺滿東西
+        box(.46, 2.0, D - .8, sx, 0, D / 2 + .1, '#c8c3b6');
+        for (let lv = 0; lv < 4; lv++) for (let z = .7; z < D - .3; z += .32) {
+          const r = rnd(h + lv * 17, z * 10 + sx * 3); box(.34, .22 + r * .12, .26, sx - Math.sign(sx) * .02, .38 + lv * .45, z, GOODS[Math.floor(r * GOODS.length)], .06);
+        }
+      }
+      box(1.3, 1.95, .62, 0, 0, D - .4, '#eef2f4'); box(1.2, 1.65, .03, 0, .2, D - .72, '#d6ecff', .8);
+      for (let r = 0; r < 4; r++) for (let q = 0; q < 7; q++) box(.12, .25, .12, -.5 + q * .17, .27 + r * .4, D - .5, GOODS[(r * 3 + q) % GOODS.length], .3);
+      box(.8, .95, .9, x1 - .9, 0, .9, '#7a5a3a'); box(.34, .22, .3, x1 - .9, .95, .9, '#2c2c2c');
+      for (let k = 0; k < 3; k++) box(.42, .28, .32, x0 + 1.1, k * .28, .7, ['#c0392b', '#2f7fd0', '#f2c230'][k]);
+    } else if (T === 'scooter') {
+      for (let r = 0; r < 3; r++) for (let q = 0; q < 4; q++) cyl(.27, .12, -1.1 + q * .62, .35 + r * .7, D - .2, '#1c1c1c', 0, 14, Math.PI / 2);   // 輪胎架
+      box(.04, 1.3, 1.6, x0 + .05, .9, D / 2, '#c99a5b');   // 工具牆
+      for (let k = 0; k < 9; k++) box(.03, .22, .06, x0 + .08, 1.05 + (k % 3) * .4, D / 2 - .6 + Math.floor(k / 3) * .55, '#3a3a3a');
+      box(.6, .9, .45, x1 - .4, 0, D - .9, '#c0392b'); box(.3, .4, .3, x1 - .4, .9, D - .9, '#2f7fd0');
+      for (const [sx, sz, cc] of [[-.6, 1.4, '#e8e8e8'], [.5, 2.3, '#c0392b']]) if (sz < D - .5) for (const pt of scooterParts(cc)) { M.multiply(new THREE.Matrix4().makeTranslation(sx, 0, sz)); add(pt); M.multiply(new THREE.Matrix4().makeTranslation(-sx, 0, -sz)); }
+      box(.5, .6, .5, x0 + .5, 0, .5, '#3a3a3a');
+    } else if (T === 'home') {
+      box(2.1, .95, .6, 0, 0, D - .4, '#6b2316'); box(1.5, .42, .45, 0, .95, D - .35, '#7d2a1a');   // 神明桌
+      box(1.5, 1.1, .03, 0, 1.38, D - .07, '#d6a33f', .18); box(1.1, .75, .02, 0, 1.55, D - .09, '#b3261e', .12);
+      cyl(.07, .22, -.55, 1.37, D - .35, '#ff3a2a', 1.3, 8); cyl(.07, .22, .55, 1.37, D - .35, '#ff3a2a', 1.3, 8);
+      cyl(.12, .14, 0, .95, D - .62, '#c9a23c', .1, 10);
+      box(.7, .42, 1.6, x0 + .45, 0, D * .48, '#8a5a32'); box(.15, .45, 1.6, x0 + .14, .42, D * .48, '#7a4a28');   // 木頭沙發
+      box(.45, .5, 1.3, x1 - .3, 0, D * .48, '#5a4030'); box(.08, .62, 1.0, x1 - .3, .5, D * .48, '#141414', .06);
+      for (const pt of scooterParts(['#e6e6e6', '#2f6fc0', '#c0392b', '#2b2b2b'][h % 4])) { M.multiply(new THREE.Matrix4().makeTranslation(.6, 0, .75)); add(pt); M.multiply(new THREE.Matrix4().makeTranslation(-.6, 0, -.75)); }
+      box(.5, .6, .3, x0 + .4, 0, .35, '#a07850');
+      box(.3, .42, .02, x1 - .08, 1.6, 1.2, '#e74c3c', .1);   // 日曆
+    } else if (T === 'eatery') {
+      box(W - .7, .95, .6, -.2, 0, .65, '#c9ced2'); box(1.2, .05, .5, -.6, .95, .65, '#2e2e2e', .05);
+      cyl(.24, .42, .75, .95, .65, '#d7bf86', 0, 12); cyl(.24, .12, .75, 1.37, .65, '#c4ab70', 0, 12);
+      for (let k = 0; k < 3; k++) { box(.9, .55, .03, -1 + k * 1, 1.8, D - .08, '#fffdf6', .35); for (let r = 0; r < 3; r++) box(.7, .04, .02, -1 + k * 1, 1.9 + r * .13, D - .1, ['#c0392b', '#2f6fc0', '#2c2c2c'][r]); }
+      if (D > 3) { box(.7, .72, .7, -.3, 0, D - 1.2, '#e6dcc8'); for (const dx of [-.65, .05]) cyl(.15, .44, dx, 0, D - .65, '#2f6fc0', 0, 8); }
+    } else if (T === 'tea') {
+      box(W - .5, 1.0, .55, 0, 0, .7, '#f7f2e6'); box(W - .5, .08, .58, 0, 1.0, .7, '#ff5ab4', 1.1);
+      box(W - .4, .95, .04, 0, 1.75, D - .08, '#fff4d6', .9);
+      for (let r = 0; r < 5; r++) box(W - .9, .05, .02, 0, 1.85 + r * .16, D - .1, ['#7a4a2a', '#2f8f5a', '#c0392b', '#7a4a2a', '#2f6fc0'][r]);
+      for (let q = 0; q < 8; q++) cyl(.05, .17, -1 + q * .28, 1.0, .5, ['#d9a36a', '#7a4a2a', '#f3e1c0', '#2f8f5a'][q % 4], .15, 8);
+      box(.4, .5, .4, -.9, 1.0, .85, '#d9dde0');
+    } else if (T === 'tackle') {
+      for (let q = 0; q < 14; q++) cyl(.014, 2.5, x0 + .15 + (q % 7) * .08, 0, .5 + Math.floor(q / 7) * D * .4, ['#1c1c1c', '#c0392b', '#2f6fc0', '#f2c230'][q % 4], 0, 5);
+      box(.42, 2, D - 1, x1 - .25, 0, D / 2, '#c8c3b6');
+      for (let lv = 0; lv < 4; lv++) for (let z = .8; z < D - .5; z += .28) box(.3, .18, .2, x1 - .3, .4 + lv * .45, z, GOODS[Math.floor(rnd(h + lv, z * 9) * GOODS.length)], .08);
+      box(1, .9, .6, 0, 0, D - .4, '#e8eef2'); box(.9, .5, .03, 0, .3, D - .72, '#cdeaff', .6);
+    } else if (T === 'arcade') {
+      for (let q = 0; q < 3; q++) { const x = -1 + q; box(.7, 1.7, .6, x, 0, D - .5, '#2b2b3d'); box(.55, .45, .03, x, 1.05, D - .82, ['#ff5ab4', '#4ad6ff', '#ffe066'][q], 1.2); box(.6, .14, .04, x, 1.6, D - .82, '#ffe066', 1); }
+      box(W - .2, .06, .06, 0, 2.6, D - .1, '#ff3fa4', 1.5); box(W - .2, .06, .06, 0, .15, D - .1, '#3fd8ff', 1.5);
+    }
+  }
+  for (const [key, c] of chunks) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(c.P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(c.N, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(c.C, 3)); g.setAttribute('glow', new THREE.Float32BufferAttribute(c.G, 1));
+    g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, mat); m.receiveShadow = true; scene.add(m);
+    LOD.push({ o: m, x: g.boundingSphere.center.x, z: g.boundingSphere.center.z, d: 125 });
+  }
+  // 開著的店門口：橫的小招牌
+  const lab = INTS.filter(it => INT_SIGN[it.type]);
+  if (lab.length) {
+    const atl = signAtlas(lab.map(it => INT_SIGN[it.type]), 'h'), SP = [], SU = [], SI = [];
+    lab.forEach((it, k) => {
+      const dx = it.nz, dz = -it.nx, y0 = it.base + .25 + 3.15, cx = it.x + it.nx * .2, cz = it.z + it.nz * .2, hw = 1.45;
+      const b0 = SP.length / 3;
+      SP.push(cx - dx * hw, y0, cz - dz * hw, cx + dx * hw, y0, cz + dz * hw, cx + dx * hw, y0 + .55, cz + dz * hw, cx - dx * hw, y0 + .55, cz - dz * hw);
+      const [u0, v0, u1, v1] = atl.uv(k);
+      SU.push(u0, v0, u1, v0, u1, v1, u0, v1);
+      SI.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3);
+    });
+    signMesh(SP, SU, SI, atl.tex);
+  }
+}
+// 招牌圖集：h 橫式（每格 512×128）、v 直式（每格 128×512）
+function signAtlas(texts, kind) {
+  const uniq = [...new Set(texts)], cw = kind === 'h' ? 512 : 128, ch = kind === 'h' ? 128 : 512, per = Math.floor(2048 / cw);
+  const rows = Math.ceil(uniq.length / per), c = document.createElement('canvas'); c.width = 2048; c.height = Math.max(ch, Math.pow(2, Math.ceil(Math.log2(rows * ch))));
+  const x = c.getContext('2d');
+  const PAL = [['#c0392b', '#fff6d0'], ['#1f5fa8', '#ffffff'], ['#f2c230', '#b0201a'], ['#ffffff', '#c0392b'], ['#1e8449', '#ffffff'], ['#16324f', '#ffd166'], ['#ffffff', '#1f5fa8'], ['#e67e22', '#ffffff']];
+  uniq.forEach((t, k) => {
+    const ox = (k % per) * cw, oy = Math.floor(k / per) * ch, [bg, fg] = PAL[hash(k, t.length * 7) % PAL.length];
+    x.fillStyle = bg; x.fillRect(ox + 2, oy + 2, cw - 4, ch - 4);
+    x.strokeStyle = 'rgba(255,255,255,.75)'; x.lineWidth = 4; x.strokeRect(ox + 8, oy + 8, cw - 16, ch - 16);
+    x.fillStyle = fg; x.textAlign = 'center'; x.textBaseline = 'middle';
+    const F = '"PingFang TC", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif';
+    if (kind === 'h') { x.font = `bold ${Math.min(72, Math.floor(440 / t.length))}px ${F}`; x.fillText(t, ox + cw / 2, oy + ch / 2 + 3); }
+    else { const n = t.length, fs = Math.min(84, Math.floor(440 / n)); x.font = `bold ${fs}px ${F}`; [...t].forEach((chh, i) => x.fillText(chh, ox + cw / 2, oy + ch / 2 + (i - (n - 1) / 2) * fs * 1.08)); }
+  });
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+  return { tex, uv: k => { const i = uniq.indexOf(texts[k]), ox = (i % per) * cw, oy = Math.floor(i / per) * ch; return [ox / 2048, 1 - (oy + ch) / c.height, (ox + cw) / 2048, 1 - oy / c.height]; } };
+}
+function signMesh(P, U, I, tex) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals();
+  const m = toon(0xffffff, { map: tex, emissive: 0x404040, emissiveMap: tex, emissiveIntensity: .3, roughness: .5, side: THREE.DoubleSide });
+  nightGlow.push(m);
+  const o = new THREE.Mesh(g, m); scene.add(o); return o;
+}
+// 放一堆同樣的東西：items 是 [x, z, y, 轉角, 顏色, 縮放 xyz]
+function instGeo(geo, items, opt = {}) {
+  if (!items.length) return;
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3(), c = new THREE.Color(), up = new THREE.Vector3(0, 1, 0), e = new THREE.Euler();
+  const mat = opt.mat || toon(0xffffff, { vertexColors: true, roughness: opt.rough || .7, metalness: opt.metal || 0 });
+  chunked(geo, mat, items, 1, (im, [x, z, y, r, col, sx = 1, sy = sx, sz = sx, tilt = 0], k) => {
+    q.setFromEuler(e.set(0, r, tilt, 'YXZ'));
+    im.setMatrixAt(k, m4.compose(p.set(x, y, z), q, s.set(sx, sy, sz)));
+    im.setColorAt(k, c.set(col || '#ffffff'));
+  }, { cast: opt.cast, lod: opt.lod, keepLayer: opt.keepLayer, y: opt.y, r: opt.r });
+}
+// ---- 立面零件：面對馬路那面的鐵窗、冷氣、陽台、雨遮、直式招牌 ----
+function buildFacadeProps() {
+  const cages = [], acs = [], balc = [], awn = [], vs = [], vsT = [];
+  const CAGE = ['#eeeeea', '#e6eee8', '#dfe7ee', '#efe9dc'], AWN = ['#3f8f5a', '#3a6fa8', '#d9822b', '#cfcfcf', '#b8402e', '#2f7f88'];
+  const VTXT = ['檳榔', '民宿', '當舖', '診所', '漁具', '冰果室', '活海鮮', '小吃', '理髮', '五金', '藥局', '卡拉OK', '麵店', '鐘錶眼鏡', '機車', '海產', '冷凍', '牙醫', '補習班', '旅社'];
+  for (const F of FRONTS) {
+    const { a, nx, nz, L, u, base, g1, H, hv } = F, dx = -nz, dz = nx, rot = Math.atan2(nx, nz);
+    const at = (t, out) => [a[0] + (F.c[0] - a[0]) / L * t + nx * out, a[1] + (F.c[1] - a[1]) / L * t + nz * out];
+    // 貼圖的開間：0 左、1 右，奇數層在上半張
+    const nf = Math.floor((H - g1 + .3) / 3.4);
+    F.bays.forEach((s, bi) => {
+      const t = s + 1.75, col = Math.floor((u + t) / 3.5) % 2;
+      for (let f = 0; f < nf; f++) {
+        const q = col + (f % 2 === 1 ? 0 : 2), fy = base + g1 + f * 3.4, r = hash(hv + bi * 7, f * 3 + 1) % 100;
+        if ((q === 0 || q === 3) && r < 80) { const [x, z] = at(t, 0); cages.push([x, z, fy + .82, rot, CAGE[hv % 4]]); }
+        else if (q === 1 && r < 90) { const [x, z] = at(t, 0); acs.push([x, z, fy + .24, rot, '#ffffff']); }
+        else if (q === 2 && r < 50) { const [x, z] = at(t, 0); balc.push([x, z, fy, rot, ['#ffffff', '#f4efe2', '#e6efe9'][r % 3]]); }
+      }
+      // 一樓雨遮
+      if (hash(hv, bi * 5 + 2) % 100 < 45) { const [x, z] = at(t, 0); awn.push([x, z, base + 3.05, rot, AWN[(hv + bi) % AWN.length]]); }
+    });
+    // 直式招牌：從牆上伸出來，跟牆垂直
+    if (H > 6.5 && hv % 100 < 60) {
+      const t = hv % 2 ? .55 : L - .55, [x, z] = at(t, .55), hgt = Math.min(5.2, H - g1 - .5), y0 = base + g1 + .3;
+      vsT.push(VTXT[(hv >>> 3) % VTXT.length]); vs.push([x, z, y0, hgt, dx, dz, nx, nz]);
+    }
+  }
+  // 鐵窗：外框、直條、上面一片斜的遮雨鐵皮（白色會跟著每戶的顏色染）
+  const cg = [];
+  for (let x = -1.2; x <= 1.21; x += .16) cg.push(pBox(.025, 2.05, .025, x, 0, .36, '#ffffff'));
+  for (const y of [0, .68, 1.36, 2.03]) cg.push(pBox(2.5, .03, .03, 0, y, .36, '#ffffff'));
+  for (const x of [-1.24, 1.24]) for (const y of [0, 2.03]) cg.push(pBox(.03, .03, .36, x, y, .18, '#ffffff'));
+  cg.push(pBox(2.62, .03, .55, 0, 2.12, .26, '#8aa0ad', -.28));
+  instGeo(colGeo(cg), cages, { lod: 130, metal: .3, rough: .5 });
+  // 冷氣室外機
+  instGeo(colGeo([pBox(1.35, .62, .38, 0, 0, .2, '#e7e7e2'), pCyl(.23, .02, -.26, .31, .39, '#5c5f62', 14, .23, Math.PI / 2), pBox(.04, .3, .02, .38, .16, .39, '#9a9a96'), pBox(.04, .3, .02, .48, .16, .39, '#9a9a96'),
+    pBox(.04, .04, .4, -.5, -.05, .2, '#777'), pBox(.04, .04, .4, .5, -.05, .2, '#777')]), acs, { lod: 110 });
+  // 陽台：樓板、欄杆、幾盆花
+  const bg = [pBox(3.3, .12, .95, 0, -.08, .47, '#d2cdc3'), pBox(3.3, .05, .05, 0, 1.05, .93, '#2f4f3f'), pBox(.05, .05, .95, -1.62, 1.05, .47, '#2f4f3f'), pBox(.05, .05, .95, 1.62, 1.05, .47, '#2f4f3f')];
+  for (let x = -1.6; x <= 1.61; x += .15) bg.push(pBox(.025, 1.05, .025, x, 0, .93, '#2f4f3f'));
+  bg.push(pCyl(.14, .25, -1.1, 0, .6, '#a0522d', 8, .17), pBall(.24, -1.1, .4, .6, '#3f8a3a', .8, 7), pCyl(.12, .22, .9, 0, .62, '#c0703a', 8, .15), pBall(.2, .9, .35, .62, '#5aa43a', .9, 7));
+  bg.push(pBox(.03, .03, 3.0, 0, 2.45, .5, '#9a9a9a', 0, Math.PI / 2));   // 曬衣桿
+  instGeo(colGeo(bg), balc, { lod: 120 });
+  // 雨遮：斜斜的鐵皮
+  instGeo(colGeo([pBox(3.4, .04, 1.35, 0, 0, .62, '#ffffff', .26), pBox(.04, .04, 1.3, -1.6, -.3, .55, '#666', -.55), pBox(.04, .04, 1.3, 1.6, -.3, .55, '#666', -.55)]), awn, { cast: 1, lod: 130 });
+  // 直式招牌
+  if (vs.length) {
+    const atl = signAtlas(vsT, 'v'), P = [], U = [], I = [];
+    vs.forEach(([x, z, y0, hgt, dx, dz, nx, nz], k) => {
+      const hw = .5, b0 = P.length / 3;   // 招牌面跟牆垂直：沿著法線方向展開
+      P.push(x - nx * hw, y0, z - nz * hw, x + nx * hw, y0, z + nz * hw, x + nx * hw, y0 + hgt, z + nz * hw, x - nx * hw, y0 + hgt, z - nz * hw);
+      const [u0, v0, u1, v1] = atl.uv(k);
+      U.push(u0, v0, u1, v0, u1, v1, u0, v1);
+      I.push(b0, b0 + 1, b0 + 2, b0, b0 + 2, b0 + 3);
+      // 背面也印字（另一組頂點，字才不會反過來）
+      const b1 = P.length / 3;
+      P.push(x + nx * hw, y0, z + nz * hw, x - nx * hw, y0, z - nz * hw, x - nx * hw, y0 + hgt, z - nz * hw, x + nx * hw, y0 + hgt, z + nz * hw);
+      U.push(u0, v0, u1, v0, u1, v1, u0, v1);
+      I.push(b1, b1 + 1, b1 + 2, b1, b1 + 2, b1 + 3);
+    });
+    const o = signMesh(P, U, I, atl.tex); o.material.side = THREE.FrontSide; o.material.polygonOffset = true; o.material.polygonOffsetFactor = -1;
+    // 招牌的鐵架
+    instGeo(colGeo([pBox(.06, .06, .6, 0, 0, .3, '#555')]), vs.flatMap(([x, z, y0, hgt, dx, dz, nx, nz]) => [[x - nx * .55, z - nz * .55, y0 + .2, Math.atan2(nx, nz), '#ffffff'], [x - nx * .55, z - nz * .55, y0 + hgt - .3, Math.atan2(nx, nz), '#ffffff']]), { lod: 120 });
+  }
+}
+// ---- 路邊：停好的機車、電線桿和電線、盆栽、塑膠椅圓桌、反光鏡、郵筒 ----
+function buildStreetProps() {
+  const scoot = [], poles = [], trans = [], pots = [], stools = [], tables = [], mirrors = [], mail = [];
+  const SC = ['#f2f2f0', '#f2f2f0', '#c0392b', '#2f6fc0', '#2b2b2b', '#9aa3a8', '#7fc8b0', '#f2c230', '#e8a0b0'];
+  const wires = [];
+  for (const [w, c] of REAL.roads) {
+    if (w < 3.5) continue;
+    const pts = []; for (let n = 0; n < c.length; n += 2) pts.push([c[n], c[n + 1]]);
+    let dist = 0, lastPole = null, poleSide = hash(Math.round(pts[0][0]), Math.round(pts[0][1])) % 2 ? 1 : -1;
+    for (let k = 1; k < pts.length; k++) {
+      const [ax, az] = pts[k - 1], [bx, bz] = pts[k], L = Math.hypot(bx - ax, bz - az); if (L < .1) continue;
+      const tx = (bx - ax) / L, tz = (bz - az) / L, nx = -tz, nz = tx;
+      for (let d = (12 - dist % 12) % 12; d < L; d += 12) {   // 每 12 公尺一段
+        const px = ax + tx * d, pz = az + tz * d, h = hash(Math.round(px * 3), Math.round(pz * 3));
+        for (const side of [-1, 1]) {
+          const off = w / 2 + .95, sx = px + nx * side * off, sz = pz + nz * side * off;
+          // 一排機車（車頭朝房子）
+          if ((h >>> (side > 0 ? 2 : 5)) % 100 < 30) {
+            const cnt = 2 + (h >>> 8) % 5;
+            for (let i = 0; i < cnt; i++) {
+              const x = sx + tx * (i - cnt / 2) * .78, z = sz + tz * (i - cnt / 2) * .78;
+              if (!groundOK(x, z, .45) || roadNear(x, z) < .1) continue;
+              const hh = hash(h + i, 9);
+              scoot.push([x, z, groundH(x, z), Math.atan2(nx * side, nz * side) + ((hh % 30) - 15) / 100, SC[hh % SC.length], 1, 1, 1, ((hh >>> 4) % 2 ? 1 : -1) * .07]);
+            }
+          }
+        }
+        // 電線桿：一邊，每 3 段一支
+        const pd = dist + d;
+        if (w >= 5 && Math.round(pd / 12) % 3 === 0) {
+          const x = px + nx * poleSide * (w / 2 + .45), z = pz + nz * poleSide * (w / 2 + .45);
+          if (groundOK(x, z, .2)) {
+            const rot = Math.atan2(tx, tz) + Math.PI / 2, gy = groundH(x, z);
+            poles.push([x, z, gy, rot, '#ffffff']);
+            if (h % 4 === 0) trans.push([x, z, gy, rot, '#ffffff']);
+            const cur = [x, z, gy, tx, tz];
+            if (lastPole && Math.hypot(lastPole[0] - x, lastPole[1] - z) < 50) wires.push([lastPole, cur]);
+            lastPole = cur;
+          } else lastPole = null;
+        }
+      }
+      dist += L;
+    }
+    // 路的兩頭：轉角反光鏡
+    if (w >= 5 && pts.length > 1) {
+      const [ax, az] = pts[0], [bx, bz] = pts[1], L = Math.hypot(bx - ax, bz - az) || 1, x = ax + (bx - ax) / L * 3 - (bz - az) / L * (w / 2 + .6), z = az + (bz - az) / L * 3 + (bx - ax) / L * (w / 2 + .6);
+      if (groundOK(x, z) && hash(Math.round(x), Math.round(z)) % 3 === 0) mirrors.push([x, z, groundH(x, z), Math.atan2(bx - ax, bz - az) + Math.PI, '#ffffff']);
+    }
+  }
+  // 房子門口：盆栽；開著的海產店、小吃店門口擺圓桌和塑膠椅
+  for (const F of FRONTS) {
+    const { a, c, nx, nz, L, hv } = F;
+    if (hv % 100 < 55) for (let i = 0; i < 1 + hv % 3; i++) {
+      const t = (hash(hv, i) % 1000) / 1000 * (L - 1) + .5, x = a[0] + (c[0] - a[0]) / L * t + nx * .45, z = a[1] + (c[1] - a[1]) / L * t + nz * .45;
+      if (groundOK(x, z, .15)) pots.push([x, z, groundH(x, z), (hv % 7) * .9, '#ffffff', .8 + (hash(hv, i + 9) % 50) / 100]);
+    }
+  }
+  for (const it of INTS) {
+    if (it.type !== 'seafood' && it.type !== 'eatery') continue;
+    const x = it.x + it.nx * 1.7, z = it.z + it.nz * 1.7;
+    if (!groundOK(x, z, .3) || roadNear(x, z) < .2) continue;
+    const gy = groundH(x, z); tables.push([x, z, gy, 0, '#ffffff']);
+    for (let k = 0; k < 4; k++) { const ang = k * 1.57 + .5; stools.push([x + Math.cos(ang) * .7, z + Math.sin(ang) * .7, gy, 0, k % 2 ? '#d23a2e' : '#2f6fc0']); }
+  }
+  for (const b of BLD) if (b.shop === 'market' || b.shop === 'restaurant') {
+    const x = b.cx + (SPAWN.x * TX - b.cx) * .15, z = b.cz + (SPAWN.y * TZ - b.cz) * .15;
+    for (let r = 4; r < 22; r += 2) { const ang = hash(Math.round(b.cx), r) % 628 / 100, xx = b.cx + Math.cos(ang) * r, zz = b.cz + Math.sin(ang) * r; if (groundOK(xx, zz, .6) && roadNear(xx, zz) > .3) { mail.push([xx, zz, groundH(xx, zz), ang, '#ffffff']); break; } }
+  }
+  instGeo(colGeo(scooterParts()), scoot, { cast: 1, lod: 75 });
+  // 電線桿：水泥桿、兩支橫擔、白色礙子
+  const pg = [pCyl(.17, 10.6, 0, 0, 0, '#a4a29b', 8, .12), pBox(1.9, .12, .12, 0, 9.6, 0, '#77766f'), pBox(1.4, .1, .1, 0, 8.7, 0, '#77766f')];
+  for (const x of [-.85, 0, .85]) pg.push(pCyl(.05, .16, x, 9.72, 0, '#f0f0ea', 6));
+  for (const y of [2.4, 3.2]) pg.push(pBox(.3, .5, .02, 0, y, .17, y > 3 ? '#f2c230' : '#ffffff'));   // 電線桿上的小廣告
+  instGeo(colGeo(pg), poles, { cast: 1, y: 5, r: 10 });
+  instGeo(colGeo([pCyl(.32, .9, -.45, 7.2, .35, '#8d9397', 12), pCyl(.32, .9, .45, 7.2, .35, '#8d9397', 12), pBox(1.2, .08, .1, 0, 7.15, .12, '#666')]), trans, { y: 7, r: 4 });
+  // 電線：每兩支桿子中間三條，往下垂
+  if (wires.length) {
+    const WP = [];
+    for (const [A, B] of wires) for (const o of [-.85, 0, .85]) {
+      const ra = Math.atan2(A[3], A[4]) + Math.PI / 2, rb = Math.atan2(B[3], B[4]) + Math.PI / 2;   // 橫擔的方向
+      const ax = A[0] + Math.cos(ra) * o, az = A[1] - Math.sin(ra) * o, bx = B[0] + Math.cos(rb) * o, bz = B[1] - Math.sin(rb) * o;
+      const ay = A[2] + 9.78, by = B[2] + 9.78, len = Math.hypot(bx - ax, bz - az), sag = len * .035;
+      for (let i = 0; i < 8; i++) {
+        const t0 = i / 8, t1 = (i + 1) / 8;
+        WP.push(ax + (bx - ax) * t0, ay + (by - ay) * t0 - sag * 4 * t0 * (1 - t0), az + (bz - az) * t0, ax + (bx - ax) * t1, ay + (by - ay) * t1 - sag * 4 * t1 * (1 - t1), az + (bz - az) * t1);
+      }
+    }
+    const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(WP, 3));
+    scene.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0x26282b, transparent: true, opacity: .75 })));
+  }
+  instGeo(colGeo([pCyl(.2, .34, 0, 0, 0, '#9c5130', 8, .24), pBall(.32, 0, .55, 0, '#3f8a3a', .9, 7), pBall(.22, .14, .78, .08, '#4f9a40', 1, 6), pBall(.2, -.15, .7, -.06, '#367a33', 1, 6)]), pots, { lod: 90 });
+  instGeo(colGeo([pCyl(.16, .44, 0, 0, 0, '#ffffff', 8, .19)]), stools, { lod: 80 });
+  instGeo(colGeo([pCyl(.05, .72, 0, 0, 0, '#7d7d7d', 6), pCyl(.5, .04, 0, .72, 0, '#ece6d6', 16)]), tables, { lod: 80 });
+  instGeo(colGeo([pBox(.08, 2.7, .08, 0, 0, 0, '#e07020'), pCyl(.36, .05, 0, 2.75, .08, '#e07020', 16, .36, Math.PI / 2), pCyl(.32, .06, 0, 2.75, .1, '#dfe6ea', 16, .32, Math.PI / 2)]), mirrors, { lod: 120 });
+  instGeo(colGeo([pBox(.4, 1.0, .35, -.24, 0, 0, '#c0392b'), pBox(.4, 1.0, .35, .24, 0, 0, '#2e8b57'), pBox(.44, .12, .4, -.24, 1.0, 0, '#a93226'), pBox(.44, .12, .4, .24, 1.0, 0, '#25784a')]), mail, { lod: 90 });
+}
+// ---- 港邊：繫船柱、保麗龍箱、塑膠籃、漁網、纜繩、浮球 ----
+function buildHarbourProps() {
+  const bol = [], sty = [], bas = [], net = [], rope = [], buoy = [];
+  const basin = REAL.basin.map(r => { const o = []; for (let n = 0; n < r.length; n += 2) o.push([r[n], r[n + 1]]); return o; });
+  for (const r of basin) for (let e = 0; e < r.length; e++) {
+    const a = r[e], c = r[(e + 1) % r.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (L < 2) continue;
+    const tx = (c[0] - a[0]) / L, tz = (c[1] - a[1]) / L;
+    let nx = -tz, nz = tx;   // 往陸地那邊
+    if (inPoly(r, (a[0] + c[0]) / 2 + nx * .5, (a[1] + c[1]) / 2 + nz * .5)) { nx = -nx; nz = -nz; }
+    for (let d = 2; d < L - 1; d += 4.5) {
+      const px = a[0] + tx * d, pz = a[1] + tz * d, h = hash(Math.round(px * 2), Math.round(pz * 2));
+      // 繫船柱：離岸邊 0.5 公尺，每 9 公尺一支
+      if (Math.round(d / 4.5) % 2 === 0) { const x = px + nx * .5, z = pz + nz * .5; if (groundOK(x, z, .2)) bol.push([x, z, groundH(x, z), 0, h % 5 ? '#ffffff' : '#f2c230']); }
+      if (h % 100 > 40) continue;
+      // 一堆漁具：離岸邊 2～4.5 公尺
+      const off = 2 + (h >>> 3) % 25 / 10, x = px + nx * off, z = pz + nz * off;
+      if (!groundOK(x, z, .8) || roadNear(x, z) < .3) continue;
+      const gy = groundH(x, z), rot = Math.atan2(tx, tz), kind = (h >>> 6) % 5;
+      if (kind === 0) { for (let i = 0; i < 4; i++) for (let j = 0; j < 2 + (h >>> (9 + i)) % 4; j++) sty.push([x + (i % 2) * .62 * tz + Math.floor(i / 2) * .44 * nx, z - (i % 2) * .62 * tx + Math.floor(i / 2) * .44 * nz, gy + j * .32, rot, '#ffffff']); }
+      else if (kind === 1) { const cc = ['#2f6fb8', '#f2c230', '#d9462b', '#2f9a5a'][(h >>> 11) % 4]; for (let i = 0; i < 3; i++) for (let j = 0; j < 1 + (h >>> (12 + i)) % 3; j++) bas.push([x + i * .6 * tz, z - i * .6 * tx, gy + j * .3, rot + j * .05, cc]); }
+      else if (kind === 2) { net.push([x, z, gy, rot, ['#3f7a4a', '#2f5f8a', '#7a8a3a'][(h >>> 11) % 3], 1 + (h >>> 13) % 6 / 10]); for (let i = 0; i < 4; i++) buoy.push([x + Math.cos(i * 1.6 + h) * .9, z + Math.sin(i * 1.6 + h) * .9, gy + .18, 0, i % 2 ? '#ff6a1a' : '#f2f2ea']); }
+      else if (kind === 3) { rope.push([x, z, gy, rot, ['#e5a23a', '#3a6fb8', '#d9d2c0'][(h >>> 11) % 3]]); rope.push([x + .1, z + .05, gy + .14, rot + 1, ['#e5a23a', '#3a6fb8', '#d9d2c0'][(h >>> 12) % 3]]); }
+      else { for (let i = 0; i < 6; i++) buoy.push([x + (i % 3) * .42 * tz + Math.floor(i / 3) * .42 * nx, z - (i % 3) * .42 * tx + Math.floor(i / 3) * .42 * nz, gy + .2, 0, ['#ff6a1a', '#ff6a1a', '#f2c230', '#f2f2ea'][i % 4]]); }
+    }
+  }
+  instGeo(colGeo([pCyl(.2, .5, 0, 0, 0, '#2c2c2e', 10, .24), pBall(.26, 0, .55, 0, '#2c2c2e', .45, 10)]), bol, { lod: 160, cast: 1 });
+  instGeo(colGeo([pBox(.6, .32, .42, 0, 0, 0, '#f4f4f0'), pBox(.62, .05, .44, 0, .3, 0, '#e8e8e2')]), sty, { lod: 130, cast: 1 });
+  instGeo(colGeo([pBox(.56, .3, .4, 0, 0, 0, '#ffffff')]), bas, { lod: 120, cast: 1 });
+  instGeo(colGeo([pBall(.9, 0, .05, 0, '#ffffff', .32, 9), pBall(.55, .3, .25, .1, '#ffffff', .4, 7)]), net, { lod: 120 });
+  const tg = new THREE.TorusGeometry(.34, .08, 6, 16); tg.rotateX(Math.PI / 2); tg.translate(0, .08, 0);
+  instGeo(colGeo([[tg, '#ffffff']]), rope, { lod: 100 });
+  instGeo(colGeo([pBall(.2, 0, 0, 0, '#ffffff', 1, 10)]), buoy, { lod: 110 });
+}
 const QUAY_Y = .9;   // 堤防頂面高度
 const REAL_EYE = 1.75;   // 真實地圖：真人的眼睛高度
 let realBoats = null;
@@ -3754,6 +4375,21 @@ function buildRealTown() {
     else gIdx[grp].push(base, base + 2, base + 1, base, base + 3, base + 2);
   };
   const tanks = [], sheds = [], signs = [];
+  FRONTS.length = 0; INTS.length = 0;
+  const frontEdge = b => {
+    let best = -1, bd = 1e9;
+    const pts = b.pts, n = pts.length;
+    for (let e = 0; e < n; e++) {
+      const a = pts[e], c = pts[(e + 1) % n], ex = c[0] - a[0], ez = c[1] - a[1], L = Math.hypot(ex, ez);
+      if (L < 3.6) continue;
+      let nx = ez / L, nz = -ex / L;
+      const mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
+      if (inPoly(pts, mx + nx * .2, mz + nz * .2)) { nx = -nx; nz = -nz; }
+      const d = roadNear(mx + nx * 1.5, mz + nz * 1.5) - L * .02;
+      if (d < 5 && d < bd) { bd = d; best = e; }
+    }
+    return best;
+  };
   const roadPts = [];
   for (const [w, c] of REAL.roads) if (w > 2.5) for (let n = 0; n < c.length; n += 2) roadPts.push([c[n], c[n + 1]]);
   BLD.forEach((b, k) => {
@@ -3766,6 +4402,7 @@ function buildRealTown() {
     col.set(temple ? '#b8432f' : market ? '#e6ebee' : FACADE[hv % FACADE.length]);
     col.offsetHSL(0, 0, ((hv >>> 4) % 10 - 5) * .006);
     const H = b.h, g1 = Math.min(H, 3.8);
+    const fe = H > 2.8 ? frontEdge(b) : -1;   // 面對馬路的那一面
     // 每一面牆
     let u = 0;
     for (let e = 0; e < n; e++) {
@@ -3775,6 +4412,31 @@ function buildRealTown() {
       const mx = (a[0] + c[0]) / 2 + nx * .2, mz = (a[1] + c[1]) / 2 + nz * .2;
       if (inPoly(pts, mx, mz)) { nx = -nx; nz = -nz; }   // 法線朝外
       const nn = [nx, nz];
+      if (e === fe) {
+        // 一樓一個開間 3.5 公尺（跟牆面貼圖對齊），有些拉開鐵捲門看得到裡面
+        const BW = 3.5, s0 = (BW - u % BW) % BW, bays = [], opens = [];
+        for (let s = s0; s + BW <= L - .05; s += BW) bays.push(s);
+        const far = Math.hypot(b.cx - SPAWN.x * TX, b.cz - SPAWN.y * TZ) > 430;
+        bays.forEach((s, bi) => {
+          const r = hash(k * 31 + bi, 977) % 100;
+          if (far || INTS.length >= 170 || opens.length >= 3 || r >= (b.shop ? 90 : 62)) return;
+          const t = s + BW / 2, ox = a[0] + ex / L * t, oz = a[1] + ez / L * t;
+          let D = 0;   // 房子裡面多深
+          for (const d of [5, 4.2, 3.4, 2.6]) if ([-1.4, 0, 1.4].every(w => inPoly(pts, ox - nx * d + ex / L * w, oz - nz * d + ez / L * w))) { D = d; break; }
+          if (!D) return;
+          opens.push([s + .15, s + BW - .15]);
+          INTS.push({ x: ox, z: oz, nx, nz, w: BW - .3, d: D - .1, base, type: intType(b, k * 7 + bi), hv: hash(k, bi * 13) });
+        });
+        // 一樓的牆：開口以外的地方，開口上面一段門楣
+        let p0 = 0;
+        const at = t => [a[0] + ex / L * t, a[1] + ez / L * t];
+        for (const [o0, o1] of opens.concat([[L, L]])) {
+          if (o0 - p0 > .01) quad(0, at(p0), at(o0), base, base + g1, nn, (u + p0) / 7, (u + o0) / 7, 0, (g1 + .25) / 4.05, col);
+          if (o1 > o0) quad(2, at(o0), at(o1), base + 2.95, base + g1, nn, 0, 0, 0, 0, col);
+          p0 = o1;
+        }
+        FRONTS.push({ b, a, c, nx, nz, L, u, base, g1, H, hv, bays, opens });
+      } else
       quad(0, a, c, base, base + g1, nn, u / 7, (u + L) / 7, 0, (g1 + .25) / 4.05, col);
       if (H > 4.1) quad(1, a, c, base + g1, base + H, nn, u / 7, (u + L) / 7, 0, (H - g1) / 6.8, col);
       if (H > 4.5 && !temple) quad(2, a, c, base + H, base + H + .9, nn, 0, 0, 0, 0, col);
@@ -3865,7 +4527,9 @@ function buildRealTown() {
   }
   // 路燈（餐廳、店門口的地上也有一圈暖光）
   const shopPools = signs.map(sg => { const x = sg.best.mx + sg.best.nx * 2.5, z = sg.best.mz + sg.best.nz * 2.5; return [x, z, 7, groundH(x, z)]; });
-  buildStreetLamps(shopPools);
+  // 晚上開著的店，門口地上也有一圈光
+  buildStreetLamps(shopPools.concat(INTS.filter((it, k) => k % 2 === 0).map(it => { const x = it.x + it.nx * 1.8, z = it.z + it.nz * 1.8; return [x, z, 5, groundH(x, z)]; })));
+  buildInteriors(); buildFacadeProps(); buildStreetProps(); buildHarbourProps();
   // ---- 馬路：柏油、人行道、白色標線 ----
   {
     const RP = [], RC = [], RI = [], LP = [], LU = [], LI = [];
@@ -4463,8 +5127,9 @@ let frameNo = 0;
 // ---- 水裡游的立體魚：近的畫成會擺動的魚，遠的只畫影子（看得出哪裡魚多）----
 // 身體在 shader 裡擺動（共用幾何、每條魚自己的 uniform），手機也跑得動
 const SWIM = {}, swimFree = {}, swimUsed = new Set();
-function swimMat(tex, uni) {
-  const m = toon(0xffffff, { map: tex, roughness: .3, metalness: .3, transparent: true, opacity: .92 });
+function swimMat(tex, uni, fin) {
+  const m = fin ? toon(0xffffff, { map: tex, roughness: .5, side: THREE.DoubleSide, alphaTest: .45 })   // 照片魚的魚鰭片
+    : toon(0xffffff, { map: tex, roughness: .3, metalness: .2, transparent: true, opacity: .94 });
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, UW, uni);
     sh.vertexShader = 'uniform float uPh, uAmp, uTurn;\nvarying vec3 vUW;\n' + sh.vertexShader
@@ -4483,6 +5148,7 @@ function swimMat(tex, uni) {
 }
 function swimKit(f) {
   if (SWIM[f.id]) return SWIM[f.id];
+  if (photoReady(f.id)) { const G = photoGeos(f.id); return (SWIM[f.id] = { photo: true, geo: G.body, fin: G.fin, tex: PHOTO_TEX[f.id] }); }
   const B = FISH_BODY[f.shape] || FISH_BODY.normal, geo = new THREE.SphereGeometry(1, 20, 12);
   const pos = geo.attributes.position, uv = geo.attributes.uv;
   for (let i = 0; i < pos.count; i++) uv.setXY(i, (B.cx + pos.getX(i) * B.rx) / FW, 1 - (14 - pos.getY(i) * B.ry) / FH);
@@ -4499,8 +5165,11 @@ function getSwimmer(f) {
   if (!o) {
     const kit = swimKit(f), uni = { uPh: { value: 0 }, uAmp: { value: .5 }, uTurn: { value: 0 } };
     const g = new THREE.Group(), body = new THREE.Mesh(kit.geo, swimMat(kit.tex, uni)), tail = new THREE.Group();
-    tail.position.x = -.47; tail.add(new THREE.Mesh(kit.tail, kit.finM)); g.add(body, tail);
-    if (kit.dorsal) g.add(new THREE.Mesh(kit.dorsal, kit.finM));
+    if (kit.photo) g.add(body, new THREE.Mesh(kit.fin, swimMat(kit.tex, uni, true)));   // 照片魚：身體＋魚鰭片，一起在 shader 裡擺
+    else {
+      tail.position.x = -.47; tail.add(new THREE.Mesh(kit.tail, kit.finM)); g.add(body, tail);
+      if (kit.dorsal) g.add(new THREE.Mesh(kit.dorsal, kit.finM));
+    }
     g.traverse(m => { if (m.isMesh) m.renderOrder = 3; });   // 畫在水面之後，看得清楚
     scene.add(g);
     o = { g, uni, tail, f };
@@ -4549,6 +5218,60 @@ function syncShadows() {
 const rodRig = new THREE.Group();
 rodRig.position.set(.3, -.36, -.5);
 camera.add(rodRig);
+// ---- 我的機車：薄荷綠復古速克達，騎的時候看得到龍頭、儀表、雙手；下車就停在路邊 ----
+const scooter = new THREE.Group();
+{
+  const g = colGeo(scooterParts('#8fd3bd').concat([
+    pBox(.34, .07, .17, 0, 1.2, .46, '#2e3134'),                       // 儀表殼
+    pBox(.62, .06, .1, 0, 1.17, .5, '#8fd3bd'),                        // 龍頭蓋
+    pBox(.1, .06, .06, -.36, 1.19, .5, '#151515'), pBox(.1, .06, .06, .36, 1.19, .5, '#151515'),
+    pBox(.38, .28, .3, 0, .78, -.62, '#e9e4d8'),                       // 後箱
+  ]));
+  const body = new THREE.Mesh(g, toon(0xffffff, { vertexColors: true, roughness: .45, metalness: .15 }));
+  body.castShadow = true; scooter.add(body);
+  // 儀表：速度
+  const dc = document.createElement('canvas'); dc.width = 128; dc.height = 64;
+  const dt = new THREE.CanvasTexture(dc);
+  const dash = new THREE.Mesh(new THREE.PlaneGeometry(.3, .15), toon(0xffffff, { map: dt, emissive: 0xffffff, emissiveMap: dt, emissiveIntensity: .6, roughness: .3 }));
+  dash.position.set(0, 1.3, .43); dash.rotation.set(-Math.PI / 2 - .5, 0, Math.PI); scooter.add(dash);   // 斜斜朝向騎士
+  scooter.userData.dash = { c: dc, t: dt, last: -1 };
+  // 大燈（晚上亮）、地上的光
+  const hl = new THREE.Mesh(new THREE.BoxGeometry(.2, .09, .02), toon(0xfff6d0, { emissive: 0xfff2c0, emissiveIntensity: .3 }));
+  hl.position.set(0, 1.09, .61); scooter.add(hl); nightGlow.push(hl.material);
+  const bc = document.createElement('canvas'); bc.width = bc.height = 64;
+  const bx = bc.getContext('2d'), bg = bx.createRadialGradient(32, 32, 0, 32, 32, 32); bg.addColorStop(0, 'rgba(255,240,200,.9)'); bg.addColorStop(1, 'rgba(255,240,200,0)');
+  bx.fillStyle = bg; bx.fillRect(0, 0, 64, 64);
+  const beam = new THREE.Mesh(new THREE.PlaneGeometry(4, 9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 }));
+  beam.rotation.x = -Math.PI / 2; beam.position.set(0, .12, 6); scooter.add(beam); scooter.userData.beam = beam;
+  // 握著龍頭的手
+  const hm = toon(0xf7c58e);
+  for (const x of [-.36, .36]) { const h = new THREE.Mesh(new THREE.BoxGeometry(.1, .09, .13), hm); h.position.set(x, 1.22, .49); scooter.add(h); scooter.userData[x < 0 ? 'hl' : 'hr'] = h; }
+  scooter.visible = false; scene.add(scooter);
+}
+function updateScooter(dt, rk) {
+  rodRig.visible = !ride.on;
+  const sc = scooter, u = sc.userData;
+  sc.visible = ride.on || !!ride.park;
+  if (!sc.visible) return;
+  u.hl.visible = u.hr.visible = ride.on;
+  if (ride.on) {
+    const x = P.x * TX - Math.sin(yaw) * .55, z = P.y * TZ - Math.cos(yaw) * .55;   // 人坐在後座的位置，龍頭在前面一公尺
+    sc.position.set(x, camGround, z); sc.rotation.set(0, yaw + Math.PI, ride.st * .16 * rk, 'YXZ');
+    const kmh = Math.round(Math.abs(ride.v) * 3.6);
+    if (kmh !== u.dash.last) {   // 儀表數字有變才重畫
+      u.dash.last = kmh; const x2 = u.dash.c.getContext('2d');
+      x2.fillStyle = '#0d1a14'; x2.fillRect(0, 0, 128, 64);
+      x2.fillStyle = '#8affc8'; x2.font = 'bold 40px sans-serif'; x2.textAlign = 'right'; x2.fillText(kmh, 84, 46);
+      x2.font = '14px sans-serif'; x2.textAlign = 'left'; x2.fillText('km/h', 88, 46);
+      x2.fillStyle = '#ffb347'; x2.fillRect(8, 54, 112 * clamp(kmh / 50, 0, 1), 5);
+      u.dash.t.needsUpdate = true;
+    }
+  } else if (ride.park) {
+    const [x, z, y] = ride.park;
+    sc.position.set(x, groundH(x, z), z); sc.rotation.set(0, y + Math.PI, .08, 'YXZ');
+  }
+  u.beam.material.opacity = ride.on ? clamp((nightK - .2) * 1.3, 0, .55) : 0;
+}
 const skinMat = toon(0xf7c58e);
 const hand = new THREE.Mesh(new THREE.BoxGeometry(.09, .11, .12), skinMat); rodRig.add(hand);
 const handle = new THREE.Mesh(new THREE.CylinderGeometry(.018, .024, .34, 8), toon(0xd9a066));
@@ -4764,6 +5487,57 @@ function fishTex(id) {
 }
 const fishSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: fishTex('tilapia'), alphaTest: .5 }));   // 透明的地方不擋住後面的水面
 fishSprite.visible = false; scene.add(fishSprite);
+// ---- 照片立體魚：assets/fish/ 的去背照片（FishBase／臺灣魚類資料庫，非商業測試）----
+// 身體照輪廓長成一段段的橢圓、照片從側面投影上去；魚鰭和尾巴是同一張照片的半透明片。載好之前用程式畫的魚
+const PHOTO = {}, PHOTO_TEX = {};
+const photoReady = id => !!PHOTO_TEX[id];
+function loadPhotoFish() {
+  fetch('assets/fish/fish.json').then(r => r.ok ? r.json() : null).then(j => {
+    if (!j) return;
+    for (const id in j) {
+      if (!FISH_BY[id]) continue;
+      const img = new Image();
+      img.onload = () => {
+        PHOTO[id] = j[id];
+        const t = new THREE.Texture(img); t.needsUpdate = true; t.anisotropy = 4; PHOTO_TEX[id] = t;
+        // 介面上的魚圖也換成照片（背包、圖鑑、商店、釣到的時候）
+        const c = FISH_IMG[id], x = c.getContext('2d');
+        x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height);
+        const sc = Math.min(c.width * .96 / img.width, c.height * .92 / img.height), w = img.width * sc, h = img.height * sc;
+        x.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
+        if (FISH_TEX[id]) FISH_TEX[id].needsUpdate = true;
+        // 已經做好的立體魚、水裡在游的魚都換掉
+        delete FISH3D[id]; delete SWIM[id]; if (fish3dId === id) fish3dId = null;
+        (swimFree[id] || []).forEach(o => scene.remove(o.g)); swimFree[id] = [];
+        for (const sh of shadows) if (sh.sw && sh.sw.f.id === id) { scene.remove(sh.sw.g); swimUsed.delete(sh.sw); sh.sw = null; }
+      };
+      img.src = 'assets/fish/' + id + '.webp';
+    }
+  }).catch(() => {});
+}
+// 長度 1、頭朝 +x；身體一段段的橢圓（背窄腹寬一點），照片照側面投影的 UV
+function photoGeos(id) {
+  const F = PHOTO[id], Hh = 1 / F.aspect, N = F.prof.length - 1, R = 16, pos = [], uv = [], idx = [];
+  for (let k = 0; k <= N; k++) {
+    const s = k / N, u = F.bx[0] + (F.bx[1] - F.bx[0]) * s, [t, b] = F.prof[k];
+    const yc = (t + b) / 2, hh = (b - t) / 2 * .985;
+    const wf = Math.pow(Math.sin(Math.PI * clamp(s * .92 + .04, 0, 1)), .55) * (1 - .45 * s);   // 頭圓、尾柄細
+    const hw = hh * Hh * F.thick * wf;
+    for (let r = 0; r <= R; r++) {
+      const th = r / R * Math.PI * 2, vy = yc - hh * Math.cos(th);
+      pos.push(.5 - u, (.5 - vy) * Hh, Math.sin(th) * hw * (1 - .18 * Math.cos(th)));
+      uv.push(u, 1 - vy);
+    }
+    if (k) for (let r = 0; r < R; r++) { const a = (k - 1) * (R + 1) + r, c = a + R + 1; idx.push(a, c, a + 1, a + 1, c, c + 1); }
+  }
+  const body = new THREE.BufferGeometry();
+  body.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); body.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  body.setIndex(idx); body.computeVertexNormals();
+  const fin = new THREE.PlaneGeometry(1, Hh, 40, 1), fp = fin.attributes.position;
+  for (let i = 0; i < fp.count; i++) fp.setX(i, -fp.getX(i));   // 頭在 +x
+  fin.computeVertexNormals();
+  return { body, fin };
+}
 // ---- 立體的魚：身體貼上像素魚的花紋，游動時身體擺動、尾巴甩動 ----
 // 魚頭朝 +x，長度 1（之後依尺寸縮放）
 const FISH_BODY = {   // 跟 makeFish() 的身體範圍一致，花紋才對得上；後三個數字是高、寬（相對長度）
@@ -4778,6 +5552,14 @@ function finMesh(pts, color) {
 }
 function make3DFish(f) {
   if (FISH3D[f.id]) return FISH3D[f.id];
+  if (photoReady(f.id)) {   // 照片立體魚
+    const G = photoGeos(f.id), tex = PHOTO_TEX[f.id];
+    const bm = underwater(toon(0xffffff, { map: tex, roughness: .4, metalness: .08 }), false);
+    const fm = underwater(toon(0xffffff, { map: tex, roughness: .5, side: THREE.DoubleSide, alphaTest: .45 }), false);
+    const g = new THREE.Group(), body = new THREE.Mesh(G.body, bm), fin = new THREE.Mesh(G.fin, fm);
+    g.add(body, fin);
+    return (FISH3D[f.id] = { g, body, base: Float32Array.from(G.body.attributes.position.array), fin, finBase: Float32Array.from(G.fin.attributes.position.array), tail: new THREE.Object3D(), pecs: [], photo: true });
+  }
   const B = FISH_BODY[f.shape] || FISH_BODY.normal, g = new THREE.Group();
   const geo = new THREE.SphereGeometry(1, 28, 16);
   // 貼圖座標：從側面投影到像素魚的身體範圍（兩側同一張圖）
@@ -4815,6 +5597,14 @@ function make3DFish(f) {
 // 游動：身體像波浪一樣擺、尾巴甩、胸鰭划（amp 是用力程度）
 // ph：擺動的相位（游越快轉越快）、amp：擺多大、turn：整條身體往一邊彎（轉彎、C 字甩尾）
 function animFish(o, ph, amp, turn = 0) {
+  if (o.photo) {   // 照片魚：身體和魚鰭片一起沿脊椎彎
+    for (const [m, b] of [[o.body, o.base], [o.fin, o.finBase]]) {
+      const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i++) { const x = b[i * 3]; p.setZ(i, b[i * 3 + 2] + Math.sin(ph * 10 - x * 6) * amp * (.5 - x) * .14 + turn * (x * x - .08)); }
+      p.needsUpdate = true;
+    }
+    return;
+  }
   const p = o.body.geometry.attributes.position, b = o.base;
   for (let i = 0; i < p.count; i++) {
     const x = b[i * 3];
@@ -4906,8 +5696,11 @@ function render3D(dt) {
   const walkBob = P.moving && !boat ? Math.sin(P.walkT * 9) * .05 : 0;
   const wave = boat ? waterH(P.x * TX, P.y * TZ) - WATER_Y : 0;   // 船跟著浪起伏
   const shake = state === 'fight' && F ? (.004 + F.tens * .01 + F.spike * .05) * (1 + (F.lv - 1) * .3) : 0;
-  camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : camGround + (REAL ? REAL_EYE : CFG.eye)) + walkBob + wave, P.y * TZ);
-  camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : 0, 'YXZ');
+  const rk = ride.on ? clamp(Math.abs(ride.v) / CFG.rideSp, 0, 1) : 0, rumble = ride.on ? Math.sin(gameT * 31) * .006 * (.3 + rk) : 0;
+  camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : camGround + (ride.on ? (REAL ? 1.58 : CFG.eye * .8) : REAL ? REAL_EYE : CFG.eye)) + walkBob + wave + rumble, P.y * TZ);
+  camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : ride.on ? -ride.st * .09 * rk : 0, 'YXZ');
+  const fov = 70 + rk * 8; if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
+  updateScooter(dt, rk);
   camera.updateMatrixWorld();
 
   boats.forEach((b, k) => { b.visible = boat && S.boat - 1 === k; });
@@ -5365,6 +6158,19 @@ function updateSound(dt) {
       while (SND.clickT <= 0) { SND.clickT += 1 / rate; F.drag ? tone(3200 + Math.random() * 400, .012, .05, 'square') : tone(1700, .015, .035, 'square'); }
     }
   }
+  // 機車引擎：兩個振盪器＋低通，轉速跟著車速和油門
+  if (ride.on || SND.eng) {
+    if (!SND.eng) {
+      const o1 = c.createOscillator(), o2 = c.createOscillator(), fl = c.createBiquadFilter(), g = c.createGain();
+      o1.type = 'sawtooth'; o2.type = 'square'; fl.type = 'lowpass'; fl.frequency.value = 520; fl.Q.value = 2; g.gain.value = 0;
+      o1.connect(fl); o2.connect(fl); fl.connect(g); g.connect(SND.master); o1.start(); o2.start();
+      SND.eng = { o1, o2, fl, g };
+    }
+    const e = SND.eng, sp = Math.abs(ride.v) / CFG.rideSp, f = 26 + sp * 52 + Math.max(0, ride.thr) * 10;
+    e.o1.frequency.setTargetAtTime(f, t, .08); e.o2.frequency.setTargetAtTime(f * .5 + 1.5, t, .08);
+    e.fl.frequency.setTargetAtTime(380 + sp * 900 + Math.max(0, ride.thr) * 250, t, .1);
+    e.g.gain.setTargetAtTime(ride.on ? .035 + sp * .05 + Math.max(0, ride.thr) * .02 : 0, t, ride.on ? .1 : .25);
+  }
   // 夜晚在陸地上：蟲鳴
   if (envDay < .3 && !nearWater && Math.random() < dt * .8) for (let k = 0; k < 3; k++) tone(4300 + Math.random() * 300, .04, .02, 'sine', k * .07);
 }
@@ -5391,6 +6197,8 @@ function openSettings() {
 }
 
 // ================= 主迴圈 =================
+loadPhotoFish();   // 照片立體魚在背景載入
+loadDishPhotos();
 applyQuality();
 let lastT = performance.now();
 function frame(now) {
