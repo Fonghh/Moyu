@@ -38,6 +38,7 @@
     - 室內 `buildInteriors()` 有這幾種：海產店（魚缸、圓桌）、雜貨店、神明廳住家、早餐店、手搖飲、機車行、釣具行、遊藝場。室內合成每 96 公尺一塊的網格，頂點屬性 `glow` 決定晚上多亮（`intMaterial()`）。店門口有橫的小招牌 `INT_SIGN`。
     - 立面零件 `buildFacadeProps()`：照牆面貼圖的位置放立體鐵窗、冷氣、陽台、雨遮，還有直式招牌（`signAtlas()` 圖集）。
     - 路邊 `buildStreetProps()`：停好的機車、電線桿和電線、盆栽、圓桌塑膠椅、反光鏡、郵筒。
+    - 停好的機車 `buildParkedScooters()`／`PARK`：遠的是方塊版（分塊），身邊 26 公尺內最多 12 台換成 Blender 精細機車（`assets/scooter_paint.glb` 白色車殼依每台顏色染＋`scooter_rest.glb` 其他零件），`updateParked()` 每 0.3 秒（真實時間）挑一次。
     - 港邊 `buildHarbourProps()`：繫船柱、保麗龍箱、塑膠籃、漁網、纜繩、浮球。
     - 共用：`colGeo()` 合併有顏色的零件（`pBox`／`pCyl`／`pBall`），`instGeo()` 分塊放很多個（遠的不畫，距離乘上畫質的 `QUALITY[].lod`）。
   - 地圖很大：地形網格放粗（`GSX`/`GSZ`）、`chunked()` 分塊 96 公尺、樹有距離 LOD；魚生在玩家 110 公尺內，150 公尺外的會換到身邊（`spawnShadow()`／`churnFish()`）；大地圖點一下可以直接走過去。真實地圖的水泥地靠水也不畫成沙灘色。
@@ -82,11 +83,15 @@
   - 產生：`tools/fish/` 的 `fbfetch.py` 抓 FishBase 照片（很多是臺灣魚類資料庫 K.T. Shao 拍的，非商業測試），`cutfish.py`／`cutall.py` 去背，`packfish.py` 打包。
   - 遊戲裡：`loadPhotoFish()` 背景載入，`photoGeos()` 照輪廓長出身體＋半透明魚鰭片。介面上的魚圖 `FISH_IMG` 也換成照片，圖鑑卡標示照片出處。
   - 沒有照片的魚（皇帶魚、鯨鯊、鮟鱇等）維持程式畫的寫實魚皮 `fishRealTex()`。
+- 奇物、雜物、章魚、鱷魚、金條的圖：`tools/blender/items.py` 渲染成 `assets/items/<id>.webp`（裁掉透明邊），`loadItemPhotos()` 載好就取代 emoji（`ITEM_IDS`）。別人的角色（Labubu、寶可夢）做成通用造型，不照原作畫。
+- 圖鑑分「魚類」和「奇物・失物」（`openBag.dexKind`），奇物頁顯示收藏價值；物品卡片價格左上、數量右上、稀有度邊框（`rarOf()`、`gridCell({ rar })`）。視窗打開時右邊按鈕藏起來（`body.dlgon`）。
+- 畫面調色：牆 `FACADE` 暖白／淡薄荷／淺米色、地面偏暖、`hemi` 地面反光暖色、霧從 28 公尺開始（淡淡的海霧）；釣竿 `rodRig` 縮小 0.8 倍。
 - 釣到的那一刻 `showCatch()`（`#catchFx`）：光芒、魚的照片彈出來、量尺量長度、星星、新魚種／個人紀錄印章，點一下再跳出結果卡 `showCatchCard()`。
 - 介面「漁港手帳風格」（樣式表最後）：米白紙面、深藍標題列、朱紅重點，背包、商店、市場、餐廳、料理都用這套；釣具箱維持半透明深藍。
 - 機車 `ride`（🛵 `#rideBtn`，鍵盤 F）：
   - 操作：左手搖桿上推油門、下拉煞車，停下來再拉是倒車，左右轉彎；最快 `CFG.rideSp`。
   - 碰撞跟走路一樣，不能下水；騎到店門口會自動停車進店；按下竿也會先停車。
+  - 模型：`tools/blender/scooter.py`（復古速克達，`PART=paint/rest` 分兩個 glb 匯出），載好後 `useScooterModel()` 換上薄荷綠的那台。
   - 畫面：`rideStep()` 移動，`updateScooter()` 畫龍頭、儀表、雙手、晚上的大燈光。下車後機車停在原地 `ride.park`，引擎聲在 `updateSound()`。
 - 立體魚 `make3DFish()`（`FISH_BODY` 對應魚圖身體範圍的球體＋尾鰭、背鰭、胸鰭）、`animFish(o, 相位, 幅度, 彎度)` 身體擺動甩尾＋整條彎成 C 字、`showFish3D()`／`fishLen()`；搏鬥整場都畫立體魚（14m 外才加影子），跳水有好幾種跳法 `F.jStyle`（arc 弧線、spin 翻滾、headshake 甩頭、tailwalk 尾巴走水、小魚 flop），累了側躺翻白肚；引拔掙扎的快慢方向 `L.f1`／`L.f2`／`L.sd` 每次隨機。
 - 釣具箱 `openBox()`（右邊 🧰 按鈕）：上面四格身上的裝備 `BOX_SLOTS`（釣竿、釣線、捲線器、餌），中間是持有的釣具格子（數量、新東西的藍色「!」記在 `S.seen`），下面說明卡（數值條 `gearStats()`、容易釣到的魚 `gearFish()`，沒釣過的只顯示剪影、小故事 `GEAR_STORY`）。點一下看說明、再點一下或按「換上」就裝上。持有的最高等級在 `S.own`，正在用的在 `S.rod`／`S.line`／`S.reel`。釣具的卡通圖 `gearImg()`（商店表格也用）。

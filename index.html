@@ -409,8 +409,20 @@
   #dlg .bigmap, #dlg canvas.tankC { border-color: #d9ccae; }
   #dlg .pos { color: #b5452e; }
   .tb-credit { margin-top: 6px; font-size: 10px; opacity: .55; text-align: right; }
+  /* 物品卡片：價格左上、數量右上、名稱在下面；稀有的有彩色邊框 */
+  #dlg .tb-cell { padding-top: 18px; }
+  #dlg .tb-cell .tb-price { top: 3px; bottom: auto; left: 6px; font-size: 12px; }
+  #dlg .tb-cell .tb-cnt { top: 3px; bottom: auto; right: 5px; font-size: 11px; padding: 0 5px; border-radius: 8px; background: rgba(59,51,40,.08); }
+  #dlg .tb-cell .tb-lbl { text-align: center; font-weight: 600; margin-top: 2px; }
+  #dlg .tb-cell.use::before { top: auto; bottom: 20px; }
+  #dlg .tb-cell.rar { border-color: var(--rc); box-shadow: inset 0 0 0 1px var(--rc), 0 0 10px -3px var(--rc); }
+  #dlg .tb-cell.rar.sel { box-shadow: inset 0 0 0 2px var(--rc), 0 0 12px -2px var(--rc); }
+  #dlg .chips.dexk { margin: 6px 0 2px; }
+  #dlg .dexv { font-size: 12px; margin: 2px 0 6px; }
+  /* 視窗打開時，右邊的按鈕先藏起來 */
+  body.dlgon #rideBtn, body.dlgon #boxBtn, body.dlgon #homeBtn, body.dlgon #bagBtn, body.dlgon #rigBtn, body.dlgon #actBtn { visibility: hidden; }
   /* 釣到的那一刻 */
-  #catchFx { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden;
+  #catchFx { position: absolute; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; overflow: hidden;
     background: radial-gradient(ellipse at 50% 45%, rgba(10,30,45,.35), rgba(4,12,20,.82) 70%); animation: cfxIn .35s ease-out both; font-family: inherit; color: #fff; }
   #catchFx.out { animation: cfxOut .26s ease-in both; }
   .cfx-rays { position: absolute; left: 50%; top: 42%; width: 160vmax; height: 160vmax; margin: -80vmax 0 0 -80vmax; opacity: .55;
@@ -1916,6 +1928,7 @@ function closeDlg() {
   if (state === 'caught') { state = 'walk'; catchShow = null; }
 }
 $('dlgX').addEventListener('click', closeDlg);
+new MutationObserver(() => document.body.classList.toggle('dlgon', $('dlg').classList.contains('on'))).observe($('dlg'), { attributes: true, attributeFilter: ['class'] });
 $('dlg').addEventListener('click', e => { if (e.target.id === 'dlg') closeDlg(); });
 
 function rarTag(f) {
@@ -2289,8 +2302,11 @@ function fishSil(id, scale) {
   return c;
 }
 // 一格：圖片＋名字，可以加數量、價格、標記
+// 稀有度（卡片邊框用）：奇物 5、變種 6、雜物 -1
+const rarOf = f => f.special ? 5 : f.mutant ? 6 : f.junk ? -1 : f.rar;
 function gridCell(canvas, o = {}) {
   const c = el(o.btn === false ? 'div' : 'button', 'tb-cell' + (o.sel ? ' sel' : '') + (o.use ? ' use' : ''));
+  if (o.rar >= 2 && RAR[o.rar]) { c.classList.add('rar'); c.style.setProperty('--rc', RAR[o.rar].color); }
   if (canvas) { if (o.fish) canvas.classList.add('fishc'); c.appendChild(canvas); }
   if (o.name != null) c.appendChild(el('div', 'tb-lbl', o.name));
   if (o.cnt) c.appendChild(el('span', 'tb-cnt', o.cnt));
@@ -2400,7 +2416,7 @@ function openBag(tab) {
     const sel = ids.includes(bagPick) ? bagPick : ids[0];
     for (const id of ids) {
       const f = FISH_BY[id], g = groups[id];
-      grid.appendChild(gridCell(fishCanvas(id, 2), { fish: true, name: f.name, cnt: '×' + g.n, price: '$' + fmtN(g.v), sel: id === sel, onclick: () => { bagPick = id; openBag(); } }));
+      grid.appendChild(gridCell(fishCanvas(id, 2), { fish: true, name: f.name, cnt: '×' + g.n, price: '$' + fmtN(g.v), rar: rarOf(f), sel: id === sel, onclick: () => { bagPick = id; openBag(); } }));
     }
     if (sel) {
       const f = FISH_BY[sel], g = groups[sel];
@@ -2434,11 +2450,23 @@ function openBag(tab) {
       card.appendChild(el('div', 'tb-story', DISH_STORY[sel.dish]));
     }
   } else {
-    // 圖鑑：沒釣過的是剪影
-    const sel = dexList.find(f => f.id === bagPick) || dexList[0];
-    for (const f of dexList) {
+    // 圖鑑：魚類、奇物・失物（河裡海裡撈到的東西）兩個分類；沒釣過的是剪影
+    const odd = f => !!(f.special || f.junk), kind = openBag.dexKind || 'fish';
+    const fishL = dexList.filter(f => !odd(f)), oddL = dexList.filter(odd), list = kind === 'odd' ? oddL : fishL;
+    const chips = el('div', 'chips dexk');
+    for (const [k, nm, l] of [['fish', '魚類', fishL], ['odd', '奇物・失物', oddL]]) {
+      const b = el('button', 'chip' + (k === kind ? ' on' : ''), `${nm} ${l.filter(f => S.dex[f.id]).length}/${l.length}`);
+      b.onclick = () => { openBag.dexKind = k; bagPick = null; openBag('dex'); }; chips.appendChild(b);
+    }
+    d.appendChild(chips);
+    if (kind === 'odd') {   // 收藏價值：撈過的奇物照原價算
+      const v = oddL.filter(f => S.dex[f.id]).reduce((a, f) => a + (f.price || 0), 0);
+      d.appendChild(el('div', 'pos dexv', `收藏價值 $${fmtN(v)}・撈到的東西都會記在這裡`));
+    }
+    const sel = list.find(f => f.id === bagPick) || list[0];
+    for (const f of list) {
       const known = S.dex[f.id];
-      grid.appendChild(gridCell(known ? fishCanvas(f.id, 2) : fishSil(f.id, 2), { fish: true, name: known ? f.name : '？？？', sel: f === sel, onclick: () => { bagPick = f.id; openBag(); } }));
+      grid.appendChild(gridCell(known ? fishCanvas(f.id, 2) : fishSil(f.id, 2), { fish: true, name: known ? f.name : '？？？', rar: known ? rarOf(f) : 0, cnt: known && odd(f) ? '×' + known.n : '', sel: f === sel, onclick: () => { bagPick = f.id; openBag(); } }));
     }
     const k = S.dex[sel.id];
     card = fishCard(sel, { known: !!k, extra: k ? [[sel.special || sel.junk ? '撈到' : '最大', sel.special || sel.junk ? k.n + ' 次' : k.max + ' cm（釣過 ' + k.n + ' 次）'], ...noteFacts(sel)] : [] });
@@ -3263,7 +3291,7 @@ $('miniBox').addEventListener('click', openMap);
 // 畫面是平滑的地形（海岸線、沙灘、小山丘），走路、釣魚的判斷還是用格子
 const BED_Y = { pond: -1.2, river: -1.5, sea: -2.4, deep: -4, far: -5.5 };
 const WATER_COL = { pond: '#2d6f5e', river: '#2a6f86', sea: '#1d5f8a', deep: '#123f6e', far: '#0a2a52' };
-const GROUND_COL = { [T.GRASS]: '#6f9446', [T.FOREST]: '#4f7836', [T.SAND]: '#d8c690', [T.PATH]: REAL ? '#8d8981' : '#b9a888', [T.DOCK]: '#9c7a52', [T.QUAY]: '#8d8a84', [T.BLDG]: '#8d8981' };   // 真實地圖的村子地面是水泥
+const GROUND_COL = { [T.GRASS]: '#7a9452', [T.FOREST]: '#4f7836', [T.SAND]: '#d8c690', [T.PATH]: REAL ? '#a0978a' : '#b9a888', [T.DOCK]: '#9c7a52', [T.QUAY]: '#a09a8f', [T.BLDG]: '#a0978a' };   // 真實地圖的村子地面是水泥
 const SKY = {   // top 天頂、hor 地平線、light 亮度、far 霧的距離
   sun: { top: 0x3d8de3, hor: 0xc4e6ff, light: 1, far: 220 }, cloud: { top: 0x7d98b6, hor: 0xd5dee7, light: .82, far: 170 },
   rain: { top: 0x5a6979, hor: 0xa2afbb, light: .68, far: 120 }, storm: { top: 0x1d2533, hor: 0x4b5668, light: .45, far: 80 },
@@ -3275,11 +3303,11 @@ const renderer = new THREE.WebGLRenderer({ canvas: cvEl, antialias: true, powerP
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; renderer.shadowMap.autoUpdate = false;   // 陰影每幀只算一次（倒影那次不算）
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(SKY.sun.hor);
-scene.fog = new THREE.Fog(SKY.sun.hor, 45, SKY.sun.far);
+scene.fog = new THREE.Fog(SKY.sun.hor, 28, SKY.sun.far);   // 近一點就開始有淡淡的海霧，遠景有層次
 const camera = new THREE.PerspectiveCamera(70, 1, .05, 700);
 camera.layers.enable(1);   // 第 1 層：小花、灌木（不畫進倒影）
 scene.add(camera);
-const hemi = new THREE.HemisphereLight(0xe6f3ff, 0x8a9a6a, .85);
+const hemi = new THREE.HemisphereLight(0xeef4fb, 0xb09c7c, .85);   // 地面反射的光偏暖，牆才不會灰綠
 scene.add(hemi);
 const sunLight = new THREE.DirectionalLight(0xfff1d6, .95);
 sunLight.castShadow = true;
@@ -3708,8 +3736,8 @@ function renderReflection() {
 }
 
 // ---- 每幀更新天空、光線、天氣（時間＋天氣一起決定）----
-const C_DAY_TOP = new THREE.Color(0x3a86d8), C_DAY_HOR = new THREE.Color(0xbcdcf2), C_DUSK_TOP = new THREE.Color(0x35507e), C_DUSK_HOR = new THREE.Color(0xf2a46a);
-const C_NIGHT_TOP = new THREE.Color(0x050a1a), C_NIGHT_HOR = new THREE.Color(0x16223a), C_GREY = new THREE.Color(0x8a96a4);
+const C_DAY_TOP = new THREE.Color(0x3f8ad8), C_DAY_HOR = new THREE.Color(0xd6e3e8), C_DUSK_TOP = new THREE.Color(0x35507e), C_DUSK_HOR = new THREE.Color(0xf2a46a);
+const C_NIGHT_TOP = new THREE.Color(0x050a1a), C_NIGHT_HOR = new THREE.Color(0x16223a), C_GREY = new THREE.Color(0x9ea2a6);
 const CLOUDY = { sun: 0, cloud: .55, rain: .75, storm: .95 };
 const T1 = new THREE.Color(), T2 = new THREE.Color();
 let envDay = 1, envCloud = 0;
@@ -3735,11 +3763,12 @@ function updateEnv(dt) {
   scene.fog.color.copy(T2); scene.background.copy(T2);
   scene.fog.far += (SKY[weather.id].far * (.6 + .4 * day) - scene.fog.far) * kk;
   // 光線：白天是太陽，晚上是淡淡的藍色月光
-  const sunC = T1.setRGB(1, .55 + .45 * smoothstep(0, .35, SUN_DIR.y), .3 + .7 * smoothstep(0, .4, SUN_DIR.y));
+  const sunC = T1.setRGB(1, .55 + .41 * smoothstep(0, .35, SUN_DIR.y), .3 + .58 * smoothstep(0, .4, SUN_DIR.y));   // 白天的太陽也帶一點暖
   if (SUN_DIR.y > -.02) { sunLight.color.copy(sunC); sunLight.intensity = .95 * smoothstep(-.02, .15, SUN_DIR.y) * (1 - envCloud * .65); }
   else { sunLight.color.setRGB(.6, .7, 1); sunLight.intensity = .18 * (1 - envCloud); }
   hemi.intensity = .18 + .62 * day * (1 - envCloud * .3) + flash * 3;
   hemi.color.copy(T2).lerp(C_DAY_HOR, .4);
+  hemi.groundColor.setRGB(.69, .61, .49).multiplyScalar(.35 + .65 * day);
   // 天氣：浪的大小、雲的顏色
   waveAmp += (WAVE_AMP[weather.id] - waveAmp) * Math.min(1, dt * .3);
   const wu = waterMat.uniforms;
@@ -4293,7 +4322,7 @@ function buildStreetProps() {
     const x = b.cx + (SPAWN.x * TX - b.cx) * .15, z = b.cz + (SPAWN.y * TZ - b.cz) * .15;
     for (let r = 4; r < 22; r += 2) { const ang = hash(Math.round(b.cx), r) % 628 / 100, xx = b.cx + Math.cos(ang) * r, zz = b.cz + Math.sin(ang) * r; if (groundOK(xx, zz, .6) && roadNear(xx, zz) > .3) { mail.push([xx, zz, groundH(xx, zz), ang, '#ffffff']); break; } }
   }
-  instGeo(colGeo(scooterParts()), scoot, { cast: 1, lod: 75 });
+  buildParkedScooters(scoot);
   // 電線桿：水泥桿、兩支橫擔、白色礙子
   const pg = [pCyl(.17, 10.6, 0, 0, 0, '#a4a29b', 8, .12), pBox(1.9, .12, .12, 0, 9.6, 0, '#77766f'), pBox(1.4, .1, .1, 0, 8.7, 0, '#77766f')];
   for (const x of [-.85, 0, .85]) pg.push(pCyl(.05, .16, x, 9.72, 0, '#f0f0ea', 6));
@@ -4320,6 +4349,64 @@ function buildStreetProps() {
   instGeo(colGeo([pCyl(.05, .72, 0, 0, 0, '#7d7d7d', 6), pCyl(.5, .04, 0, .72, 0, '#ece6d6', 16)]), tables, { lod: 80 });
   instGeo(colGeo([pBox(.08, 2.7, .08, 0, 0, 0, '#e07020'), pCyl(.36, .05, 0, 2.75, .08, '#e07020', 16, .36, Math.PI / 2), pCyl(.32, .06, 0, 2.75, .1, '#dfe6ea', 16, .32, Math.PI / 2)]), mirrors, { lod: 120 });
   instGeo(colGeo([pBox(.4, 1.0, .35, -.24, 0, 0, '#c0392b'), pBox(.4, 1.0, .35, .24, 0, 0, '#2e8b57'), pBox(.44, .12, .4, -.24, 1.0, 0, '#a93226'), pBox(.44, .12, .4, .24, 1.0, 0, '#25784a')]), mail, { lod: 90 });
+}
+// ---- 停在路邊的機車：遠的用簡單方塊版（分塊），身邊 22 公尺內最多 12 台換成 Blender 的精細機車 ----
+const PARK = [];
+let parkDet = null, parkT = 0;
+function buildParkedScooters(items) {
+  const geo = colGeo(scooterParts()), mat = toon(0xffffff, { vertexColors: true, roughness: .7 });
+  const groups = new Map(), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1), c = new THREE.Color();
+  for (const it of items) { const k = Math.floor(it[0] / 96) + ',' + Math.floor(it[1] / 96); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
+  for (const [k, list] of groups) {
+    const [gx, gz] = k.split(',').map(v => (+v + .5) * 96);
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach(([x, z, y, r, col, , , , tilt], i) => {
+      q.setFromEuler(e.set(0, r, tilt, 'YXZ'));
+      const mtx = new THREE.Matrix4().compose(p.set(x - gx, y, z - gz), q, sc);
+      im.setMatrixAt(i, mtx); im.setColorAt(i, c.set(col));
+      PARK.push({ x, z, im, i, mtx, world: new THREE.Matrix4().compose(p.set(x, y, z), q, sc), col, det: false });
+    });
+    im.position.set(gx, 0, gz); im.castShadow = true; im.layers.set(1);
+    im.geometry = geo; scene.add(im);
+    LOD.push({ o: im, x: gx, z: gz, d: 75 });
+  }
+  Promise.all([loadAsset('scooter_paint'), loadAsset('scooter_rest')]).then(([pm, rm]) => {
+    if (!pm || !rm) return;
+    glowAsset(rm.material);
+    const dp = new THREE.InstancedMesh(pm.geometry, pm.material, 12), dr = new THREE.InstancedMesh(rm.geometry, rm.material, 12);
+    for (let i = 0; i < 12; i++) dp.setColorAt(i, c.set('#ffffff'));   // 先建好顏色（要在 count 設成 0 之前，不然陣列是空的）
+    for (const d of [dp, dr]) { d.count = 0; d.frustumCulled = false; d.castShadow = true; scene.add(d); }
+    parkDet = { dp, dr, pm, rm };
+    useScooterModel(pm, rm);
+  });
+}
+const _z4 = new THREE.Matrix4().makeScale(0, 0, 0), _pc = new THREE.Color();
+function updateParked(dt) {
+  const now = performance.now();
+  if (!parkDet || now - parkT < 300) return;   // 用真實時間，幀率低的手機也一樣 0.3 秒更新一次
+  parkT = now;
+  const cx = camera.position.x, cz = camera.position.z, near = [];
+  for (const s of PARK) { const d = Math.abs(s.x - cx) + Math.abs(s.z - cz); if (d < 26) near.push([d, s]); }
+  near.sort((a, b) => a[0] - b[0]); const want = new Set(near.slice(0, 12).map(n => n[1]));
+  const dirty = new Set();
+  for (const s of PARK) {
+    const on = want.has(s);
+    if (on !== s.det) { s.det = on; s.im.setMatrixAt(s.i, on ? _z4 : s.mtx); dirty.add(s.im); }
+  }
+  dirty.forEach(im => { im.instanceMatrix.needsUpdate = true; });
+  const { dp, dr } = parkDet; let n = 0;
+  for (const s of want) { dp.setMatrixAt(n, s.world); dr.setMatrixAt(n, s.world); dp.setColorAt(n, _pc.set(s.col)); n++; }
+  dp.count = dr.count = n; dp.instanceMatrix.needsUpdate = dr.instanceMatrix.needsUpdate = true; if (dp.instanceColor) dp.instanceColor.needsUpdate = true;
+}
+// 騎的那台也換成精細機車（薄荷綠）
+function useScooterModel(pm, rm) {
+  const u = scooter.userData;
+  const paint = new THREE.Mesh(pm.geometry, pm.material.clone()); paint.material.color.set('#8fd3bd');
+  const rest = new THREE.Mesh(rm.geometry, rm.material);
+  for (const m of [paint, rest]) { m.castShadow = true; scooter.add(m); }
+  u.body.visible = false; u.hlMesh.visible = false;
+  u.dashMesh.position.set(0, 1.245, .5);
+  for (const h of [u.hl, u.hr]) { h.scale.set(.85, .75, .85); h.position.y = 1.15; }
 }
 // ---- 港邊：繫船柱、保麗龍箱、塑膠籃、漁網、纜繩、浮球 ----
 function buildHarbourProps() {
@@ -4360,7 +4447,7 @@ const REAL_EYE = 1.75;   // 真實地圖：真人的眼睛高度
 let realBoats = null;
 function buildRealTown() {
   const hsh = (a, b) => hash(Math.round(a * 7), Math.round(b * 7));
-  const FACADE = ['#f2efe8', '#e9e3d6', '#dcd7cf', '#efe2cf', '#d2d9db', '#e8d6c2', '#cdb89c', '#e3dcd0', '#f4f1ea', '#d8cfc0'];
+  const FACADE = ['#f6f0e4', '#f0e6d3', '#e9ddc6', '#e2efe7', '#f5eee1', '#eddfc8', '#e4d2b6', '#dbece4', '#f8f3e9', '#ebdfca'];   // 暖白、淡薄荷、淺米色
   // ---- 房子：牆（一樓、樓上、女兒牆）＋平屋頂，全部合成一個網格 ----
   const VP = [], VN = [], VU = [], VC = [], gIdx = [[], [], []];   // 群組：0 一樓、1 樓上、2 素面（女兒牆、屋頂）
   const col = new THREE.Color();
@@ -4494,8 +4581,8 @@ function buildRealTown() {
   const all = []; let off = 0;
   gIdx.forEach((ix, g) => { all.push(...ix); geo.addGroup(off, ix.length, g); off += ix.length; });
   geo.setIndex(all);
-  const upMat = toon(0xffffff, { vertexColors: true, map: facadeTex(false), emissive: 0x3a3226, emissiveMap: facadeTex(true), emissiveIntensity: .3, roughness: .8 });
-  const gfMat = toon(0xffffff, { vertexColors: true, map: groundTex(false), emissive: 0x4a3e2e, emissiveMap: groundTex(true), emissiveIntensity: .3, roughness: .8 });
+  const upMat = toon(0xfff3e4, { vertexColors: true, map: facadeTex(false), emissive: 0x3a3226, emissiveMap: facadeTex(true), emissiveIntensity: .3, roughness: .8 });
+  const gfMat = toon(0xfff3e4, { vertexColors: true, map: groundTex(false), emissive: 0x4a3e2e, emissiveMap: groundTex(true), emissiveIntensity: .3, roughness: .8 });
   const plainMat = toon(0xffffff, { vertexColors: true, roughness: .9 });
   nightGlow.push(upMat, gfMat);
   const town = new THREE.Mesh(geo, [gfMat, upMat, plainMat]);
@@ -4533,7 +4620,7 @@ function buildRealTown() {
   // ---- 馬路：柏油、人行道、白色標線 ----
   {
     const RP = [], RC = [], RI = [], LP = [], LU = [], LI = [];
-    const asph = new THREE.Color('#55565b'), walk = new THREE.Color('#a29c92'), cc = new THREE.Color();
+    const asph = new THREE.Color('#5a5859'), walk = new THREE.Color('#b3a794'), cc = new THREE.Color();
     const ribbon = (pts, half, offs, y0, outP, outI, color, outC, outU) => {
       const n = pts.length, b0 = outP.length / 3;
       let dist = 0;
@@ -5216,7 +5303,7 @@ function syncShadows() {
 
 // ---- 手上的釣竿（跟著相機）----
 const rodRig = new THREE.Group();
-rodRig.position.set(.3, -.36, -.5);
+rodRig.position.set(.34, -.4, -.52); rodRig.scale.setScalar(.8);   // 小一點，只佔畫面右下角
 camera.add(rodRig);
 // ---- 我的機車：薄荷綠復古速克達，騎的時候看得到龍頭、儀表、雙手；下車就停在路邊 ----
 const scooter = new THREE.Group();
@@ -5228,16 +5315,16 @@ const scooter = new THREE.Group();
     pBox(.38, .28, .3, 0, .78, -.62, '#e9e4d8'),                       // 後箱
   ]));
   const body = new THREE.Mesh(g, toon(0xffffff, { vertexColors: true, roughness: .45, metalness: .15 }));
-  body.castShadow = true; scooter.add(body);
+  body.castShadow = true; scooter.add(body); scooter.userData.body = body;
   // 儀表：速度
   const dc = document.createElement('canvas'); dc.width = 128; dc.height = 64;
   const dt = new THREE.CanvasTexture(dc);
   const dash = new THREE.Mesh(new THREE.PlaneGeometry(.3, .15), toon(0xffffff, { map: dt, emissive: 0xffffff, emissiveMap: dt, emissiveIntensity: .6, roughness: .3 }));
-  dash.position.set(0, 1.3, .43); dash.rotation.set(-Math.PI / 2 - .5, 0, Math.PI); scooter.add(dash);   // 斜斜朝向騎士
+  dash.position.set(0, 1.3, .43); dash.rotation.set(-Math.PI / 2 - .5, 0, Math.PI); scooter.add(dash); scooter.userData.dashMesh = dash;   // 斜斜朝向騎士
   scooter.userData.dash = { c: dc, t: dt, last: -1 };
   // 大燈（晚上亮）、地上的光
   const hl = new THREE.Mesh(new THREE.BoxGeometry(.2, .09, .02), toon(0xfff6d0, { emissive: 0xfff2c0, emissiveIntensity: .3 }));
-  hl.position.set(0, 1.09, .61); scooter.add(hl); nightGlow.push(hl.material);
+  hl.position.set(0, 1.09, .61); scooter.add(hl); nightGlow.push(hl.material); scooter.userData.hlMesh = hl;
   const bc = document.createElement('canvas'); bc.width = bc.height = 64;
   const bx = bc.getContext('2d'), bg = bx.createRadialGradient(32, 32, 0, 32, 32, 32); bg.addColorStop(0, 'rgba(255,240,200,.9)'); bg.addColorStop(1, 'rgba(255,240,200,0)');
   bx.fillStyle = bg; bx.fillRect(0, 0, 64, 64);
@@ -5515,6 +5602,22 @@ function loadPhotoFish() {
     }
   }).catch(() => {});
 }
+// 奇物、雜物、章魚、鱷魚、金條：Blender 渲染的圖（tools/blender/items.py），載好就取代 emoji
+const ITEM_IDS = ['boot', 'boba', 'airpods', 'ball', 'card', 'labubu', 'switch2', 'iphone', 'rtx', 'btc', 'gold', 'octopus', 'croc'];
+function loadItemPhotos() {
+  for (const id of ITEM_IDS) {
+    if (!FISH_BY[id]) continue;
+    const img = new Image();
+    img.onload = () => {
+      const c = FISH_IMG[id], x = c.getContext('2d');
+      x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, c.width, c.height);
+      const sc = Math.min(c.width * .9 / img.width, c.height * .88 / img.height), w = img.width * sc, h = img.height * sc;   // 圖已經裁好邊，放大塞滿
+      x.drawImage(img, (c.width - w) / 2, (c.height - h) / 2, w, h);
+      if (FISH_TEX[id]) FISH_TEX[id].needsUpdate = true;
+    };
+    img.src = 'assets/items/' + id + '.webp';
+  }
+}
 // 長度 1、頭朝 +x；身體一段段的橢圓（背窄腹寬一點），照片照側面投影的 UV
 function photoGeos(id) {
   const F = PHOTO[id], Hh = 1 / F.aspect, N = F.prof.length - 1, R = 16, pos = [], uv = [], idx = [];
@@ -5700,7 +5803,7 @@ function render3D(dt) {
   camera.position.set(P.x * TX, (boat ? WATER_Y + 2.4 : camGround + (ride.on ? (REAL ? 1.58 : CFG.eye * .8) : REAL ? REAL_EYE : CFG.eye)) + walkBob + wave + rumble, P.y * TZ);
   camera.rotation.set(pitch + (Math.random() - .5) * shake, yaw + (Math.random() - .5) * shake, boat ? Math.sin(gameT * 1.1) * .02 : ride.on ? -ride.st * .09 * rk : 0, 'YXZ');
   const fov = 70 + rk * 8; if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
-  updateScooter(dt, rk);
+  updateScooter(dt, rk); if (REAL) updateParked(dt);
   camera.updateMatrixWorld();
 
   boats.forEach((b, k) => { b.visible = boat && S.boat - 1 === k; });
@@ -5730,7 +5833,7 @@ function render3D(dt) {
   // 轉頭時竿子稍微慢半拍，有重量感
   let dy = yaw - lastYaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); lastYaw = yaw;
   rodSway += (clamp(dy / Math.max(dt, .001) * .035, -.1, .1) - rodSway) * Math.min(1, dt * 8);
-  rodRig.position.x = .3 + rodSway; rodRig.rotation.y = rodSway * 1.5;
+  rodRig.position.x = .34 + rodSway; rodRig.rotation.y = rodSway * 1.5;
   rodRig.updateMatrixWorld(true);
   const tip = rodTip.getWorldPosition(V1);
 
@@ -6198,6 +6301,7 @@ function openSettings() {
 
 // ================= 主迴圈 =================
 loadPhotoFish();   // 照片立體魚在背景載入
+loadItemPhotos();
 loadDishPhotos();
 applyQuality();
 let lastT = performance.now();
